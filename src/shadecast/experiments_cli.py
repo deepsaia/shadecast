@@ -15,6 +15,7 @@ from typing import Annotated
 import typer
 
 from .console import console
+from .experiments.channel import run_channel
 from .experiments.factorial import run_factorial
 from .experiments.targeting import run_targeting
 
@@ -81,5 +82,27 @@ def targeting(
     """
     corpus = _corpus(bundles, surrogate_root)
     result = run_targeting(corpus, out, budget=budget)
+    console.print_json(json.dumps(result["verdict"]))
+    console.print(f"[green]written to {out}[/]")
+
+
+@app.command("channel")
+def channel(
+    bundles: Annotated[list[Path], typer.Argument(help="Built city bundle directories.")],
+    budget: Annotated[float, typer.Option("--budget", help="Budget in USD.")] = 2_288_000.0,
+    out: Annotated[Path, typer.Option("--out", help="Where to write results.")] = Path(
+        "data/channel.json"
+    ),
+    surrogate_root: Annotated[
+        Path, typer.Option("--surrogate-root", help="Root holding per-city baselines.")
+    ] = DEFAULT_SURROGATE,
+) -> None:
+    """Does the surface temperature channel cool, and behave like its parameter (H5, H6)?
+
+    Each city pays for one extra engine run holding land cover unchanged. Without that
+    matched control the result would confound de-paving with switching land cover on.
+    """
+    corpus = _corpus(bundles, surrogate_root)
+    result = run_channel(corpus, out, budget=budget)
     console.print_json(json.dumps(result["verdict"]))
     console.print(f"[green]written to {out}[/]")
