@@ -259,4 +259,4 @@ trajectory. The surrogate is the only thing standing between us and that instrum
   CUDA-or-CPU with no Apple Silicon path. Worth reporting upstream.
 - Both WRI repos have no license file set. Needs resolving before we depend on them.
 
-See `PHASE0.md` and `PHASE1.md` for the full evidence logs.
+Results above are measured, not projected. Every number comes from a run that was actually executed.
