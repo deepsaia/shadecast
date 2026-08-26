@@ -62,13 +62,17 @@ def select(
     res_m: float = 1.0,
     threshold: float = 45.0,
     kind: str = "tree",
+    surface: np.ndarray | None = None,
 ) -> tuple[np.ndarray, float, int]:
     """Place as many trees as the budget allows, at least `spacing_m` apart.
 
     Returns (canopy mask, spent, number of trees actually planted).
     """
     feasible = feasibility_mask(umep_lc, building_h, kind)
-    harm = rank_surface(tmrt, weights, threshold) * feasible
+    # `surface` lets a caller rank on something other than area harm, which is how the
+    # network objective plants along corridors instead of across the hottest ground.
+    ranking = rank_surface(tmrt, weights, threshold) if surface is None else surface
+    harm = ranking * feasible
     canopy = np.zeros(harm.shape, dtype=bool)
     if harm.max() <= 0:
         return canopy, 0.0, 0
