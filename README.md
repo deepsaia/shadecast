@@ -1,5 +1,11 @@
 # shadecast
 
+### [Interactive walkthrough: deepsaia.github.io/shadecast](https://deepsaia.github.io/shadecast/)
+
+Step by step through the whole pipeline on three real cities, with every number taken
+from a real physics run. Maps are drawn in your browser from raw model output, so
+hovering any pixel reads its actual temperature.
+
 Open, credential-free pipeline that turns any city into an urban heat **decision**
 problem, plus baselines and a benchmark.
 
