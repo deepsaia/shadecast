@@ -15,7 +15,7 @@ import logging
 
 import networkx as nx
 import numpy as np
-from scipy.ndimage import grey_dilation
+from scipy.ndimage import distance_transform_edt, grey_dilation
 from shapely.geometry import LineString
 
 from ..aoi import AOI
@@ -73,9 +73,17 @@ def corridor_surface(
 
     radius_px = max(1, round(buffer_m / aoi.res_m))
     widened = grey_dilation(surface, footprint=_disk(radius_px))
+
+    # Dilation alone leaves a flat plateau, so every pixel within reach of a street ties
+    # and the planner breaks the tie on raster order, which is arbitrary. Decay by
+    # distance from the street instead: a tree at the kerb shades the footway a walker
+    # is on, one six metres back shades a wall.
+    distance = distance_transform_edt(surface == 0)
+    decayed = widened * np.clip(1.0 - distance / radius_px, 0.0, 1.0)
+
     logger.info(
         "corridor surface: %d street pixels widened to %d plantable pixels",
         painted,
-        int((widened > 0).sum()),
+        int((decayed > 0).sum()),
     )
-    return widened
+    return decayed
