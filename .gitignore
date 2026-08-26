@@ -13,3 +13,6 @@ __pycache__/
 
 # Cloned upstream repos kept for reference only.
 /vendor/
+
+# Working evidence logs, kept local.
+PHASE*.md
