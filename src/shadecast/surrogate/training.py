@@ -53,6 +53,22 @@ def split_by_design(
     return ~test, test
 
 
+def split_by_city(origins: list[str], holdout_city: str) -> tuple[np.ndarray, np.ndarray]:
+    """Hold out one whole city, which is the transfer question.
+
+    Origins are tagged ``city/design``. Holding out a design measures whether the
+    model generalises to an unseen intervention pattern. Holding out a city measures
+    whether it generalises to unseen *geometry*, which is a much harder question and
+    the one that decides whether this is a benchmark or a single city demo.
+    """
+    origin_array = np.array(origins)
+    cities = {origin.split("/", 1)[0] for origin in origins}
+    if holdout_city not in cities:
+        raise ValueError(f"{holdout_city!r} not among {sorted(cities)}")
+    test = np.array([origin.startswith(f"{holdout_city}/") for origin in origin_array])
+    return ~test, test
+
+
 def train(
     inputs: np.ndarray,
     targets: np.ndarray,
@@ -62,6 +78,7 @@ def train(
     batch_size: int = 8,
     learning_rate: float = 2e-3,
     holdout: float = 0.25,
+    holdout_city: str | None = None,
     seed: int = 0,
     out_path: Path | None = None,
 ) -> dict:
@@ -69,7 +86,10 @@ def train(
     device = pick_device()
     torch.manual_seed(seed)
 
-    train_mask, test_mask = split_by_design(origins, holdout=holdout, seed=seed)
+    if holdout_city:
+        train_mask, test_mask = split_by_city(origins, holdout_city)
+    else:
+        train_mask, test_mask = split_by_design(origins, holdout=holdout, seed=seed)
     held_designs = sorted(set(np.array(origins)[test_mask].tolist()))
     logger.info(
         "device %s, %d train patches, %d held out across %d unseen designs",
@@ -145,6 +165,8 @@ def train(
         "train_patches": int(train_mask.sum()),
         "test_patches": int(test_mask.sum()),
         "held_out_designs": held_designs,
+        "holdout_mode": "city" if holdout_city else "design",
+        "holdout_city": holdout_city,
         "final_test_mae_C": history[-1]["test_mae_C"],
         "zero_baseline_mae_C": round(float(np.abs(targets[test_mask]).mean()), 5),
         "final_skill": round(history[-1]["skill"], 4),
