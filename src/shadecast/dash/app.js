@@ -43,6 +43,16 @@ const EXPLAIN = {
     ["What the two arms are",
      "<em>Trees</em> are living canopy: they cast shade and cool by evaporation, but take years to mature and need water. <em>Shade structures</em> are built canopies such as sails or pergolas: instant, maintenance-light, and far more expensive per square metre covered."]
   ],
+  channel: [
+    ["De-paving",
+     "Lifting sealed surface and putting vegetation in its place. Here it is asphalt replaced by unmanaged grass, and permeable paving is the halfway house: a lighter, rougher surface that still takes traffic."],
+    ["Which channel it works through",
+     "Not reflectivity. The model's own table gives asphalt a surface heating coefficient of <em>0.58</em> and grass <em>0.21</em>, so the ground simply emits less infrared at the people standing on it. Nothing is bounced at anybody, which is what makes this arm trustworthy."],
+    ["The control that makes it a measurement",
+     "Every run here feeds the engine a land cover map, and the ordinary baseline was produced without one. Comparing against that baseline would have measured <em>land cover switched on</em> mixed together with <em>asphalt became grass</em>, inseparably. So each city pays for an extra run holding land cover unchanged, and every number is measured against that."],
+    ["Why it barely moves the city average",
+     "De-paving cools the ground you actually replace and almost nothing beyond it. A tree also shades well past its own trunk. So a large local effect, <em>4.4 °C</em> on treated ground, becomes a small city-wide one once it is spread over the people who live there."]
+  ],
   corridor: [
     ["The question",
      "A budget can cool the <em>hottest ground</em>, or it can cool the ground <em>people actually walk on</em>. Those are not the same places, and until you build both plans and simulate both, there is no way to know how far apart they are."],
@@ -312,9 +322,40 @@ function stepPlans(c){
   </div></section>`;
 }
 
+function stepChannel(f){
+  const x=f.channel;
+  if(x.status!=="done") return "";
+  const v=x.verdict||{}, m=v.mean_treated_drop_C||{};
+  const cells=x.rows.flatMap(r=>r.cells.filter(c=>c.pixels).map(c=>({city:r.city,...c})));
+  return `<section class="step"><h2><i>07</i> Try a second cooling mechanism, not just shade</h2>
+  <p class="sub">Trees and awnings both work by blocking sun. This asks whether making the ground itself cooler works too, through a channel we can trust.</p>
+  ${why(EXPLAIN.channel)}
+  <div class="grid g3">
+    <div class="card">
+      <table><thead><tr><th>City</th><th>Surface</th><th class="n">Heating coef.</th><th class="n">Treated ground</th><th class="n">City-wide</th></tr></thead><tbody>
+      ${cells.map(c=>`<tr><td>${c.city}</td><td>${c.kind==="depave"?"grass":"permeable"}</td><td class="n">${c.ts_deg}</td><td class="n">${c.treated_drop_C.toFixed(2)} °C</td><td class="n">${c.exposure_drop_C.toFixed(3)} °C</td></tr>`).join("")}
+      </tbody></table>
+    </div>
+    <div class="card">
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem">
+        <span class="tag ${v.h5_cools?"ok":"pend"}">H5 cools</span>
+        <span class="tag ${v.h5_in_predicted_range?"ok":"pend"}">H5 size ${v.h5_in_predicted_range?"as predicted":"missed"}</span>
+        <span class="tag ${v.h6_monotone?"ok":"pend"}">H6 ${v.h6_monotone?"supported":"open"}</span>
+      </div>
+      <ul class="hyp" style="padding:0;margin:0">
+        <li><code>H5</code><span>De-paving cools, predicted 0.5 to 3 °C on treated ground. It cooled in <b>every one of the six cells</b>, but averaged <b>${m.depave} °C</b>, <b>above the band we wrote down</b>. Direction confirmed, magnitude mispredicted, recorded as a partial miss rather than rounded into a success.</span></li>
+        <li><code>H6</code><span>Cooling should follow the surface heating coefficient, grass ahead of permeable paving. <b>It did</b>, ${m.depave} °C against ${m.permeable} °C, and in every city separately.</span></li>
+      </ul>
+      <p class="outcome">Note the last two columns. The same intervention that cools treated ground by <b>${m.depave} °C</b> moves the
+      population-weighted city figure by under <b>0.4 °C</b>, because it cools only the ground it replaces while a tree shades far
+      beyond its own footprint. That gap is why shade still wins a budget.</p>
+    </div>
+  </div></section>`;
+}
+
 function stepOpen(f){
   const open=[f.channel,f.targeting].filter(x=>x.status==="pending");
-  let s=`<section class="step"><h2><i>07</i> Open questions, running now</h2>
+  let s=`<section class="step"><h2><i>08</i> Open questions</h2>
   <p class="sub">Written down before they were run. Listed here whether or not they turn out the way we expect.</p><div class="grid g3">`;
   open.forEach(x=>{
     s+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:.5rem">
@@ -370,7 +411,7 @@ function paintPlan(){
 async function render(){
   const c=S.data.cities.find(x=>x.city===S.city), f=S.data.findings;
   $("citymeta").textContent=`${c.name} · design day ${c.provenance.design_day} · 1 km² at 1 m`;
-  $("app").innerHTML=stepAssemble(c)+stepSimulate(c)+stepSurrogate(f)+stepFactorial(f)+stepPlans(c)+stepCorridor(f)+stepOpen(f);
+  $("app").innerHTML=stepAssemble(c)+stepSimulate(c)+stepSurrogate(f)+stepFactorial(f)+stepPlans(c)+stepCorridor(f)+stepChannel(f)+stepOpen(f);
   $("hour").value=S.hour;
   $("hour").oninput=e=>{S.hour=+e.target.value;paintHour();};
   $("play").onclick=()=>{
