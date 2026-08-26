@@ -24,7 +24,11 @@ logger = logging.getLogger(__name__)
 # baselines are built from, and a stale bundle under data/cities once made the page
 # describe one city's geometry beside another one's physics.
 BUNDLE_ROOTS = (Path("out/corpus"), Path("data/cities"))
-DEFAULT_OUT = Path("data/dash")
+# The same directory that gets published. Serving the walkthrough locally from one
+# bundle and publishing another is how the two quietly drift apart, which is exactly
+# what happened once: `shadecast dash` kept showing a build from hours earlier while
+# the public page had moved on.
+DEFAULT_OUT = Path("docs")
 
 app = typer.Typer(name="dash", help="Interactive local walkthrough of what we do to a city.")
 
