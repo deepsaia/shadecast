@@ -11,9 +11,11 @@ redistributed across the building volume inside it (footprint area times height)
 a standard dasymetric step that is only possible because GlobalBuildingAtlas
 gives us complete heights.
 """
+
 from __future__ import annotations
 
 import io
+import logging
 import zipfile
 from pathlib import Path
 
@@ -26,8 +28,12 @@ from rasterio.warp import reproject
 
 from ..aoi import AOI
 
-BASE = ("https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/"
-        "GHS_POP_E2020_GLOBE_R2023A_54009_100/V1-0/tiles")
+logger = logging.getLogger(__name__)
+
+BASE = (
+    "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/"
+    "GHS_POP_E2020_GLOBE_R2023A_54009_100/V1-0/tiles"
+)
 STEM = "GHS_POP_E2020_GLOBE_R2023A_54009_100_V1_0"
 CACHE = Path.home() / ".cache" / "shadecast" / "ghspop"
 
@@ -66,14 +72,20 @@ def coarse(aoi: AOI) -> np.ndarray:
     for row, col in tiles_for(aoi):
         try:
             tif = _local_tile(row, col)
-        except Exception:
-            continue  # ocean-only tiles are absent
+        except (requests.HTTPError, zipfile.BadZipFile, StopIteration) as exc:
+            # Ocean-only tiles are absent from the JRC listing, which is normal
+            # for coastal cities rather than a failure.
+            logger.debug("GHS-POP tile R%d_C%d unavailable: %s", row, col, exc)
+            continue
         with rasterio.open(tif) as src:
             buf = np.full(aoi.shape, np.nan, dtype="float32")
             reproject(
-                source=rasterio.band(src, 1), destination=buf,
-                src_transform=src.transform, src_crs=src.crs,
-                dst_transform=aoi.transform, dst_crs=aoi.crs,
+                source=rasterio.band(src, 1),
+                destination=buf,
+                src_transform=src.transform,
+                src_crs=src.crs,
+                dst_transform=aoi.transform,
+                dst_crs=aoi.crs,
                 dst_nodata=np.nan,
                 # Counts, not density. Nearest replicates the parent cell value
                 # into its children; we divide by the child count below so the
