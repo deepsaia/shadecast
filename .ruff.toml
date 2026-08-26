@@ -10,3 +10,7 @@ ignore = [
 
 [lint.per-file-ignores]
 "tests/*" = ["PLR2004", "ARG"]
+# A Typer command signature IS the command line interface. Its parameter count is
+# set by what the command needs to expose, not by internal design.
+"src/shadecast/cli.py" = ["PLR0913", "PLR0917"]
+"src/shadecast/surrogate_cli.py" = ["PLR0913", "PLR0917"]
