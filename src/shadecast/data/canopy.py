@@ -7,6 +7,7 @@ carries a lot of the eventual signal.
 Served as anonymous cloud-optimised GeoTIFFs on AWS Open Data. Tiles are indexed
 by a global GeoJSON footprint file which we cache once.
 """
+
 from __future__ import annotations
 
 import json
