@@ -70,6 +70,15 @@ mid-run rebuilds the environment underneath the live process and kills it.
   ~283 s. The action space should exploit that asymmetry.
 - **macOS spawns rather than forks**, so anything invoking the engine needs a
   `__main__` guard.
+- **`ruff format` reflows signatures, so patch against the formatted text.** Editing a
+  file by string replacement against what you *wrote* silently no-ops once ruff has
+  reformatted it, and the print statement still says it worked. Always read the current
+  text first. This has cost several debugging cycles.
+- **The engine truncates albedo to zero on integer land cover.** `Tgmaps_v1` substitutes
+  float albedos into `np.copy(lc_grid)`, so a uint8 or int32 raster yields an all-zero
+  albedo grid with no error. Land cover must be float32. Verified directly.
+- **Engine class code 3 is not free.** `solweig.py` hardcodes `lc_grid == 3` as water in
+  two places despite the class table listing water as 7. Cool surfaces use 4 and 8.
 - **`ruff` respects `.gitignore`.** An unanchored `data/` pattern meant to exclude
   built bundles also matched `src/shadecast/data/`, so ruff silently skipped six
   modules while reporting all checks passed. Anchor ignore patterns to the root.
