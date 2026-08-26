@@ -3,10 +3,18 @@
 import numpy as np
 import pytest
 import torch
+from scipy import ndimage
 
 from shadecast.surrogate import designs
 from shadecast.surrogate.features import IN_CHANNELS_ORDER, sky_openness, stack
-from shadecast.surrogate.metrics import aggregate_error, distance_bands, ranking, speedup
+from shadecast.surrogate.metrics import (
+    aggregate_error,
+    distance_bands,
+    ranking,
+    skill,
+    speedup,
+    zero_baseline,
+)
 from shadecast.surrogate.model import ResponseUNet
 from shadecast.surrogate.training import split_by_design
 
@@ -30,11 +38,9 @@ def test_every_family_places_only_on_feasible_ground():
 
 def test_sparse_probes_stay_beyond_the_measured_reach():
     """The whole efficiency argument depends on probes not overlapping."""
-    from scipy import ndimage
-
     grid = np.ones((600, 600), dtype=bool)
     placement = designs.sparse_probe(grid, np.random.default_rng(0))
-    labelled, count = ndimage.label(placement)
+    _, count = ndimage.label(placement)
     assert count > 10
     # Every probe is its own component, so none have merged.
     assert count == int(placement.sum())
@@ -49,8 +55,6 @@ def test_probe_count_scales_with_spacing():
 
 
 def test_clustered_is_more_contiguous_than_uniform():
-    from scipy import ndimage
-
     grid = feasible_grid()
     rng = np.random.default_rng(1)
     clustered = designs.clustered(grid, rng, coverage=0.1, blob_m=10.0)
@@ -160,3 +164,23 @@ def test_speedup_reports_the_search_cost():
     result = speedup(engine_seconds=162.0, surrogate_seconds=0.05)
     assert result["speedup"] == pytest.approx(3240.0)
     assert result["search_hours_engine"] > result["search_hours_surrogate"]
+
+
+def test_zero_baseline_is_the_mean_absolute_response():
+    truth = np.array([[0.0, 2.0], [-1.0, 0.0]])
+    assert zero_baseline(truth) == pytest.approx(0.75)
+
+
+def test_a_perfect_model_has_skill_one():
+    truth = np.random.default_rng(0).uniform(-1, 5, (30, 30))
+    assert skill(truth, truth.copy())["skill"] == pytest.approx(1.0)
+
+
+def test_a_model_worse_than_nothing_has_negative_skill():
+    """The failure mode this guards: low MAE on a mostly zero field looks fine."""
+    truth = np.zeros((30, 30))
+    truth[15, 15] = 10.0
+    noisy = np.full((30, 30), 0.5)
+    result = skill(truth, noisy)
+    assert result["skill"] < 0
+    assert not result["beats_predicting_nothing"]

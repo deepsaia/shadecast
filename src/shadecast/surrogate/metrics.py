@@ -67,6 +67,30 @@ def aggregate_error(truth: np.ndarray, predicted: np.ndarray, weights: np.ndarra
     }
 
 
+def zero_baseline(truth: np.ndarray) -> float:
+    """Error of the trivial model that predicts no change anywhere.
+
+    This is the number every reported error must be compared against. The response
+    field is mostly near zero, so a surrogate can post an impressive looking mean
+    absolute error while being strictly worse than predicting nothing at all. On one
+    sparse probe design the field mean is 0.008 C, so an MAE of 0.08 C is ten times
+    worse than doing nothing, not ten times better.
+    """
+    return float(np.abs(truth).mean())
+
+
+def skill(truth: np.ndarray, predicted: np.ndarray) -> dict:
+    """Skill against the predict-nothing baseline. Positive means it earned its keep."""
+    baseline = zero_baseline(truth)
+    model = float(np.abs(predicted - truth).mean())
+    return {
+        "mae_C": round(model, 5),
+        "zero_baseline_mae_C": round(baseline, 5),
+        "skill": round(1.0 - model / max(baseline, 1e-12), 4),
+        "beats_predicting_nothing": bool(model < baseline),
+    }
+
+
 def ranking(truth_scores: list[float], predicted_scores: list[float]) -> dict:
     """How well the surrogate orders plans, which is all a search needs."""
     if len(truth_scores) < 3:

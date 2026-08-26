@@ -103,7 +103,7 @@ def train(
             loss = criterion(model(xb), yb)
             loss.backward()
             optimiser.step()
-            running += float(loss) * len(batch)
+            running += loss.item() * len(batch)
         schedule.step()
 
         model.eval()
@@ -136,6 +136,9 @@ def train(
         "test_patches": int(test_mask.sum()),
         "held_out_designs": held_designs,
         "final_test_mae_C": history[-1]["test_mae_C"],
+        "zero_baseline_mae_C": round(float(np.abs(targets[test_mask]).mean()), 5),
+        "final_skill": round(history[-1]["skill"], 4),
+        "beats_predicting_nothing": bool(history[-1]["skill"] > 0),
         "train_seconds": round(elapsed, 1),
         "history": history,
         "checkpoint": str(out_path) if out_path else None,
