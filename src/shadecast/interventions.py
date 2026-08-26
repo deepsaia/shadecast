@@ -21,9 +21,12 @@ import numpy as np
 
 from .data.landcover import ASPHALT, COBBLE, GRASS, ROOF, SOIL
 
-# CoolBench extensions to the stock UMEP class table.
-COOL_ROOF = 3  # high-albedo roof coating
-COOL_PAVING = 4  # reflective / light-coloured paving
+# Extensions to the stock UMEP class table, installed into the engine by
+# sim.surfaces. Code 3 is deliberately skipped: solweig.py hardcodes `lc_grid == 3`
+# as water in two places for the nocturnal water temperature, so reusing it would
+# silently make cool roofs behave like ponds.
+COOL_ROOF = 4  # high-albedo roof coating
+COOL_PAVING = 8  # reflective / light-coloured paving
 
 EXTENDED_ALBEDO = {COOL_ROOF: 0.65, COOL_PAVING: 0.40}
 
