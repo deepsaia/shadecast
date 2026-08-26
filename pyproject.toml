@@ -28,10 +28,12 @@ dependencies = [
     "boto3>=1.43.80",
     "earthengine-api>=1.7.41",
     "geemap>=0.38.3",
+    "typer>=0.27.1",
+    "rich>=15.0.0",
 ]
 
 [project.scripts]
-shadecast = "shadecast.cli:main"
+shadecast = "shadecast.cli:app"
 
 [build-system]
 requires = ["hatchling"]
