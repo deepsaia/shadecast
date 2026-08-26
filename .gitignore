@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.pytest_cache/
+.ruff_cache/
+
+# Built city bundles and engine outputs are large and reproducible.
+data/
+out/
+
+# Cloned upstream repos kept for reference only.
+vendor/
