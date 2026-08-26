@@ -112,15 +112,25 @@ def train(
                 [model(x_test[i : i + batch_size]) for i in range(0, len(x_test), batch_size)]
             )
             mae = float((predicted - y_test).abs().mean())
+            # Error of the trivial model that predicts no change anywhere. The
+            # response is near zero over most of the field, so a low absolute error
+            # proves nothing on its own and every number must be read against this.
+            baseline_mae = float(y_test.abs().mean())
         history.append(
-            {"epoch": epoch, "train_loss": running / max(1, len(x_train)), "test_mae_C": mae}
+            {
+                "epoch": epoch,
+                "train_loss": running / max(1, len(x_train)),
+                "test_mae_C": mae,
+                "skill": 1.0 - mae / max(baseline_mae, 1e-12),
+            }
         )
         if epoch % 5 == 0 or epoch == 1:
             logger.info(
-                "epoch %2d: train loss %.4f, held-out MAE %.3f C",
+                "epoch %2d: train loss %.4f, held-out MAE %.4f C, skill %+.3f",
                 epoch,
                 history[-1]["train_loss"],
                 mae,
+                history[-1]["skill"],
             )
 
     elapsed = time.time() - started
