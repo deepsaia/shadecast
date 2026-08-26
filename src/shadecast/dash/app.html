@@ -4,12 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>shadecast</title>
+<meta name="description" content="An open, credential-free benchmark for urban heat adaptation planning.">
 <style>
 :root{
   --ground:#F1F4F6; --card:#FCFCFB; --card-2:#E7ECEF; --ink:#0B0B0B; --ink-2:#52514E;
   --ink-3:#6B7A84; --rule:#D6DDE2; --rule-2:#BAC5CC;
   --accent:#146B60; --accent-2:#0E524A; --accent-wash:#DDEDEA;
   --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --hot:#C0521E;
+  --ok:#1F7A4D; --pend:#8A6D1F; --pend-wash:#FBF3DC;
   --f-b:system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-m:ui-monospace,SFMono-Regular,Menlo,monospace;
 }
@@ -18,284 +20,174 @@
   --ink-3:#7C8A94; --rule:#28333B; --rule-2:#39454E;
   --accent:#5FBFAF; --accent-2:#84D3C4; --accent-wash:#132A28;
   --s1:#3987e5; --s2:#d95926; --s3:#199e70; --hot:#E08152;
+  --ok:#4FBF88; --pend:#D9B85C; --pend-wash:#241F0E;
 }}
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-b);font-size:15px;line-height:1.55}
 .wrap{max-width:74rem;margin:0 auto;padding:1.5rem 1.25rem 5rem}
-header{display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;padding-bottom:1rem;border-bottom:1px solid var(--rule-2);margin-bottom:1.5rem}
+header{display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;padding-bottom:1rem;border-bottom:1px solid var(--rule-2);margin-bottom:1.25rem}
 h1{font-size:1.35rem;margin:0;letter-spacing:-.02em}
 h1 span{color:var(--accent);font-family:var(--f-m);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;margin-left:.5rem}
 select{font-family:var(--f-b);font-size:.95rem;padding:.35rem .6rem;border:1px solid var(--rule-2);border-radius:4px;background:var(--card);color:var(--ink)}
-.step{margin:0 0 1.6rem}
-.step > h2{font-size:1rem;margin:0 0 .1rem;display:flex;align-items:baseline;gap:.6rem}
+.lede{max-width:66ch;color:var(--ink-2);font-size:.95rem;margin:0 0 1.6rem}
+.lede b{color:var(--ink)}
+.step{margin:0 0 2rem;scroll-margin-top:1rem}
+.step > h2{font-size:1.05rem;margin:0 0 .15rem;display:flex;align-items:baseline;gap:.6rem}
 .step > h2 i{font-family:var(--f-m);font-size:.7rem;color:var(--accent);font-style:normal}
-.step > p{margin:.1rem 0 .8rem;color:var(--ink-2);font-size:.9rem;max-width:70ch}
+.step > p.sub{margin:.1rem 0 .9rem;color:var(--ink-2);font-size:.9rem;max-width:72ch}
 .card{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:1rem}
 .grid{display:grid;gap:.8rem}
 .g4{grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(13rem,1fr))}
 .kv .n{font-family:var(--f-m);font-size:1.15rem;font-weight:600;letter-spacing:-.02em}
 .kv .l{font-size:.74rem;color:var(--ink-3);line-height:1.3}
 .chain{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem}
 .chip{font-family:var(--f-m);font-size:.68rem;background:var(--card-2);border:1px solid var(--rule);border-radius:3px;padding:.25rem .5rem;color:var(--ink-2)}
+/* the explainer block: definitions, not decoration */
+.why{background:var(--accent-wash);border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:5px;padding:.85rem 1rem;margin:0 0 .9rem}
+.why dl{margin:0;display:grid;gap:.55rem 2rem;grid-template-columns:1fr}
+@media(min-width:900px){.why dl{grid-template-columns:1fr 1fr}}
+.why dt{font-weight:650;font-size:.83rem;letter-spacing:-.01em}
+.why dd{margin:.1rem 0 0;font-size:.855rem;color:var(--ink-2);line-height:1.5}
+.why div{break-inside:avoid}
+.why dd em{font-style:normal;color:var(--ink);font-weight:600}
 .scrub{display:grid;grid-template-columns:minmax(0,1fr) 17rem;gap:1rem}
 @media(max-width:820px){.scrub{grid-template-columns:1fr}}
-.frame{position:relative;background:var(--card);border:1px solid var(--rule);border-radius:6px;overflow:hidden}
-.frame img{display:block;width:100%;height:auto;background:#fff}
-.frame .hour{position:absolute;top:.5rem;left:.6rem;font-family:var(--f-m);font-size:.8rem;background:rgba(0,0,0,.62);color:#fff;padding:.15rem .5rem;border-radius:3px}
-.controls{display:flex;align-items:center;gap:.7rem;margin-top:.7rem}
+.frame{position:relative;max-width:33rem;margin:0 auto;border:1px solid var(--rule);border-radius:5px;overflow:hidden;background:var(--card-2)}
+.frame canvas{display:block;width:100%;height:auto;image-rendering:auto}
+.hour{position:absolute;top:.5rem;left:.5rem;font-family:var(--f-m);font-size:.72rem;background:rgba(0,0,0,.62);color:#fff;padding:.15rem .45rem;border-radius:3px;pointer-events:none}
+.readout{position:absolute;bottom:.5rem;left:.5rem;font-family:var(--f-m);font-size:.72rem;background:rgba(0,0,0,.62);color:#fff;padding:.15rem .45rem;border-radius:3px;pointer-events:none;opacity:0;transition:opacity .12s}
+.frame:hover .readout{opacity:1}
+.ctrl{display:flex;align-items:center;gap:.6rem;margin-top:.6rem}
+button{font:inherit;font-size:.85rem;padding:.3rem .7rem;border:1px solid var(--rule-2);background:var(--card);color:var(--ink);border-radius:4px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible,.prow:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 input[type=range]{flex:1;accent-color:var(--accent)}
-button{font-family:var(--f-b);font-size:.85rem;padding:.35rem .8rem;border:1px solid var(--rule-2);border-radius:4px;background:var(--card);color:var(--ink);cursor:pointer}
-button:hover{border-color:var(--accent);color:var(--accent)}
-button[aria-pressed=true]{background:var(--accent);color:var(--card);border-color:var(--accent)}
-svg{display:block;width:100%;height:auto}
-.grid-l{stroke:var(--rule);stroke-width:1}
-.ax{font-family:var(--f-m);font-size:9px;fill:var(--ink-3)}
-.lbl{font-family:var(--f-b);font-size:11px;font-weight:600}
-.plans{display:grid;grid-template-columns:20rem minmax(0,1fr);gap:1rem}
-@media(max-width:900px){.plans{grid-template-columns:1fr}}
-.plist{max-height:24rem;overflow-y:auto;border:1px solid var(--rule);border-radius:6px;background:var(--card)}
-.prow{display:grid;grid-template-columns:1.1rem 1fr auto;gap:.5rem;align-items:center;padding:.45rem .7rem;border-bottom:1px solid var(--rule);cursor:pointer;font-size:.84rem}
-.prow:last-child{border-bottom:none}
-.prow:hover{background:var(--card-2)}
-.prow[aria-selected=true]{background:var(--accent-wash);color:var(--ink)}
-.prow .sw{width:10px;height:10px;border-radius:50%}
-.prow .c{font-family:var(--f-m);font-size:.75rem;color:var(--ink-3)}
-.maps{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:6px;overflow:hidden}
-.maps figure{margin:0;background:var(--card)}
-.maps figcaption{font-family:var(--f-m);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);padding:.45rem .6rem .1rem}
-.maps img{display:block;width:100%;height:auto;background:#fff}
-.outcome{display:grid;grid-template-columns:repeat(auto-fit,minmax(8rem,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:6px;overflow:hidden;margin-top:.8rem}
-.outcome div{background:var(--card);padding:.7rem .8rem}
-.legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.8rem;color:var(--ink-2);margin-top:.5rem}
-.legend span{display:inline-flex;align-items:center;gap:.35rem}
-.dot{width:10px;height:10px;border-radius:50%}
-.ramp{height:9px;border-radius:2px;border:1px solid var(--rule);background:linear-gradient(90deg,#fdf3e7,#f7c99a,#eb8f4e,#d1552a,#7e2412)}
-.rampc{height:9px;border-radius:2px;border:1px solid var(--rule);background:linear-gradient(90deg,#f4f7fb,#b9d3ef,#6ba3de,#2a78d6,#17457c)}
-.sc{display:flex;align-items:center;gap:.6rem;font-family:var(--f-m);font-size:.68rem;color:var(--ink-3);margin-top:.5rem}
-.sc > div{flex:1;max-width:14rem}
-footer{margin-top:2.5rem;padding-top:1.2rem;border-top:1px solid var(--rule-2);font-family:var(--f-m);font-size:.7rem;color:var(--ink-3);line-height:1.7}
+.sc{display:flex;align-items:center;gap:.5rem;margin-top:.5rem;font-size:.72rem;color:var(--ink-3)}
+.ramp{height:8px;flex:1;border-radius:2px;border:1px solid var(--rule)}
+.maps{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+.maps figure{margin:0}
+.maps figcaption{font-size:.72rem;color:var(--ink-3);margin-bottom:.25rem}
+.maps canvas{display:block;width:100%;height:auto;aspect-ratio:1;border:1px solid var(--rule);border-radius:4px;background:var(--card-2)}
+.plist{max-height:19rem;overflow:auto;border:1px solid var(--rule);border-radius:5px}
+.prow{display:grid;grid-template-columns:1fr auto auto;gap:.5rem;padding:.4rem .6rem;font-size:.8rem;border-bottom:1px solid var(--rule);cursor:pointer}
+.prow:last-child{border-bottom:0}
+.prow[aria-selected=true]{background:var(--accent-wash)}
+.prow .m{font-family:var(--f-m);font-size:.75rem;color:var(--ink-2)}
+.outcome{margin-top:.7rem;font-size:.85rem;color:var(--ink-2)}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th,td{text-align:left;padding:.35rem .5rem;border-bottom:1px solid var(--rule)}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:600}
+td.n{font-family:var(--f-m);text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-flex;align-items:center;gap:.3rem;font-family:var(--f-m);font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;padding:.15rem .45rem;border-radius:3px;border:1px solid var(--rule-2)}
+.tag.ok{color:var(--ok);border-color:var(--ok)}
+.tag.pend{color:var(--pend);border-color:var(--pend);background:var(--pend-wash)}
+.hyp{display:grid;gap:.5rem;margin:.6rem 0 0}
+.hyp li{list-style:none;display:grid;grid-template-columns:auto 1fr;gap:.55rem;align-items:start;font-size:.85rem;color:var(--ink-2)}
+.hyp code{font-family:var(--f-m);font-size:.74rem;color:var(--accent);font-weight:650}
+.scrollx{overflow-x:auto}
+figure.chart{margin:0;min-height:2rem}
+svg{display:block;max-width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:.7rem;font-size:.72rem;color:var(--ink-2);margin-top:.4rem}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:.3rem;vertical-align:-1px}
+footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--rule-2);font-size:.8rem;color:var(--ink-3)}
+a{color:var(--accent)}
+.loading{padding:2rem;text-align:center;color:var(--ink-3);font-family:var(--f-m);font-size:.8rem}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
-  <h1>shadecast <span>city walkthrough</span></h1>
+  <h1>shadecast <span>walkthrough</span></h1>
   <select id="city" aria-label="Choose a city"></select>
   <span id="citymeta" style="font-family:var(--f-m);font-size:.75rem;color:var(--ink-3)"></span>
 </header>
 
-<section class="step">
-  <h2><i>01</i> What we assembled</h2>
-  <p>Every layer pulled from open global sources. No account, key or quota anywhere. The study area is chosen by population density rather than by hand, because a city centre coordinate usually lands in a commercial district that is empty at night.</p>
-  <div class="card">
-    <div class="grid g4" id="prov"></div>
-    <div class="chain" id="sources"></div>
-  </div>
-</section>
+<p class="lede">An open benchmark for <b>urban heat adaptation planning</b>. Given a city and a budget,
+which cooling measures should you build, and where? Every layer comes from public data with
+<b>no API key at any step</b>, every number below comes from a real physics run, and every hypothesis was
+written down before it was tested. This page walks the pipeline end to end.</p>
 
-<section class="step">
-  <h2><i>02</i> The heat we simulated</h2>
-  <p>Mean radiant temperature through the design day, the hottest day observed in five years. Drag the slider: the shade pattern sweeps across the city as the sun moves, which is the structure a single map hides.</p>
-  <div class="scrub">
-    <div>
-      <div class="frame"><span class="hour" id="hourlbl"></span><img id="frame" alt="Mean radiant temperature"></div>
-      <div class="controls">
-        <button id="play" aria-pressed="false">Play</button>
-        <input type="range" id="hour" min="0" max="23" value="15" aria-label="Hour of day">
-        <span class="c" style="font-family:var(--f-m);font-size:.78rem;color:var(--ink-3)" id="hourstat"></span>
-      </div>
-      <div class="sc"><span>cooler</span><div class="ramp"></div><span>hotter</span><span id="scalelbl"></span></div>
-    </div>
-    <div class="card">
-      <div style="font-size:.8rem;color:var(--ink-3);margin-bottom:.4rem">Air temperature and sunlight</div>
-      <div id="metchart"></div>
-      <div class="legend">
-        <span><i class="dot" style="background:var(--s2)"></i> air temp</span>
-        <span><i class="dot" style="background:var(--s1)"></i> solar</span>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="step">
-  <h2><i>03</i> The plans we tested</h2>
-  <p>Every point is a real physics run. Right is more cooling, up is more people moved below the 45&nbsp;C danger threshold. Each curve is one arrangement traced from the smallest budget to the largest. <strong>Where curves cross, the two objectives disagree about what to build.</strong></p>
-  <div class="plans">
-    <div>
-      <div id="tradeoff" class="card" style="padding:.6rem"></div>
-      <div class="legend">
-        <span><i class="dot" style="background:var(--s1)"></i> clustered, what greedy produces</span>
-        <span><i class="dot" style="background:var(--s2)"></i> scattered</span>
-        <span><i class="dot" style="background:var(--s3)"></i> corridor</span>
-      </div>
-      <div class="plist" id="plist" style="margin-top:.8rem"></div>
-    </div>
-    <div>
-      <div class="maps">
-        <figure><figcaption>where the trees go</figcaption><img id="mplace" alt="Tree placement"></figure>
-        <figure><figcaption>cooling delivered</figcaption><img id="mcool" alt="Cooling delivered"></figure>
-      </div>
-      <div class="sc"><span>0</span><div class="rampc"></div><span>max</span><span>shared scale, non-linear</span></div>
-      <div class="outcome" id="outcome"></div>
-    </div>
-  </div>
-</section>
+<div id="app"><div class="loading">loading…</div></div>
 
 <footer>
-  Every number is a real SOLWEIG run at 1 m resolution, not a surrogate.<br>
-  shadecast &middot; served locally from a static bundle
+  Built by <a href="https://github.com/deepsaia/shadecast">shadecast</a>. Physics by SOLWEIG.
+  Maps are rendered in your browser from raw model output, so hovering reads the actual value.
 </footer>
 </div>
-
 <script>
-const S = {data:null, city:null, hour:15, plan:null, timer:null};
-const COL = {clustered:"var(--s1)", scattered:"var(--s2)", corridor:"var(--s3)"};
 const $ = id => document.getElementById(id);
-const fmt = n => n.toLocaleString();
+const S = {data:null, city:null, plan:null, hour:15, playing:false, atlas:{}};
+const BASE = "";
 
-async function boot(){
-  S.data = await (await fetch("index.json")).json();
-  const sel = $("city");
-  S.data.cities.forEach(c => {
-    const o = document.createElement("option");
-    o.value = c.city; o.textContent = c.name; sel.appendChild(o);
-  });
-  sel.onchange = () => select(sel.value);
-  select(S.data.cities[0].city);
+/* ---------- colour ramps: single hue, light to dark, per sequential-data practice ---- */
+const RAMP_HEAT = [[253,243,231],[247,201,154],[235,143,78],[209,85,42],[126,36,18]];
+const RAMP_COOL = [[244,247,251],[185,211,239],[107,163,222],[42,120,214],[23,69,124]];
+const RAMP_PLACE= [[255,255,255],[27,175,122]];
+function ramp(stops,t){
+  const n=stops.length-1, i=Math.min(n-1,Math.floor(t*n)), f=t*n-i;
+  const a=stops[i], b=stops[i+1];
+  return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f];
 }
 
-function select(key){
-  S.city = S.data.cities.find(c => c.city === key);
-  S.hour = 15; S.plan = S.city.plans.length ? S.city.plans[0].id : null;
-  renderProv(); renderMet(); renderTradeoff(); renderList(); renderFrame(); renderPlan();
+/* ---------- atlases: a greyscale PNG is a data container, decoded back to numbers ---- */
+async function loadAtlas(meta){
+  if(!meta || !meta.file) return null;
+  if(S.atlas[meta.file]) return S.atlas[meta.file];
+  const img = new Image();
+  // onload rather than decode(): decode() never settles in some engines, which used to
+  // leave the whole page stuck on "loading" because one image had not resolved.
+  const ready = new Promise((res,rej)=>{ img.onload=res; img.onerror=()=>rej(new Error(meta.file)); });
+  img.src = BASE + meta.file;
+  try{ await ready; }catch(e){ console.warn("atlas failed:",meta.file); return null; }
+  const c = document.createElement("canvas");
+  c.width = img.width; c.height = img.height;
+  const g = c.getContext("2d",{willReadFrequently:true});
+  g.drawImage(img,0,0);
+  const px = g.getImageData(0,0,img.width,img.height).data;
+  const v = new Uint8Array(img.width*img.height);
+  for(let i=0;i<v.length;i++) v[i]=px[i*4];
+  const A = Object.assign({},meta,{v, W:img.width, H:img.height});
+  S.atlas[meta.file]=A;
+  return A;
 }
-
-function renderProv(){
-  const p = S.city.provenance, b = S.city.baseline;
-  $("citymeta").textContent = `${p.lat.toFixed(4)}, ${p.lon.toFixed(4)} · design day ${p.design_day} · tier ${p.tier}`;
-  const cells = [
-    [fmt(p.buildings), "buildings mapped"],
-    [(p.built_fraction*100).toFixed(0)+"%", "ground built on"],
-    [(p.canopy*100).toFixed(1)+"%", "existing canopy"],
-    [p.population ? fmt(Math.round(p.population)) : "n/a", "residents"],
-    [b.exposure.toFixed(1)+" C", "baseline outdoor Tmrt"],
-    [fmt(b.at_risk), "above 45 C"],
-  ];
-  $("prov").innerHTML = cells.map(([n,l]) =>
-    `<div class="kv"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
-  $("sources").innerHTML = Object.entries(p.sources).map(([k,v]) =>
-    `<span class="chip">${k}: ${v}</span>`).join("");
+function tileValue(A,tile,x,y){
+  const r=Math.floor(tile/A.columns), c=tile%A.columns;
+  const raw = A.v[(r*A.tile_h+y)*A.W + (c*A.tile_w+x)];
+  if(raw===0) return null;
+  return A.vmin + (raw-1)/254*(A.vmax-A.vmin);
 }
-
-function renderMet(){
-  const m = S.city.met, W=250, H=140, PL=30, PR=26, PT=10, PB=22;
-  if(!m.length){ $("metchart").innerHTML=""; return; }
-  const tmax = Math.max(...m.map(d=>d.air_c)), tmin = Math.min(...m.map(d=>d.air_c));
-  const smax = Math.max(...m.map(d=>d.solar), 1);
-  const X = h => PL + (h/23)*(W-PL-PR);
-  const Yt = v => H-PB - ((v-tmin)/(tmax-tmin||1))*(H-PT-PB);
-  const Ys = v => H-PB - (v/smax)*(H-PT-PB);
-  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Air temperature and solar through the day">`;
-  s += `<path d="${m.map((d,i)=>`${i?"L":"M"}${X(d.hour).toFixed(1)},${Ys(d.solar).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--s1)" stroke-width="1.6" opacity=".55"/>`;
-  s += `<path d="${m.map((d,i)=>`${i?"L":"M"}${X(d.hour).toFixed(1)},${Yt(d.air_c).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--s2)" stroke-width="2"/>`;
-  s += `<line id="metcursor" x1="0" y1="${PT}" x2="0" y2="${H-PB}" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="3 3"/>`;
-  s += `<text x="${PL-5}" y="${Yt(tmax)+3}" class="ax" text-anchor="end">${tmax.toFixed(0)}C</text>`;
-  s += `<text x="${PL-5}" y="${Yt(tmin)+3}" class="ax" text-anchor="end">${tmin.toFixed(0)}C</text>`;
-  [0,6,12,18,23].forEach(h => s += `<text x="${X(h).toFixed(1)}" y="${H-6}" class="ax" text-anchor="middle">${h}</text>`);
-  s += `</svg>`;
-  $("metchart").innerHTML = s;
-  moveCursor();
-}
-
-function moveCursor(){
-  const c = document.getElementById("metcursor");
-  if(!c) return;
-  const W=250, PL=30, PR=26;
-  const x = PL + (S.hour/23)*(W-PL-PR);
-  c.setAttribute("x1", x); c.setAttribute("x2", x);
-}
-
-function renderFrame(){
-  const f = S.city.frames[S.hour];
-  if(!f){ $("frame").removeAttribute("src"); return; }
-  $("frame").src = f.img;
-  $("hourlbl").textContent = String(f.hour).padStart(2,"0") + ":00";
-  $("hourstat").textContent = `shade ${f.min} C · median ${f.median} C · sun ${f.max} C`;
-  const all = S.city.frames;
-  $("scalelbl").textContent = `${Math.min(...all.map(x=>x.min)).toFixed(0)} to ${Math.max(...all.map(x=>x.max)).toFixed(0)} C, one scale all day`;
-  $("hour").value = S.hour;
-  moveCursor();
-}
-
-function renderTradeoff(){
-  const P = S.city.plans, W=430, H=290, PL=52, PR=18, PT=14, PB=34;
-  if(!P.length){ $("tradeoff").innerHTML=""; return; }
-  const xmax = Math.max(...P.map(p=>p.exposure_drop))*1.12;
-  const ymax = Math.max(...P.map(p=>p.people))*1.12 || 1;
-  const X = v => PL + (v/xmax)*(W-PL-PR);
-  const Y = v => H-PB - (v/ymax)*(H-PT-PB);
-  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Exposure against people, by arrangement">`;
-  for(let i=0;i<4;i++){
-    const gy = ymax*i/3, y = Y(gy);
-    s += `<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" class="grid-l"/>`;
-    s += `<text x="${PL-6}" y="${(y+3.5).toFixed(1)}" class="ax" text-anchor="end">${ymax>3000?(gy/1000).toFixed(0)+"k":gy.toFixed(0)}</text>`;
+function drawTile(canvas,A,tile,stops,opts){
+  if(!A) return;
+  const {tile_w:tw,tile_h:th,columns:cols}=A;
+  const r=Math.floor(tile/cols), c=tile%cols;
+  canvas.width=tw; canvas.height=th;
+  const g=canvas.getContext("2d");
+  const out=g.createImageData(tw,th);
+  const floor = (opts&&opts.floor)||0;
+  for(let y=0;y<th;y++) for(let x=0;x<tw;x++){
+    const raw=A.v[(r*th+y)*A.W+(c*tw+x)];
+    const o=(y*tw+x)*4;
+    if(raw===0 || raw<=floor){ out.data[o+3]=0; continue; }
+    const [R,G,B]=ramp(stops,(raw-1)/254);
+    out.data[o]=R; out.data[o+1]=G; out.data[o+2]=B; out.data[o+3]=255;
   }
-  for(let i=0;i<4;i++){
-    const gx = xmax*i/3;
-    s += `<text x="${X(gx).toFixed(1)}" y="${H-PB+16}" class="ax" text-anchor="middle">${gx.toFixed(1)}</text>`;
-  }
-  ["clustered","scattered","corridor"].forEach(arr => {
-    const pts = P.filter(p=>p.arrangement===arr).sort((a,b)=>a.coverage-b.coverage);
-    if(!pts.length) return;
-    s += `<path d="${pts.map((p,i)=>`${i?"L":"M"}${X(p.exposure_drop).toFixed(1)},${Y(p.people).toFixed(1)}`).join(" ")}" fill="none" stroke="${COL[arr]}" stroke-width="2" stroke-linecap="round"/>`;
-    pts.forEach(p => {
-      const on = p.id===S.plan;
-      s += `<circle class="pt" data-id="${p.id}" cx="${X(p.exposure_drop).toFixed(1)}" cy="${Y(p.people).toFixed(1)}" r="${on?7:4.5}" fill="${COL[arr]}" stroke="var(--card)" stroke-width="${on?3:1.5}" style="cursor:pointer"><title>${p.id}: ${(p.coverage*100).toFixed(1)}% coverage, $${p.cost_m}M</title></circle>`;
-    });
-    const last = pts[pts.length-1];
-    const end = X(last.exposure_drop) > W*0.6;
-    s += `<text x="${(X(last.exposure_drop)+(end?-8:8)).toFixed(1)}" y="${(Y(last.people)-9).toFixed(1)}" class="lbl" fill="${COL[arr]}" text-anchor="${end?"end":"start"}">${arr}</text>`;
+  g.putImageData(out,0,0);
+}
+function attachReadout(canvas,readout,getAtlas,getTile,unit){
+  canvas.addEventListener("mousemove",e=>{
+    const A=getAtlas(); if(!A) return;
+    const b=canvas.getBoundingClientRect();
+    const x=Math.floor((e.clientX-b.left)/b.width*A.tile_w);
+    const y=Math.floor((e.clientY-b.top)/b.height*A.tile_h);
+    if(x<0||y<0||x>=A.tile_w||y>=A.tile_h) return;
+    const v=tileValue(A,getTile(),x,y);
+    readout.textContent = v===null ? "no data" : v.toFixed(1)+unit;
   });
-  s += `<text x="${((W-PL)/2+PL).toFixed(0)}" y="${H-4}" class="ax" text-anchor="middle">mean exposure drop (C)</text>`;
-  s += `</svg>`;
-  $("tradeoff").innerHTML = s;
-  $("tradeoff").querySelectorAll(".pt").forEach(el =>
-    el.onclick = () => { S.plan = el.dataset.id; renderTradeoff(); renderList(); renderPlan(); });
 }
-
-function renderList(){
-  $("plist").innerHTML = S.city.plans.map(p =>
-    `<div class="prow" data-id="${p.id}" aria-selected="${p.id===S.plan}">
-       <i class="sw" style="background:${COL[p.arrangement]}"></i>
-       <span>${p.arrangement} <span class="c">${(p.coverage*100).toFixed(1)}%</span></span>
-       <span class="c">$${p.cost_m}M</span></div>`).join("");
-  $("plist").querySelectorAll(".prow").forEach(el =>
-    el.onclick = () => { S.plan = el.dataset.id; renderTradeoff(); renderList(); renderPlan(); });
-}
-
-function renderPlan(){
-  const p = S.city.plans.find(x=>x.id===S.plan);
-  if(!p){ $("outcome").innerHTML=""; return; }
-  $("mplace").src = p.place_img; $("mcool").src = p.cool_img;
-  const cells = [
-    [fmt(p.trees), "trees planted"],
-    ["$"+p.cost_m+"M", "cost"],
-    [p.exposure_drop.toFixed(2)+" C", "mean exposure drop"],
-    [fmt(p.people), "moved below 45 C"],
-    [p.efficiency.toFixed(1), "reduction per $1k"],
-  ];
-  $("outcome").innerHTML = cells.map(([n,l]) =>
-    `<div class="kv"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
-}
-
-$("hour").oninput = e => { S.hour = +e.target.value; renderFrame(); };
-$("play").onclick = () => {
-  const btn = $("play"), on = btn.getAttribute("aria-pressed")==="true";
-  if(on){ clearInterval(S.timer); S.timer=null; btn.setAttribute("aria-pressed","false"); btn.textContent="Play"; }
-  else { btn.setAttribute("aria-pressed","true"); btn.textContent="Pause";
-    S.timer = setInterval(()=>{ S.hour=(S.hour+1)%24; renderFrame(); }, 320); }
-};
-boot();
+const fmt = (n,d=0)=> n===null||n===undefined||!isFinite(n) ? "—" : Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 </script>
+<script src="app.js"></script>
 </body>
 </html>
