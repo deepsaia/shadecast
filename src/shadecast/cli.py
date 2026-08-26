@@ -21,6 +21,7 @@ import typer
 from .build import build_city
 from .cities import CORPUS, summary
 from .console import add_build_row, build_table, console, corpus_table, error_console, result_table
+from .dash_cli import app as dash_app
 from .logging_setup import configure
 from .pipeline import evaluate
 from .sim.runner import run as run_engine
@@ -40,6 +41,7 @@ app = typer.Typer(
 
 
 app.add_typer(surrogate_app, name="surrogate")
+app.add_typer(dash_app, name="dash")
 
 
 @app.callback()
