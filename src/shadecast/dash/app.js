@@ -310,14 +310,17 @@ function stepPlans(c){
       <div style="font-size:.74rem;color:var(--ink-3);margin-bottom:.3rem">Every generated plan, scored on both objectives</div>
       <figure class="chart" id="tradeoff"></figure>
       <div class="legend"><span><i style="background:var(--s2)"></i>clustered</span><span><i style="background:var(--s1)"></i>scattered</span><span><i style="background:var(--s3)"></i>corridor</span></div>
-      <div class="plist" id="plist"></div>
     </div>
     <div class="card">
-      <div class="maps">
-        <figure><figcaption>where the trees go</figcaption><canvas id="mplace"></canvas></figure>
-        <figure><figcaption>cooling delivered (°C)</figcaption><canvas id="mcool"></canvas></figure>
-      </div>
+      <div style="font-size:.74rem;color:var(--ink-3);margin-bottom:.3rem">Pick a plan</div>
+      <div class="plist" id="plist"></div>
       <div class="outcome" id="outcome"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:.8rem">
+    <div class="maps">
+      <figure><figcaption>where the trees go</figcaption><canvas id="mplace"></canvas></figure>
+      <figure><figcaption>cooling delivered (°C), hover to read</figcaption><canvas id="mcool"></canvas></figure>
     </div>
   </div></section>`;
 }
