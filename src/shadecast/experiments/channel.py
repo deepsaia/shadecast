@@ -159,5 +159,9 @@ def run_channel(cities: list[tuple[str, Path, Path]], out_path: Path, *, budget:
                 work_root=Path("out/channel"),
             )
         )
-        Path(out_path).write_text(json.dumps({"rows": rows, "verdict": verdict(rows)}, indent=2))
-    return {"rows": rows, "verdict": verdict(rows)}
+        running = {"rows": rows, "verdict": verdict(rows), "complete": False}
+        Path(out_path).write_text(json.dumps(running, indent=2))
+    # Only now is the result a finding rather than a run in progress.
+    payload = {"rows": rows, "verdict": verdict(rows), "complete": True}
+    Path(out_path).write_text(json.dumps(payload, indent=2))
+    return payload
