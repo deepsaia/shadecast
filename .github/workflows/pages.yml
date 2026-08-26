@@ -1,0 +1,69 @@
+name: Publish walkthrough
+
+# Fires on every merge into main, so a merged pull request refreshes the public page.
+# The bundle is published as committed, not rebuilt here: building it needs the city
+# bundles, the surrogate baselines and the engine outputs, which are gigabytes of
+# gitignored local data that no runner has. Rebuild with `shadecast dash build --out docs`
+# and commit the result as part of the change that alters it.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two publishes race. Queue rather than cancel, so the last merge to land is
+# the one that ends up live rather than whichever happens to finish first.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the bundle is publishable
+        run: |
+          set -euo pipefail
+          for required in docs/index.html docs/index.json docs/app.js; do
+            [ -f "$required" ] || { echo "missing $required"; exit 1; }
+          done
+          python3 - <<'PY'
+          import json, pathlib, sys
+          payload = json.loads(pathlib.Path("docs/index.json").read_text())
+          cities = payload.get("cities", [])
+          if not cities:
+              sys.exit("index.json carries no cities")
+          # Every atlas the page asks for must actually be in the bundle, or the
+          # published maps come out blank and nothing here would have said so.
+          missing = []
+          for city in cities:
+              for meta in (city.get("hours"), city.get("context"),
+                           city.get("plans", {}).get("cooling"),
+                           city.get("plans", {}).get("placement")):
+                  name = (meta or {}).get("file")
+                  if name and not pathlib.Path("docs", name).exists():
+                      missing.append(name)
+          if missing:
+              sys.exit(f"bundle references missing files: {missing}")
+          settled = [k for k, v in payload.get("findings", {}).items()
+                     if v.get("status") == "done"]
+          print(f"{len(cities)} cities, {len(settled)} settled findings: {', '.join(settled)}")
+          PY
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -86,6 +86,7 @@ def build_command(
     tile_size: int,
     save_svf: bool,
     save_shadow: bool,
+    landcover: str | None = None,
 ) -> list[str]:
     """Assemble the engine invocation for one bundle."""
     command = [
@@ -121,6 +122,11 @@ def build_command(
         "--save_shadow",
         str(save_shadow),
     ]
+    if landcover:
+        # Only pass land cover when an intervention actually changes surface albedo.
+        # Without it the engine uses a uniform 0.15, which is the setting every plan
+        # before the intervention-type experiment ran under.
+        command += ["--landcover", landcover]
     if start:
         command += ["--start", start]
     if end:
@@ -137,6 +143,7 @@ def run(
     tile_size: int = 1100,
     save_svf: bool = True,
     save_shadow: bool = True,
+    landcover: str | None = None,
     timeout: int = 7200,
 ) -> RunResult:
     """Run SOLWEIG over a prepared bundle directory.
@@ -157,6 +164,7 @@ def run(
         tile_size=tile_size,
         save_svf=save_svf,
         save_shadow=save_shadow,
+        landcover=landcover,
     )
     logger.info("running engine over %s for %s", base_path, date)
 

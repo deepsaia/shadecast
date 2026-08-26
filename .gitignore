@@ -23,3 +23,6 @@ data/dash/
 docs/_*.json
 docs/_*.svg
 docs/figures/
+
+# Local download cache for open data fetches.
+/cache/

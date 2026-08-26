@@ -1,13 +1,13 @@
-"""Build the static bundle the dashboard serves.
+"""Build the static bundle the walkthrough serves.
 
-Everything the browser needs is precomputed to disk: one JSON index plus PNG frames.
-The server is then a plain static file server with no application logic, which keeps
-the dependency surface at zero beyond the standard library and makes the whole
-bundle trivially publishable or archived alongside a paper.
+Everything the browser needs is precomputed to disk: one JSON index plus a handful of
+greyscale atlases. There is no application logic on the server, so the bundle is a pile
+of plain files that can be zipped, archived beside a paper, or published to GitHub Pages
+without a build step or a CDN.
 
-The hourly Tmrt frames are the reason this exists. A single map of a design day
-hides the thing that actually matters, which is that the shade pattern sweeps across
-the city as the sun moves. Scrubbing through 24 frames shows that directly.
+Fields ship as data rather than as pictures. See `encode`: the colour ramp is applied in
+the browser, which is what lets a visitor hover a pixel and read its temperature, scrub
+the day without a network round trip, and download one file instead of twenty four.
 """
 
 from __future__ import annotations
@@ -19,15 +19,15 @@ from pathlib import Path
 import numpy as np
 import rasterio
 
-from .. import viz
+from ..experiments.factorial import verdict as factorial_verdict
 from ..exposure import outdoor_mask, outdoor_weights
 from ..interventions import cost
 from ..objectives import benefit, score
+from . import encode, findings
 
 logger = logging.getLogger(__name__)
 
-FRAME_PX = 420
-MAP_PX = 460
+TILE_PX = 320
 ARRANGEMENT = {"clustered": "clustered", "random": "scattered", "corridor": "corridor"}
 
 
@@ -36,113 +36,102 @@ def read(path: Path, band: int = 1) -> np.ndarray:
         return src.read(band)
 
 
-def hourly_frames(tmrt_path: Path, out_dir: Path, city: str) -> list[dict]:
-    """Render one PNG per hour on a single shared scale across the whole day."""
+def hourly_atlas(tmrt_path: Path, out_dir: Path, city: str) -> dict:
+    """Every hour of the design day in one greyscale sheet, on one shared scale.
+
+    One scale across the whole day is deliberate. Rescaling each hour to its own range
+    would hide the very thing the animation exists to show, which is that the city heats
+    and cools while the shade pattern sweeps across it.
+    """
     with rasterio.open(tmrt_path) as src:
         bands = [src.read(b + 1) for b in range(src.count)]
-    stacked = np.stack(bands)
-    # One scale for all 24 hours, or the animation would rescale itself and hide
-    # the very thing it exists to show.
-    vmin, vmax = float(stacked.min()), float(stacked.max())
-    frames = []
-    for hour, field in enumerate(bands):
-        name = f"{city}_tmrt_{hour:02d}.png"
-        viz.temperature(field, out_dir / name, vmin=vmin, vmax=vmax, size_px=FRAME_PX)
-        frames.append(
-            {
-                "hour": hour,
-                "img": name,
-                "min": round(float(field.min()), 1),
-                "median": round(float(np.median(field)), 1),
-                "max": round(float(field.max()), 1),
-            }
-        )
-    return frames
+    meta = encode.atlas(bands, out_dir / f"{city}_hours.png", size=TILE_PX, columns=6)
+    meta["hours"] = [
+        {"hour": h, "median": round(float(np.median(f)), 1), "max": round(float(f.max()), 1)}
+        for h, f in enumerate(bands)
+    ]
+    return meta
 
 
-def plan_entries(city: str, surrogate_dir: Path, out_dir: Path, layers: dict) -> list[dict]:
-    """Score and render every generated plan for one city."""
+def plan_entries(city: str, surrogate_dir: Path, out_dir: Path, layers: dict) -> dict:
+    """Score every generated plan, and pack their fields into two atlases."""
     baseline = score(np.where(layers["outdoor"], layers["baseline"], 0), layers["weights"], 0.0)
     responses = sorted(surrogate_dir.glob("*/response.npz"))
-    scales = []
-    for path in responses:
-        if path.parent.name.startswith("sparse"):
-            continue
-        scales.append(np.percentile(np.load(path)["response"], 99.9))
-    shared_vmax = float(max(scales)) if scales else 1.0
 
-    entries = []
+    entries, cooling, placement = [], [], []
     for path in responses:
         design = path.parent.name
         family = ARRANGEMENT.get(design.split("_")[0])
         if family is None:
             continue
         payload = np.load(path)
-        placement, response = payload["placement"], payload["response"]
-        spent = cost("tree", placement, 1.0)
-        after = score(
-            np.where(layers["outdoor"], layers["baseline"] - response, 0),
-            layers["weights"],
-            spent,
+        place, response = payload["placement"], payload["response"]
+        spent = cost("tree", place, 1.0)
+        gain = benefit(
+            baseline,
+            score(
+                np.where(layers["outdoor"], layers["baseline"] - response, 0),
+                layers["weights"],
+                spent,
+            ),
         )
-        gain = benefit(baseline, after)
-
-        place_img = f"{city}_{design}_place.png"
-        cool_img = f"{city}_{design}_cool.png"
-        viz.placement(
-            placement, out_dir / place_img, buildings=layers["building_height"], size_px=MAP_PX
-        )
-        viz.cooling(
-            response,
-            out_dir / cool_img,
-            vmax=shared_vmax,
-            buildings=layers["building_height"],
-            size_px=MAP_PX,
-        )
-
         entries.append(
             {
                 "id": design,
                 "arrangement": family,
-                "coverage": round(float(placement.mean()), 4),
-                "trees": int(placement.sum()),
+                "coverage": round(float(place.mean()), 4),
+                "trees": int(place.sum()),
                 "cost_m": round(spent / 1e6, 2),
                 "exposure_drop": gain["delta_exposure_C"],
                 "people": round(gain["delta_people_at_risk"]),
                 "efficiency": gain["excess_reduced_per_1k_usd"],
-                "place_img": place_img,
-                "cool_img": cool_img,
             }
         )
-    entries.sort(key=lambda e: (e["arrangement"], e["coverage"]))
-    return entries
+        cooling.append(response)
+        placement.append(place.astype(np.float32))
+
+    order = sorted(
+        range(len(entries)), key=lambda i: (entries[i]["arrangement"], entries[i]["coverage"])
+    )
+    entries = [entries[i] for i in order]
+    for slot, entry in enumerate(entries):
+        entry["tile"] = slot
+    return {
+        "list": entries,
+        "cooling": encode.atlas(
+            [cooling[i] for i in order], out_dir / f"{city}_cool.png", size=TILE_PX, columns=5
+        ),
+        "placement": encode.atlas(
+            [placement[i] for i in order], out_dir / f"{city}_place.png", size=TILE_PX, columns=5
+        ),
+    }
 
 
 def build_city(city: str, bundle: Path, surrogate_dir: Path, out_dir: Path) -> dict:
-    """Assemble one city's dashboard payload."""
+    """Assemble one city's payload."""
     bundle, surrogate_dir, out_dir = Path(bundle), Path(surrogate_dir), Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     provenance = json.loads((bundle / "provenance.json").read_text())
 
     heights = np.maximum(read(bundle / "Building_DSM.tif") - read(bundle / "DEM.tif"), 0)
+    population = read(bundle / "population.tif")
     layers = {
         "building_height": heights,
-        "canopy": read(bundle / "Trees.tif"),
-        "population": read(bundle / "population.tif"),
         "outdoor": outdoor_mask(heights),
-        "weights": outdoor_weights(read(bundle / "population.tif"), heights),
+        "weights": outdoor_weights(population, heights),
         "baseline": np.load(surrogate_dir / "baseline" / "tmrt_daylight.npy"),
     }
 
     tmrt_path = surrogate_dir / "baseline" / "output_folder" / "0_0" / "TMRT_0_0.tif"
-    frames = hourly_frames(tmrt_path, out_dir, city) if tmrt_path.exists() else []
+    hours = hourly_atlas(tmrt_path, out_dir, city) if tmrt_path.exists() else {}
+    context = encode.atlas([heights], out_dir / f"{city}_ctx.png", size=TILE_PX, columns=1)
 
     baseline_score = score(
         np.where(layers["outdoor"], layers["baseline"], 0), layers["weights"], 0.0
     )
     met = np.loadtxt(bundle / "met.txt", skiprows=1)
 
-    logger.info("%s: %d hourly frames, scoring plans", city, len(frames))
+    logger.info("%s: %d hourly frames", city, hours.get("count", 0))
     return {
         "city": city,
         "name": provenance["city"]["name"] if "city" in provenance else city.title(),
@@ -167,11 +156,26 @@ def build_city(city: str, bundle: Path, surrogate_dir: Path, out_dir: Path) -> d
             "exposure": round(baseline_score.exposure, 2),
             "at_risk": round(baseline_score.people_at_risk),
         },
-        # Air temperature and solar for the scrubber's context strip.
         "met": [
             {"hour": int(r[2]), "air_c": round(float(r[11]), 1), "solar": round(float(r[14]), 0)}
             for r in met
         ],
-        "frames": frames,
+        "hours": hours,
+        "context": context,
         "plans": plan_entries(city, surrogate_dir, out_dir, layers),
     }
+
+
+def build_index(cities: list[tuple[str, Path, Path]], out_dir: Path, data_root: Path) -> dict:
+    """Build every city plus the findings panel, and write index.json."""
+    out_dir = Path(out_dir)
+    rows = findings.load_json(Path(data_root) / "factorial.json")
+    verdict = factorial_verdict(rows) if isinstance(rows, list) and rows else {}
+
+    payload = {
+        "cities": [build_city(c, b, s, out_dir) for c, b, s in cities],
+        "findings": findings.collect(Path(data_root), verdict),
+    }
+    (out_dir / "index.json").write_text(json.dumps(payload, separators=(",", ":")))
+    logger.info("index.json written with %d cities", len(payload["cities"]))
+    return payload

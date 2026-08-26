@@ -26,10 +26,12 @@ logger = logging.getLogger(__name__)
 
 def aoi_from_provenance(bundle: Path) -> AOI:
     """Reconstruct the exact grid a bundle was built on."""
-    record = json.loads((Path(bundle) / "provenance.json").read_text())["aoi"]
-    return AOI(
-        record["name"], record["lat"], record["lon"], side_m=record["side_m"], res_m=record["res_m"]
-    )
+    provenance = json.loads((Path(bundle) / "provenance.json").read_text())
+    record = provenance["aoi"]
+    # Older bundles carried the city name inside the aoi block; newer ones keep it
+    # in a separate city block. Fall back to the directory name.
+    name = record.get("name") or provenance.get("city", {}).get("key") or Path(bundle).name
+    return AOI(name, record["lat"], record["lon"], side_m=record["side_m"], res_m=record["res_m"])
 
 
 def _write_like(bundle: Path, name: str, array: np.ndarray, dtype: str) -> Path:
@@ -66,7 +68,7 @@ def backfill(bundle: Path) -> list[str]:
     if not (bundle / "landcover_umep.tif").exists() and (bundle / "landcover.tif").exists():
         with rasterio.open(bundle / "landcover.tif") as src:
             cover = src.read(1)
-        _write_like(bundle, "landcover_umep.tif", to_umep(cover, heights), "uint8")
+        _write_like(bundle, "landcover_umep.tif", to_umep(cover, heights), "float32")
         written.append("landcover_umep.tif")
 
     return written
