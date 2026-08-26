@@ -30,7 +30,9 @@ from ..network import graph as netgraph
 from ..network import heat, rasterize, routing
 from ..objectives import benefit, score
 from ..pipeline import BUNDLE_FILES, daylight_mean
+from ..repair import aoi_from_provenance
 from ..sim.runner import run
+from .layers import city_layers
 
 logger = logging.getLogger(__name__)
 
@@ -111,9 +113,7 @@ def run_city(
     multigraph, node_weights, endpoints = prepare_network(
         bundle, aoi, baseline, layers["population"]
     )
-    base_routes = score_routes(
-        multigraph, baseline, aoi, weights=node_weights, endpoints=endpoints
-    )
+    base_routes = score_routes(multigraph, baseline, aoi, weights=node_weights, endpoints=endpoints)
     digraph = routing.to_routable(multigraph)
     surface = rasterize.corridor_surface(digraph, base_routes.corridor, aoi)
 
@@ -166,6 +166,25 @@ def run_city(
         "route": results["route"],
         "engine_seconds": round(time.time() - started, 1),
     }
+
+
+def run_targeting(cities: list[tuple[str, Path, Path]], out_path: Path, *, budget: float) -> dict:
+    """Run the H8 comparison across cities and apply the pre-registered rule."""
+    rows: list[dict] = []
+    for index, (city, bundle, surrogate_dir) in enumerate(cities, start=1):
+        logger.info("[%d/%d] %s at %.1fM", index, len(cities), city, budget / 1e6)
+        rows.append(
+            run_city(
+                city,
+                bundle,
+                city_layers(bundle, surrogate_dir),
+                budget=budget,
+                aoi=aoi_from_provenance(bundle),
+                work_root=Path("out/targeting"),
+            )
+        )
+        Path(out_path).write_text(json.dumps({"rows": rows, "verdict": verdict(rows)}, indent=2))
+    return {"rows": rows, "verdict": verdict(rows)}
 
 
 def verdict(rows: list[dict]) -> dict:
