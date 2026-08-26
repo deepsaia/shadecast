@@ -30,6 +30,7 @@ dependencies = [
     "geemap>=0.38.3",
     "typer>=0.27.1",
     "rich>=15.0.0",
+    "scikit-image>=0.26.0",
 ]
 
 [project.scripts]
