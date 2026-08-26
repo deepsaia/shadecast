@@ -5,9 +5,26 @@ which keeps the environment honest. There is no reduced-form cooling coefficient
 anywhere; if an intervention cools a pixel it is because the radiation budget says so.
 
     trees              -> canopy model (CDSM)
+    shade structures   -> canopy model, as a flat awning
+    de-paving          -> ground cover class on sealed pixels, to grass
+    permeable paving   -> ground cover class on sealed pixels, to cobble
     cool roofs         -> ground cover class on roof pixels
     reflective paving  -> ground cover class on sealed pixels
-    shade structures   -> canopy model, as a flat awning
+
+Arms are best grouped by the physical channel they act through, because the channel
+decides how far the result can be trusted:
+
+    geometry / shading      trees, shade structures        validated
+    surface temperature     de-paving, permeable paving    trusted, longwave only
+    shortwave albedo        cool roofs, reflective paving  quarantined, see below
+    directional reflectance retro-reflective materials     not representable
+
+The albedo arms are quarantined. Raising ground albedo makes this engine report
+cooling, while field measurement over 58 km of treated street in Phoenix reports a
+significant rise in pedestrian mean radiant temperature on the road
+(Nature Communications 14, 1467, 2023). Retro-reflective materials are the physically
+correct version of that arm and cannot be represented at all, because SOLWEIG assumes
+Lambertian reflection and building albedo is a single module scalar in the engine.
 
 Costs are per unit and deliberately kept as an editable table rather than buried
 in code, because they are the most locally variable numbers in the whole system.
@@ -54,6 +71,22 @@ CATALOGUE = {
     "shade": InterventionSpec(
         "shade", unit_cost=250.0, maintenance_frac=0.03, plantable_on=(ASPHALT, COBBLE, GRASS, SOIL)
     ),
+    # Lifting sealed surface and establishing vegetation. This acts through the
+    # surface temperature channel, since the UMEP table gives asphalt Ts_deg 0.58
+    # and unmanaged grass 0.21, so the ground simply emits less longwave. It does
+    # not bounce shortwave onto anyone, which is why it stays usable while the
+    # albedo arms are quarantined. The residual albedo change is small and adverse
+    # (0.18 -> 0.16), so measured cooling here is a lower bound.
+    "depave": InterventionSpec(
+        "depave", unit_cost=60.0, maintenance_frac=0.12, plantable_on=(ASPHALT,)
+    ),
+    # Sealed surface replaced by lighter, rougher paving (Ts_deg 0.58 -> 0.37).
+    # Carried mainly as the midpoint of the same channel: if the channel behaves,
+    # its cooling must land between asphalt and grass. That ordering is a cheap
+    # internal check on the channel itself, not a headline result.
+    "permeable": InterventionSpec(
+        "permeable", unit_cost=90.0, maintenance_frac=0.04, plantable_on=(ASPHALT,)
+    ),
 }
 
 
@@ -61,7 +94,7 @@ def feasibility_mask(umep_lc: np.ndarray, building_h: np.ndarray, kind: str) -> 
     """Where this intervention may physically be placed."""
     spec = CATALOGUE[kind]
     mask = np.isin(umep_lc, spec.plantable_on)
-    if kind in ("tree", "shade", "cool_paving"):
+    if kind in ("tree", "shade", "cool_paving", "depave", "permeable"):
         mask &= building_h <= 0  # nothing goes on top of a building
     return mask
 
@@ -90,6 +123,10 @@ def apply(
         umep_lc[placement] = COOL_ROOF
     elif kind == "cool_paving":
         umep_lc[placement] = COOL_PAVING
+    elif kind == "depave":
+        umep_lc[placement] = GRASS
+    elif kind == "permeable":
+        umep_lc[placement] = COBBLE
     else:
         raise KeyError(kind)
     return cdsm, umep_lc
