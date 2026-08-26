@@ -16,6 +16,7 @@ import numpy as np
 import typer
 
 from .console import console
+from .surrogate.assessment import assess
 from .surrogate.dataset import default_plan, generate
 from .surrogate.patches import crop_batch
 from .surrogate.training import save_report, train
@@ -83,3 +84,35 @@ def train_model(
     }
     save_report(report, surrogate_dir / "training_report.json")
     console.print_json(json.dumps({k: v for k, v in report.items() if k != "history"}))
+
+
+@app.command("assess")
+def assess_model(
+    surrogate_dir: Annotated[Path, typer.Argument(help="Directory of generated responses.")],
+    bundle: Annotated[Path, typer.Argument(help="The matching city bundle.")],
+    design: Annotated[
+        list[str] | None,
+        typer.Option("--design", help="Assess these designs instead of the held-out set."),
+    ] = None,
+) -> None:
+    """Compare the surrogate against engine truth on designs it never trained on.
+
+    Reports skill against predicting nothing, whether the spillover tail survives,
+    error in the plan score, and how well plans are ordered.
+    """
+    with console.status("[cyan]comparing surrogate against engine truth[/]"):
+        report = assess(surrogate_dir, bundle, only=design)
+
+    headline = report["headline"]
+    verdict = "green" if headline["all_beat_predicting_nothing"] else "red"
+    console.print(
+        f"[{verdict}]mean skill {headline['mean_skill']:+.3f}[/]  "
+        f"(above zero means it beats predicting nothing)"
+    )
+    console.print(
+        f"plan score error {headline['mean_aggregate_relative_error']:.1%}, "
+        f"ranking spearman {report['ranking']['spearman']}, "
+        f"speedup {report['speed']['speedup']:,.0f}x"
+    )
+    (Path(surrogate_dir) / "assessment.json").write_text(json.dumps(report, indent=2))
+    console.print(f"[dim]full report written to {surrogate_dir}/assessment.json[/]")
