@@ -9,20 +9,24 @@ GBA is 3 m native resolution with >97% global height completeness (ESSD 2025).
 Hosted as anonymous GeoParquet on Source Cooperative, tiled 5 degrees, so a
 single city needs one file rather than a global scan.
 """
+
 from __future__ import annotations
 
+import logging
 import math
 from operator import itemgetter
 
 import duckdb
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 from rasterio.enums import MergeAlg
 from rasterio.features import rasterize
-import numpy as np
 from shapely import from_wkb
 
 from ..aoi import AOI
+
+logger = logging.getLogger(__name__)
 
 BASE = "https://data.source.coop/tge-labs/globalbuildingatlas-lod1"
 
@@ -43,8 +47,9 @@ def tile_name(lon: float, lat: float) -> str:
     """GBA tiles are 5x5 degrees, named by their west/north/east/south edges."""
     lon0 = int(math.floor(lon / 5) * 5)
     lat0 = int(math.floor(lat / 5) * 5)
-    return (f"{_east_west(lon0)}_{_north_south(lat0 + 5)}"
-            f"_{_east_west(lon0 + 5)}_{_north_south(lat0)}")
+    return (
+        f"{_east_west(lon0)}_{_north_south(lat0 + 5)}_{_east_west(lon0 + 5)}_{_north_south(lat0)}"
+    )
 
 
 def tiles_for(aoi: AOI) -> list[str]:
@@ -63,18 +68,22 @@ def fetch(aoi: AOI) -> gpd.GeoDataFrame:
     con.execute("INSTALL httpfs; LOAD httpfs;")
 
     frames = []
-    for t in tiles_for(aoi):
+    for tile in tiles_for(aoi):
         try:
-            frames.append(con.execute(
-                f"""
+            frames.append(
+                con.execute(
+                    f"""
                 SELECT height, var, source, geometry
-                FROM read_parquet('{BASE}/{t}.parquet')
+                FROM read_parquet('{BASE}/{tile}.parquet')
                 WHERE bbox.xmin BETWEEN {minx} AND {maxx}
                   AND bbox.ymin BETWEEN {miny} AND {maxy}
                 """
-            ).fetchdf())
-        except Exception:
-            # Ocean-only tiles are simply absent from the bucket.
+                ).fetchdf()
+            )
+        except duckdb.IOException as exc:
+            # Ocean-only tiles are simply absent from the bucket, which is a
+            # normal condition for coastal cities, not a failure.
+            logger.debug("GBA tile %s unavailable: %s", tile, exc)
             continue
 
     df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
@@ -95,7 +104,11 @@ def rasterize_heights(aoi: AOI, gdf: gpd.GeoDataFrame) -> np.ndarray:
     Taller buildings win on overlap, so a courtyard block does not erase a tower.
     """
     shapes = sorted(
-        ((geom, float(h)) for geom, h in zip(gdf.geometry, gdf["height"]) if h and h > 0),
+        (
+            (geom, float(height))
+            for geom, height in zip(gdf.geometry, gdf["height"], strict=True)
+            if height and height > 0
+        ),
         key=itemgetter(1),
     )
     if not shapes:
