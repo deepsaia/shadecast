@@ -77,8 +77,26 @@ const EXPLAIN = {
   ]
 };
 
-function why(items){
-  return `<div class="why"><dl>${items.map(([t,d])=>`<div><dt>${t}</dt><dd>${d}</dd></div>`).join("")}</dl></div>`;
+/* Definitions live once, at the foot of the page, and steps point at them by number.
+   Inline they crowded out the thing each step was actually showing. */
+const TERM_ORDER = ["assemble","simulate","surrogate","factorial","plans","corridor","channel"];
+const TERMS = [];
+TERM_ORDER.forEach(key=>(EXPLAIN[key]||[]).forEach(([title,body])=>{
+  TERMS.push({n:TERMS.length+1, key, title, body});
+}));
+
+function why(key){
+  const mine=TERMS.filter(t=>t.key===key);
+  if(!mine.length) return "";
+  return `<p class="terms">Terms: ${mine.map(t=>
+    `<a href="#t${t.n}"><span class="rn">${t.n}</span>${t.title}</a>`).join("")}</p>`;
+}
+
+function stepGlossary(){
+  return `<section class="step" id="terminology"><h2><i>09</i> Terminology</h2>
+  <p class="sub">Every term the walkthrough uses, defined once. Each is linked from the step that first needs it.</p>
+  <div class="card"><ol class="glossary">${TERMS.map(t=>
+    `<li id="t${t.n}"><span class="rn">${t.n}</span><div><b>${t.title}</b><p>${t.body}</p></div></li>`).join("")}</ol></div></section>`;
 }
 
 /* ------------------------------- charts (SVG, interactive) ---------------------------- */
@@ -165,7 +183,7 @@ function stepCorridor(f){
   const v=t.verdict||{};
   return `<section class="step"><h2><i>06</i> Cool the hottest ground, or the ground people walk on?</h2>
   <p class="sub">Two plans per city at the same budget, both simulated for real, each scored on both objectives.</p>
-  ${why(EXPLAIN.corridor)}
+  ${why("corridor")}
   <div class="grid g3">
     <div class="card">
       <figure class="chart scrollx">${corridorChart(t.rows)}</figure>
@@ -206,7 +224,7 @@ function stepAssemble(c){
   const p=c.provenance;
   return `<section class="step"><h2><i>01</i> Assemble a city from open data</h2>
   <p class="sub">Before any physics, the city has to exist as numbers. Five layers, one metre, one grid, no credentials.</p>
-  ${why(EXPLAIN.assemble)}
+  ${why("assemble")}
   <div class="card">
     <div class="grid g4" >
       <div class="kv"><div class="n">${fmt(p.buildings)}</div><div class="l">buildings with heights</div></div>
@@ -222,7 +240,7 @@ function stepAssemble(c){
 function stepSimulate(c){
   return `<section class="step"><h2><i>02</i> Simulate the heat a body actually feels</h2>
   <p class="sub">The engine computes mean radiant temperature for every square metre, every hour of the design day.</p>
-  ${why(EXPLAIN.simulate)}
+  ${why("simulate")}
   <div class="scrub">
     <div class="card">
       <div class="frame">
@@ -251,7 +269,7 @@ function stepSurrogate(f){
   if(s.status!=="done") return "";
   return `<section class="step"><h2><i>03</i> Learn a fast stand-in for the physics</h2>
   <p class="sub">Physics is too slow to search with. A trained model makes the search affordable without giving up the physics as ground truth.</p>
-  ${why(EXPLAIN.surrogate)}
+  ${why("surrogate")}
   <div class="grid g3">
     <div class="card"><div class="grid g4">
       <div class="kv"><div class="n">${s.skill}</div><div class="l">skill against predicting no change, on plans it never saw</div></div>
@@ -276,7 +294,7 @@ function stepFactorial(f){
   const spread=x.spreads&&x.spreads.length?x.spreads:[];
   return `<section class="step"><h2><i>04</i> Ask which measure buys the most cooling per dollar</h2>
   <p class="sub">${x.cells} cells, every one a real physics run: two intervention types, three budgets, three cities on three continents.</p>
-  ${why(EXPLAIN.factorial)}
+  ${why("factorial")}
   <div class="grid g3">
     <div class="card">
       <figure class="chart scrollx">${factorialChart(x.rows)}</figure>
@@ -304,7 +322,7 @@ function stepFactorial(f){
 function stepPlans(c){
   return `<section class="step"><h2><i>05</i> Ask where to put it</h2>
   <p class="sub">Same budget, same canopy, different geometry. Select a plan to see where the trees go and what cooling arrives.</p>
-  ${why(EXPLAIN.plans)}
+  ${why("plans")}
   <div class="scrub">
     <div class="card">
       <div style="font-size:.74rem;color:var(--ink-3);margin-bottom:.3rem">Every generated plan, scored on both objectives</div>
@@ -332,7 +350,7 @@ function stepChannel(f){
   const cells=x.rows.flatMap(r=>r.cells.filter(c=>c.pixels).map(c=>({city:r.city,...c})));
   return `<section class="step"><h2><i>07</i> Try a second cooling mechanism, not just shade</h2>
   <p class="sub">Trees and awnings both work by blocking sun. This asks whether making the ground itself cooler works too, through a channel we can trust.</p>
-  ${why(EXPLAIN.channel)}
+  ${why("channel")}
   <div class="grid g3">
     <div class="card">
       <table><thead><tr><th>City</th><th>Surface</th><th class="n">Heating coef.</th><th class="n">Treated ground</th><th class="n">City-wide</th></tr></thead><tbody>
@@ -414,7 +432,7 @@ function paintPlan(){
 async function render(){
   const c=S.data.cities.find(x=>x.city===S.city), f=S.data.findings;
   $("citymeta").textContent=`${c.name} · design day ${c.provenance.design_day} · 1 km² at 1 m`;
-  $("app").innerHTML=stepAssemble(c)+stepSimulate(c)+stepSurrogate(f)+stepFactorial(f)+stepPlans(c)+stepCorridor(f)+stepChannel(f)+stepOpen(f);
+  $("app").innerHTML=stepAssemble(c)+stepSimulate(c)+stepSurrogate(f)+stepFactorial(f)+stepPlans(c)+stepCorridor(f)+stepChannel(f)+stepOpen(f)+stepGlossary();
   $("hour").value=S.hour;
   $("hour").oninput=e=>{S.hour=+e.target.value;paintHour();};
   $("play").onclick=()=>{
