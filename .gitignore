@@ -6,8 +6,9 @@ __pycache__/
 .ruff_cache/
 
 # Built city bundles and engine outputs are large and reproducible.
-data/
-out/
+# Anchored so they do not match src/shadecast/data.
+/data/
+/out/
 
 # Cloned upstream repos kept for reference only.
-vendor/
+/vendor/

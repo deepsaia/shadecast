@@ -1,0 +1,610 @@
+<title>CoolBench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+/* ============ tokens, complete light palette ============ */
+:root{
+  --ground:#F1F4F6;
+  --card:#FFFFFF;
+  --card-2:#E7ECEF;
+  --ink:#141C22;
+  --ink-2:#3F4C55;
+  --ink-3:#6B7A84;
+  --rule:#D6DDE2;
+  --rule-2:#BAC5CC;
+  /* accent = shade / canopy: the solution, not the problem */
+  --accent:#146B60;
+  --accent-2:#0E524A;
+  --accent-wash:#DDEDEA;
+  /* semantic heat scale, data only, never decoration */
+  --heat-1:#C9821A;
+  --heat-2:#C0521E;
+  --heat-3:#9E2B1E;
+  --heat-wash:#F6E7DC;
+  --shadow:0 1px 2px rgba(20,28,34,.05),0 10px 30px -20px rgba(20,28,34,.35);
+  --f-d:"Source Serif 4",Georgia,serif;
+  --f-b:"Source Sans 3",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --f-m:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --col:70ch;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E141A;
+    --card:#161E25;
+    --card-2:#1E272F;
+    --ink:#E4EBF0;
+    --ink-2:#AFBCC5;
+    --ink-3:#7C8A94;
+    --rule:#28333B;
+    --rule-2:#39454E;
+    --accent:#5FBFAF;
+    --accent-2:#84D3C4;
+    --accent-wash:#132A28;
+    --heat-1:#E0A94E;
+    --heat-2:#E08152;
+    --heat-3:#D4685A;
+    --heat-wash:#2A1D18;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 30px -20px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E141A;
+  --card:#161E25;
+  --card-2:#1E272F;
+  --ink:#E4EBF0;
+  --ink-2:#AFBCC5;
+  --ink-3:#7C8A94;
+  --rule:#28333B;
+  --rule-2:#39454E;
+  --accent:#5FBFAF;
+  --accent-2:#84D3C4;
+  --accent-wash:#132A28;
+  --heat-1:#E0A94E;
+  --heat-2:#E08152;
+  --heat-3:#D4685A;
+  --heat-wash:#2A1D18;
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 30px -20px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--f-b);font-size:16.5px;line-height:1.62;margin:0;-webkit-font-smoothing:antialiased}
+a{color:var(--accent-2);text-underline-offset:.16em;text-decoration-thickness:.06em}
+a:hover{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+code{font-family:var(--f-m);font-size:.84em;background:var(--card-2);border:1px solid var(--rule);border-radius:3px;padding:.06em .32em;color:var(--ink-2);white-space:nowrap}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ============ top strip ============ */
+.strip{
+  position:sticky;top:0;z-index:20;
+  background:var(--ground);
+  border-bottom:1px solid var(--rule);
+  padding:.55rem 1.5rem;
+}
+.strip-in{max-width:64rem;margin:0 auto;display:flex;align-items:center;gap:1.4rem;flex-wrap:wrap}
+.strip .brand{font-family:var(--f-m);font-size:.76rem;font-weight:500;color:var(--accent);letter-spacing:.04em}
+.strip nav{display:flex;gap:1.1rem;flex-wrap:wrap}
+.strip nav a{font-size:.78rem;color:var(--ink-3);text-decoration:none}
+.strip nav a:hover{color:var(--ink)}
+@media (max-width:700px){.strip nav{display:none}}
+
+/* ============ wrap ============ */
+.wrap{max-width:64rem;margin:0 auto;padding:0 1.5rem 6rem}
+@media (max-width:640px){.wrap{padding:0 1.15rem 4rem}}
+
+/* ============ masthead ============ */
+header.top{padding:4rem 0 0}
+.kicker{font-family:var(--f-m);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 1.1rem}
+h1{font-family:var(--f-d);font-weight:600;font-size:clamp(2.7rem,7vw,4.4rem);line-height:1;letter-spacing:-.025em;margin:0 0 .5rem}
+.sub{font-family:var(--f-d);font-size:clamp(1.15rem,2.4vw,1.45rem);line-height:1.45;color:var(--ink-2);max-width:34ch;margin:0 0 2rem}
+.meta{display:flex;flex-wrap:wrap;gap:.4rem 1.5rem;font-family:var(--f-m);font-size:.74rem;color:var(--ink-3);padding-bottom:2.4rem;border-bottom:1px solid var(--rule-2)}
+.meta b{font-weight:500;color:var(--ink-2)}
+
+/* ============ abstract card ============ */
+.abstract{
+  background:var(--card);
+  border:1px solid var(--rule);
+  border-left:3px solid var(--accent);
+  border-radius:4px;
+  padding:1.5rem 1.75rem;
+  margin:2.6rem 0 0;
+  box-shadow:var(--shadow);
+}
+.abstract .lbl{font-family:var(--f-m);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 .7rem}
+.abstract p{font-family:var(--f-d);font-size:1.06rem;line-height:1.58;color:var(--ink);margin:0;max-width:none}
+.abstract strong{font-weight:600}
+
+/* ============ sections ============ */
+section{padding:3.6rem 0 0}
+.shead{display:flex;align-items:baseline;gap:.8rem;border-bottom:1px solid var(--rule-2);padding-bottom:.6rem;margin-bottom:1.6rem}
+.shead .n{font-family:var(--f-m);font-size:.74rem;color:var(--accent);flex:none}
+h2{font-family:var(--f-d);font-weight:600;font-size:clamp(1.45rem,3.2vw,1.9rem);line-height:1.18;letter-spacing:-.014em;margin:0;text-wrap:balance}
+h3{font-family:var(--f-b);font-weight:600;font-size:1.02rem;margin:2rem 0 .6rem;letter-spacing:-.004em}
+p{max-width:var(--col);margin:0 0 1rem}
+section>ul,section>ol{max-width:var(--col);padding-left:1.15rem;margin:0 0 1rem}
+li{margin-bottom:.4rem}
+strong{font-weight:600;color:var(--ink)}
+
+/* ============ quote ============ */
+blockquote{
+  margin:1.6rem 0;max-width:var(--col);
+  padding:1rem 1.3rem;
+  background:var(--heat-wash);
+  border-left:2px solid var(--heat-2);
+  border-radius:0 3px 3px 0;
+}
+blockquote p{font-family:var(--f-d);font-size:1.03rem;line-height:1.5;margin:0 0 .5rem;color:var(--ink)}
+blockquote p:last-child{margin:0}
+blockquote cite{display:block;font-family:var(--f-m);font-style:normal;font-size:.7rem;color:var(--ink-3)}
+
+/* ============ stat row ============ */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:4px;overflow:hidden;margin:1.8rem 0}
+.stat{background:var(--card);padding:1.1rem 1rem}
+.stat .v{font-family:var(--f-m);font-weight:500;font-size:1.5rem;line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-.02em;margin-bottom:.3rem}
+.stat.h1c .v{color:var(--heat-1)}
+.stat.h2c .v{color:var(--heat-2)}
+.stat.h3c .v{color:var(--heat-3)}
+.stat .k{font-size:.78rem;line-height:1.35;color:var(--ink-3)}
+
+/* ============ tables ============ */
+.tw{overflow-x:auto;margin:1.5rem 0;border:1px solid var(--rule);border-radius:4px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:40rem;font-size:.86rem}
+thead th{text-align:left;background:var(--card-2);font-family:var(--f-m);font-weight:500;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);padding:.7rem .95rem;border-bottom:1px solid var(--rule-2);white-space:nowrap}
+tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--rule);vertical-align:top;color:var(--ink-2)}
+tbody tr:last-child td{border-bottom:none}
+tbody td:first-child{color:var(--ink);font-weight:500}
+
+/* ============ track grid ============ */
+.tracks{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));gap:.85rem;margin:1.6rem 0}
+.track{background:var(--card);border:1px solid var(--rule);border-radius:4px;padding:1.1rem 1.25rem}
+.track .tid{font-family:var(--f-m);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:.35rem}
+.track h4{font-family:var(--f-b);font-size:.98rem;font-weight:600;margin:0 0 .45rem}
+.track p{font-size:.86rem;margin:0;color:var(--ink-2);max-width:none}
+.track.hero{border-color:var(--accent);background:var(--accent-wash)}
+
+/* ============ ship list ============ */
+.ship{counter-reset:s;list-style:none;padding:0;margin:1.6rem 0;display:flex;flex-direction:column;gap:.75rem}
+.ship li{counter-increment:s;display:grid;grid-template-columns:2rem minmax(0,1fr);gap:.55rem;max-width:var(--col);margin:0;font-size:.93rem;color:var(--ink-2)}
+.ship li::before{content:counter(s);font-family:var(--f-m);font-size:.78rem;color:var(--accent);padding-top:.22rem;font-variant-numeric:tabular-nums}
+.ship b{display:block;color:var(--ink);font-weight:600;font-size:.97rem;margin-bottom:.12rem}
+
+/* ============ honesty block ============ */
+.honest{background:var(--card);border:1px solid var(--heat-2);border-radius:4px;padding:1.35rem 1.5rem;margin:1.6rem 0;max-width:var(--col)}
+.honest .lbl{font-family:var(--f-m);font-size:.68rem;letter-spacing:.13em;text-transform:uppercase;color:var(--heat-2);margin:0 0 .8rem}
+.honest ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.8rem}
+.honest li{margin:0;font-size:.9rem;color:var(--ink-2);padding-left:1.2rem;position:relative}
+.honest li::before{content:"\25AA";position:absolute;left:0;color:var(--heat-2);font-family:var(--f-m)}
+.honest b{color:var(--ink)}
+
+/* ============ callout ============ */
+.warn{max-width:var(--col);margin:1.4rem 0;padding:.95rem 1.2rem;background:var(--heat-wash);border:1px solid var(--rule);border-radius:4px;font-size:.89rem;color:var(--ink-2)}
+.warn b{color:var(--ink)}
+
+/* ============ phases ============ */
+.ph{margin:1.6rem 0;border-top:1px solid var(--rule)}
+.phr{display:grid;grid-template-columns:2.2rem minmax(0,1fr) 6.5rem;gap:1rem;padding:.95rem 0;border-bottom:1px solid var(--rule);align-items:start}
+@media (max-width:620px){.phr{grid-template-columns:2.2rem minmax(0,1fr)}.phr .wk{grid-column:2;text-align:left;margin-top:.35rem}}
+.phr .pn{font-family:var(--f-m);font-size:1rem;font-weight:500;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.4}
+.phr h4{font-family:var(--f-b);font-size:.96rem;font-weight:600;margin:0 0 .22rem}
+.phr p{font-size:.85rem;margin:0;color:var(--ink-2);max-width:56ch}
+.phr .ex{font-family:var(--f-m);font-size:.66rem;letter-spacing:.11em;text-transform:uppercase;color:var(--accent);margin-right:.4rem}
+.wk{font-family:var(--f-m);font-size:.75rem;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.gono{max-width:var(--col);font-size:.9rem;color:var(--ink-2);padding:.85rem 1.1rem;background:var(--accent-wash);border-radius:4px;margin-top:1.2rem}
+
+/* ============ sources ============ */
+.src{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1.5rem 2rem;margin-top:1.4rem}
+.src h3{margin:0 0 .45rem;font-family:var(--f-m);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.src ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.3rem}
+.src li{margin:0;font-size:.84rem;line-height:1.4}
+
+.colo{margin-top:3rem;padding-top:1.6rem;border-top:1px solid var(--rule-2);font-family:var(--f-m);font-size:.72rem;color:var(--ink-3);line-height:1.7}
+</style>
+
+<style>
+/* ---- result callout ---- */
+.result{background:var(--accent-wash);border:1px solid var(--accent);border-radius:4px;padding:1.35rem 1.6rem;margin:1.6rem 0}
+.result .lbl{font-family:var(--f-m);font-size:.68rem;letter-spacing:.13em;text-transform:uppercase;color:var(--accent-2);margin:0 0 .8rem}
+.result p:last-child{margin-bottom:0}
+.badge{display:inline-block;font-family:var(--f-m);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;padding:.18rem .5rem;border-radius:3px;vertical-align:.15em;margin-left:.5rem}
+.badge.done{background:var(--accent);color:var(--card)}
+.badge.next{background:var(--card-2);color:var(--ink-3);border:1px solid var(--rule-2)}
+.phr.is-done .pn{color:var(--accent-2)}
+.phr.is-done h4::after{content:"PASSED";font-family:var(--f-m);font-size:.6rem;letter-spacing:.1em;color:var(--card);background:var(--accent);padding:.14rem .42rem;border-radius:3px;margin-left:.5rem;vertical-align:.18em}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:4px;overflow:hidden;margin:1.4rem 0}
+.kv div{background:var(--card);padding:.95rem 1rem}
+.kv .n{font-family:var(--f-m);font-weight:500;font-size:1.35rem;line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--accent-2);margin-bottom:.25rem}
+.kv .l{font-size:.76rem;line-height:1.35;color:var(--ink-3)}
+</style>
+
+<div class="strip">
+  <div class="strip-in">
+    <span class="brand">CoolBench</span>
+    <nav>
+      <a href="#result">Phase 0</a>
+      <a href="#phase1">Phase 1</a>
+      <a href="#why">Why now</a>
+      <a href="#gap">The gap</a>
+      <a href="#arch">Architecture</a>
+      <a href="#data">Data</a>
+      <a href="#tracks">Tracks</a>
+      <a href="#limits">Limits</a>
+      <a href="#phases">Phases</a>
+      <a href="#umbra">Umbra</a>
+    </nav>
+  </div>
+</div>
+
+<div class="wrap">
+
+<header class="top">
+  <p class="kicker">Research proposal, v3, 2026-08-26</p>
+  <h1>CoolBench</h1>
+  <p class="sub">A global, open benchmark for urban heat adaptation planning.</p>
+  <div class="meta">
+    <span>Contribution <b>Benchmark plus baselines</b></span>
+    <span>Data <b>100% open, no credentials</b></span>
+    <span>Phases 0 and 1 <b>passed, 9 cities</b></span>
+  </div>
+
+  <div class="abstract">
+    <p class="lbl">The claim</p>
+    <p>WRI's Cool Cities Lab solved the forward model: given an intervention, how much cooler? Nobody has solved the inverse problem: given a budget, what should you build? CoolBench is a reproducible, physics-grounded environment in which an agent allocates a finite adaptation budget across a real city to minimise heat-attributable exposure under equity and robustness constraints. Built entirely from open global data requiring <strong>no account, key or quota</strong>, with baselines spanning greedy, MILP, evolutionary, quality-diversity and deep RL, and zero-shot transfer to held-out cities.</p>
+  </div>
+</header>
+
+<section id="result">
+  <div class="shead"><span class="n">01</span><h2>Phase 0 result<span class="badge done">passed</span></h2></div>
+  <p>A working vertical slice, not a plan. One square kilometre of Ahmedabad's old walled city, design day 2024-05-23 with a 46.4&deg;C peak, every input pulled from open sources with no credentials. A greedy planner was given 10 million USD and told to plant trees.</p>
+
+  <div class="tw"><table>
+    <thead><tr><th></th><th>Baseline</th><th>With plan</th><th>Change</th></tr></thead>
+    <tbody>
+      <tr><td>Population-weighted outdoor Tmrt, daylight mean</td><td>55.35 &deg;C</td><td>49.42 &deg;C</td><td><strong>-5.93 &deg;C</strong></td></tr>
+      <tr><td>People above the 45 &deg;C stress threshold</td><td>41,002</td><td>32,631</td><td><strong>-8,370</strong></td></tr>
+      <tr><td>Canopy cover above 2 m</td><td>10.3%</td><td>21.7%</td><td>+11.4 pp</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>Greedy targets correctly, planting where baseline Tmrt averages 64.8&deg;C against an outdoor mean of 55.8&deg;C. Local cooling where planted is <strong>17.84&deg;C mean and 27.19&deg;C maximum</strong>.</p>
+
+  <div class="result">
+    <p class="lbl">The finding that shapes the benchmark</p>
+    <p>Cooling spilled over to <em>unplanted</em> outdoor pixels by <strong>1.52 &deg;C</strong>.</p>
+    <p>That is spatial interaction. A tree shades its neighbours, so the marginal value of any placement depends on every other placement. Greedy assumes independence and structurally cannot see it. The gap between greedy and an interaction-aware search is the headroom this benchmark exists to measure, and it is now quantified rather than asserted. This is the empirical reason evolutionary search, quality-diversity and RL belong in the paper at all.</p>
+  </div>
+
+  <h3>The physics behaves</h3>
+  <p>At night Tmrt collapses to air temperature with almost no spatial spread. By 15:00 the median reaches 73.0&deg;C with a <strong>30&deg;C gap between deep shade at 43.9&deg;C and full sun at 79.7&deg;C</strong>. That gap is the entire premise of the project, now measured from open data rather than assumed.</p>
+
+  <div class="kv">
+    <div><div class="n">37.8 s</div><div class="l">to build a whole city bundle, credential-free</div></div>
+    <div><div class="n">162 s</div><div class="l">SOLWEIG per km&sup2;, warm, sky-view factor cached</div></div>
+    <div><div class="n">283 s</div><div class="l">SOLWEIG per km&sup2;, cold, geometry changed</div></div>
+    <div><div class="n">45 to 78 h</div><div class="l">cost of one 1,000-evaluation search, one city</div></div>
+  </div>
+
+  <p><strong>That last number is the surrogate justification, quantified.</strong> The corpus is 30 cities. Without a learned response model the benchmark is not runnable, which makes the surrogate a load-bearing contribution rather than an optimisation. There is also a useful asymmetry: sky-view factor is cached, so albedo interventions such as cool roofs are 1.7 times cheaper to evaluate than geometry interventions such as trees. A search method that knows this can spend its budget better.</p>
+</section>
+
+
+<section id="phase1">
+  <div class="shead"><span class="n">02</span><h2>Phase 1 result<span class="badge done">passed</span></h2></div>
+  <p>Generalise across cities. <strong>Nine cities built, zero failures</strong>, plus a full plan-and-evaluate loop on a second continent with no code changes. The corpus is 32 cities, 69% Global South and 31% tropical, against the 9% tropical share of the existing literature.</p>
+
+  <h3>Study areas are chosen from data, not by hand</h3>
+  <p>A city-centre coordinate usually lands in a commercial district that is empty at night. Scanning GHS-POP for the densest window instead:</p>
+  <div class="tw"><table>
+    <thead><tr><th>City</th><th>Population at seed</th><th>At selected AOI</th><th>Factor</th></tr></thead>
+    <tbody>
+      <tr><td>Ahmedabad</td><td>56,631</td><td>101,644</td><td>1.8x</td></tr>
+      <tr><td>Nairobi</td><td>1,562</td><td><strong>154,245</strong></td><td><strong>99x</strong></td></tr>
+      <tr><td>Rio de Janeiro</td><td>540</td><td><strong>53,134</strong></td><td><strong>98x</strong></td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>This is a finding, not a convenience.</strong> Naive centroid selection would have systematically studied the wrong neighbourhoods, and in the Global South that means missing exactly the informal settlements where heat risk concentrates. The selector found Nairobi's Eastlands and a dense residential area in Rio.</p>
+
+  <h3>Nine cities, all Tier A, every risky path covered</h3>
+  <div class="tw"><table>
+    <thead><tr><th>City</th><th>Build</th><th>Buildings</th><th>Built</th><th>Canopy</th><th>Population</th><th>Design day</th></tr></thead>
+    <tbody>
+      <tr><td>Ahmedabad</td><td>33.8 s</td><td>1,833</td><td>32%</td><td>14%</td><td>101,644</td><td>2024-05-23</td></tr>
+      <tr><td>Nairobi</td><td>71.7 s</td><td>5,115</td><td>47%</td><td>5%</td><td>154,245</td><td>2024-02-18</td></tr>
+      <tr><td>Rio de Janeiro</td><td>34.5 s</td><td>2,096</td><td>30%</td><td>20%</td><td>53,134</td><td>2023-11-18</td></tr>
+      <tr><td>Sydney</td><td>32.4 s</td><td>742</td><td>40%</td><td>7%</td><td>27,125</td><td>2023-12-09</td></tr>
+      <tr><td>Lagos</td><td>31.9 s</td><td>2,969</td><td>58%</td><td>0%</td><td>108,903</td><td>2023-02-16</td></tr>
+      <tr><td>London</td><td>57.5 s</td><td>1,372</td><td>33%</td><td>12%</td><td>27,467</td><td>2022-07-19</td></tr>
+      <tr><td>Phoenix</td><td>44.7 s</td><td>913</td><td>23%</td><td>7%</td><td>9,167</td><td>2025-08-07</td></tr>
+      <tr><td>Jakarta</td><td>43.0 s</td><td>802</td><td>21%</td><td>8%</td><td>43,827</td><td>2024-09-07</td></tr>
+      <tr><td>Khartoum</td><td>30.4 s</td><td>4,863</td><td>28%</td><td>0%</td><td>14,646</td><td>2023-05-26</td></tr>
+    </tbody>
+  </table></div>
+  <p>Design-day selection comes out seasonally correct everywhere with no special-casing: northern cities pick their summer, southern cities pick theirs, equatorial Jakarta picks its dry season. All 32 corpus cities validate against the real GlobalBuildingAtlas listing, including equator-crossing and prime-meridian-crossing tiles.</p>
+
+  <h3>Zero canopy is real, and an independent sensor confirms it</h3>
+  <p>Lagos and Khartoum initially tiered down for having no detectable canopy. That is ambiguous: the trees may be absent, or the model may have failed. So the tier now cross-checks a separate sensor.</p>
+  <div class="tw"><table>
+    <thead><tr><th>City</th><th>Meta/WRI canopy model (1 m)</th><th>ESA WorldCover woody (10 m)</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>Lagos</td><td>0.03% nonzero, max 2.0 m</td><td><strong>0.00%</strong></td><td>genuinely treeless</td></tr>
+      <tr><td>Khartoum</td><td>2.16%, max 12.8 m</td><td>0.03%</td><td>genuinely treeless</td></tr>
+      <tr><td>Nairobi</td><td>14.2%, max 23.0 m</td><td>4.7%</td><td>consistent</td></tr>
+      <tr><td>Rio</td><td>40.4%, max 30.0 m</td><td>21.1%</td><td>consistent</td></tr>
+    </tbody>
+  </table></div>
+  <p>Lagos genuinely has almost no trees across 108,903 people at 58% built fraction. Never let a single model's silence stand as evidence on its own.</p>
+
+  <h3>The first comparative result</h3>
+  <div class="tw"><table>
+    <thead><tr><th></th><th>Ahmedabad</th><th>Lagos</th></tr></thead>
+    <tbody>
+      <tr><td>Baseline outdoor Tmrt, population-weighted</td><td>55.35 &deg;C</td><td>50.96 &deg;C</td></tr>
+      <tr><td>Change with a 10 million USD plan</td><td>-5.93 &deg;C</td><td>-5.37 &deg;C</td></tr>
+      <tr><td>People moved below 45 &deg;C</td><td>8,370</td><td><strong>42,088</strong></td></tr>
+      <tr><td>Tmrt drop where planted</td><td>17.84 &deg;C</td><td>11.91 &deg;C</td></tr>
+      <tr><td>Spillover to unplanted ground</td><td>1.52 &deg;C</td><td>1.30 &deg;C</td></tr>
+      <tr><td><strong>Excess reduced per 1,000 USD</strong></td><td><strong>31.77</strong></td><td><strong>43.72</strong></td></tr>
+    </tbody>
+  </table></div>
+  <div class="result">
+    <p class="lbl">What the comparison says</p>
+    <p><strong>Lagos returns 38% more benefit per dollar than Ahmedabad</strong>, despite cooling each planted pixel <em>less</em>. It starts from zero canopy, so every tree lands on genuinely unshaded ground, and its exposed population is more than twice as dense, so each degree of cooling reaches more people.</p>
+    <p>That points the opposite way to where adaptation money currently goes. The treeless, dense, tropical cities that make up 9% of the literature appear to have the highest return on adaptation spend. Spillover also reproduces across both cities, so spatial interaction is a stable property rather than an Ahmedabad artefact.</p>
+  </div>
+</section>
+
+<section id="why">
+  <div class="shead"><span class="n">03</span><h2>Why this problem, why now</h2></div>
+  <p>Heat is the deadliest climate hazard on earth, and the decision layer for doing anything about it is empty.</p>
+
+  <div class="stats">
+    <div class="stat h3c"><div class="v">489,000</div><div class="k">heat-attributable deaths per year, 2000 to 2019</div></div>
+    <div class="stat h3c"><div class="v">10 to 20k</div><div class="k">estimated deaths, June 2026 European heatwave</div></div>
+    <div class="stat h2c"><div class="v">~90%</div><div class="k">of heat mortality is in people over 65</div></div>
+    <div class="stat h2c"><div class="v">700%</div><div class="k">projected rise in urban poor exposed to extreme heat by 2050</div></div>
+    <div class="stat h1c"><div class="v">12%</div><div class="k">of cities have a Heat Action Plan</div></div>
+    <div class="stat h1c"><div class="v">&lt;5%</div><div class="k">have ever evaluated a heat intervention's impact</div></div>
+  </div>
+
+  <blockquote>
+    <p>60% of cities have no heat policy. Only 12% have a Heat Action Plan. 88% have no dedicated heat budget. Fewer than 5% have ever evaluated the impact of a heat intervention.</p>
+    <cite>Red Cross Red Crescent Climate Centre, Urban Heat Governance, 2026</cite>
+  </blockquote>
+
+  <blockquote>
+    <p>Tropical cities account for merely 9% of mitigation studies despite facing the most severe heat-health risks; building-scale interventions such as cool roofs are only 12% of the literature.</p>
+    <cite>Renewable and Sustainable Energy Reviews, 2026 review</cite>
+  </blockquote>
+
+  <p>The cities that need this most are the least studied, the least funded and the least evaluated. A heat event that used to occur once in fifty years now occurs once a decade.</p>
+</section>
+
+<section id="gap">
+  <div class="shead"><span class="n">04</span><h2>The gap, stated precisely</h2></div>
+  <p>WRI launched Cool Cities Lab in March 2026: SOLWEIG plus UTCI at 1 m, validated at 0.39&deg;C mean absolute error against LiDAR-derived models, across 25 cities on five continents. It is good science and we adopt the method and cite it. It is also, by its authors' own description, a scenario viewer.</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>What exists</th><th>What it does</th><th>Why it isn't this</th></tr></thead>
+    <tbody>
+      <tr><td>WRI Cool Cities Lab</td><td>Forward model. Evaluates predefined scenarios (technical, achievable, programme-level)</td><td>By WRI's own papers, it does <strong>not</strong> address optimisation, budget constraints, cost, equity or multi-objective tradeoffs. It answers "how much cooler", never "what should I build".</td></tr>
+      <tr><td>GUHVI, 2025</td><td>Global open urban heat <em>vulnerability</em> index</td><td>Diagnosis, not decision. Tells you where it hurts, not what to build. We consume it as input.</td></tr>
+      <tr><td>CityLearn, Building2Building</td><td>Gymnasium environments for building energy, HVAC, demand response</td><td>Indoor energy management. Nothing outdoors, nothing spatial.</td></tr>
+      <tr><td><code>weather2alert</code></td><td>Gymnasium environment for optimising heat <em>alert issuance</em></td><td>Warning policy, not capital allocation. The closest sibling, and proof the community wants this.</td></tr>
+      <tr><td>Single-city heat optimisers, 2025 to 2026</td><td>Deep-learning surrogates plus differential evolution for green and cool roofs</td><td>One city, local data, one "optimal" plan, no transfer, no shared protocol, not reproducible elsewhere.</td></tr>
+    </tbody>
+  </table></div>
+
+  <p><strong>Nobody has built the inverse problem, and nobody has built a shared protocol for comparing methods on it.</strong> That absence is the paper.</p>
+</section>
+
+<section id="arch">
+  <div class="shead"><span class="n">05</span><h2>Architecture: one rule</h2></div>
+  <div class="result">
+    <p class="lbl">The rule</p>
+    <p><strong>Credentials at build time, never at use time.</strong></p>
+  </div>
+  <p>A benchmark that requires three accounts to run is not a benchmark. WRI's <code>cities-cif</code> needs Google Earth Engine access, a Copernicus CDS API key, and an AWS profile named <code>cities-data-dev</code> whose credentials live in WRI's internal secrets. Their OpenUrban land cover is served only as an Earth Engine asset. That is fine for a hosted platform and fatal for a reproducible benchmark.</p>
+  <p>So the pipeline splits. <strong>Build time</strong>, done once by us, needs network but no accounts: pull layers, run the physics, design the intervention sampling, fit the surrogate. <strong>Use time</strong>, for anyone, forever: download a frozen versioned bundle and run offline. This is what separates a benchmark from a pipeline.</p>
+
+  <h3>Where we can be better, not just faster</h3>
+  <p>WRI uses UT-GLOBUS for building heights, which reports <strong>RMSE 9.1 m against LiDAR</strong> in its own paper. Three storeys of error in the input that drives shadow geometry, which is why WRI cautions that their 1 m output has spatial inaccuracies "well above 1 m" and advises against site-specific use. We measured the alternatives on the same Ahmedabad area:</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>Source</th><th>Buildings found</th><th>Carrying a height</th><th>Query time</th></tr></thead>
+    <tbody>
+      <tr><td>Overture 2026-08-19.0</td><td>14,213</td><td><strong>1 (0.0%)</strong></td><td>298 s</td></tr>
+      <tr><td>GlobalBuildingAtlas LoD1</td><td><strong>27,352</strong></td><td><strong>27,352 (100%)</strong></td><td><strong>6.0 s</strong></td></tr>
+    </tbody>
+  </table></div>
+
+  <p>GlobalBuildingAtlas wins on every axis: 1.9 times more buildings, complete heights against Overture's effectively zero, and 50 times faster because it is tiled by 5 degrees so one file covers a city instead of a global scan. Native 3 m resolution, above 97% global height completeness, published in ESSD 2025.</p>
+  <p><strong>One building in 14,213 carrying a height is a finding, not a configuration choice.</strong> It is a measurable North/South data asymmetry that directly caps what heat modelling can claim in exactly the cities that need it most. It belongs in the paper.</p>
+</section>
+
+<section id="data">
+  <div class="shead"><span class="n">06</span><h2>The verified data chain</h2></div>
+  <p>Every row below was tested end to end during Phase 0. No account, key or quota anywhere.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Layer</th><th>Source</th><th>Access</th><th>Measured on Ahmedabad</th></tr></thead>
+    <tbody>
+      <tr><td>Buildings and heights</td><td>GlobalBuildingAtlas LoD1</td><td>Source Cooperative, anonymous GeoParquet</td><td>6,408 buildings, 100% heights</td></tr>
+      <tr><td>Terrain</td><td>Copernicus DEM GLO-30</td><td>Planetary Computer STAC, anonymous</td><td>45.5 to 62.4 m above sea level</td></tr>
+      <tr><td>Canopy height</td><td>Meta and WRI 1 m CHM</td><td>AWS Open Data, anonymous S3</td><td>10.3% cover above 2 m</td></tr>
+      <tr><td>Land cover</td><td>ESA WorldCover 10 m</td><td>Planetary Computer STAC</td><td>97.4% built</td></tr>
+      <tr><td>Population</td><td>GHS-POP R2023A 100 m</td><td>JRC, tiled, range requests</td><td>56,631 people per km&sup2;</td></tr>
+      <tr><td>Meteorology</td><td>ERA5 via Open-Meteo archive</td><td>Public HTTP, no key</td><td>46.4&deg;C design day</td></tr>
+      <tr><td>Validation thermal</td><td>Landsat 8 and 9, ECOSTRESS</td><td>Planetary Computer STAC</td><td>2,056 scenes available</td></tr>
+      <tr><td>Physics</td><td>SOLWEIG-GPU 2.0.0</td><td>PyPI</td><td>runs, 162 s per km&sup2;</td></tr>
+    </tbody>
+  </table></div>
+  <div class="warn"><b>Google Earth Engine is not required for anything we use.</b> That matters because GEE added monthly compute quotas to noncommercial tiers on 27 April 2026. WorldPop was rejected in favour of GHS-POP for a specific reason: WorldPop's server refuses HTTP range requests, so a windowed read is impossible and you must pull an entire country file.</div>
+</section>
+
+<section id="tracks">
+  <div class="shead"><span class="n">07</span><h2>Four tracks</h2></div>
+  <div class="tracks">
+    <div class="track">
+      <div class="tid">Track A</div>
+      <h4>Single period</h4>
+      <p>Fixed budget, one shot. MILP and greedy should be strong. If RL loses, that is a <em>finding</em>, and an honest benchmark reports it.</p>
+    </div>
+    <div class="track">
+      <div class="tid">Track B</div>
+      <h4>Multi-period sequencing</h4>
+      <p>Twenty years with tree growth, discounting and budget cycles. RL earns its keep: the state is non-stationary and actions have long delayed payoff.</p>
+    </div>
+    <div class="track">
+      <div class="tid">Track C</div>
+      <h4>Zero-shot transfer</h4>
+      <p>Train on data-rich cities, deploy unseen. Targets a documented failure mode, 46% degradation on a Los Angeles to Beijing transfer, and the 9% equity gap directly.</p>
+    </div>
+    <div class="track hero">
+      <div class="tid">Track D</div>
+      <h4>Portfolio</h4>
+      <p>Produce a <em>set</em> of behaviourally distinct plans, scored on quality-diversity coverage rather than a single optimum. Planners choose among options under political constraint. Almost no prior work applies quality-diversity to spatial intervention planning, so this is where the sharpest novelty sits.</p>
+    </div>
+  </div>
+  <p>The measured 1.52&deg;C spillover is what gives Tracks B and D their teeth. Interaction is real and quantified, so a method that models it has something concrete to win.</p>
+</section>
+
+<section id="methods">
+  <div class="shead"><span class="n">08</span><h2>Method ladder</h2></div>
+  <div class="tw"><table>
+    <thead><tr><th>Family</th><th>Role</th><th>Why it belongs</th></tr></thead>
+    <tbody>
+      <tr><td>Supervised ML</td><td>SOLWEIG surrogate, learned change in Tmrt from the intervention field</td><td>At 162 s per evaluation, nothing else is affordable. Publishable alone.</td></tr>
+      <tr><td>Design of experiments</td><td>Which physics runs to spend; Bayesian experimental design over the intervention space; active learning for surrogate training points</td><td>Physics runs are the hard budget. DoE decides feasibility here, it is not decoration.</td></tr>
+      <tr><td>Exact and heuristic OR</td><td>MILP p-median, max-cover, greedy</td><td>Honest strong baselines. Benchmarks that omit these are not credible.</td></tr>
+      <tr><td>Evolutionary strategies</td><td>CMA-ES, NSGA-II over the allocation vector</td><td>Non-convex, mixed-integer, black-box. Handles spatial interaction that greedy cannot.</td></tr>
+      <tr><td>Quality-diversity</td><td>MAP-Elites over a cost and equity behaviour space</td><td>Produces the portfolio planners actually need, Track D.</td></tr>
+      <tr><td>Deep RL</td><td>PPO and graph RL for Track B sequencing and Track C transfer</td><td>Non-stationary multi-period allocation with delayed reward.</td></tr>
+      <tr><td>Robust decision making</td><td>Scenario discovery, regret-based ranking</td><td>Cross-field borrow from policy analysis. Makes robustness credible to planners.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="limits">
+  <div class="shead"><span class="n">09</span><h2>What we will not claim</h2></div>
+  <p>Being explicit here is what separates this from an overclaiming paper. Phase 0 already turned one of these from a caveat into a caught defect.</p>
+  <div class="honest">
+    <p class="lbl">Stated limits</p>
+    <ul>
+      <li><b>SOLWEIG models outdoor thermal comfort, not indoor air temperature.</b> Most heat mortality, especially among the over-65s who are roughly 90% of deaths, is mediated by indoor exposure. We report outdoor exposure and do not claim to predict deaths averted. <em>Phase 0 found this as a real bug:</em> Tmrt over a building footprint is not a temperature anyone experiences, yet the dasymetric population step places everyone inside buildings, so the first scoring pass weighted the physics by exactly the mask where it does not apply. Fixed by redistributing residents onto outdoor pixels within walking reach.</li>
+      <li><b>Exposure-response functions do not exist for most target cities.</b> The MCC network covers 604 locations in 39 countries, heavily skewed to the Global North. We use meta-regression transfer and report where the epidemiology is extrapolated, as a first-class uncertainty.</li>
+      <li><b>Equity is currently proxied by population density, which is weak.</b> Phase 0 measured a negative equity gap, meaning the densest areas are cooler at pedestrian level by day. That is probably physically real, since dense low-rise fabric self-shades its own streets, but interpreting it needs a proper deprivation surface.</li>
+      <li><b>A benchmark is not a deployment.</b> We are not telling a city what to build. We are giving the research community a shared, honest place to compare methods.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="phases">
+  <div class="shead"><span class="n">10</span><h2>Phases</h2></div>
+  <div class="ph">
+    <div class="phr is-done"><div class="pn">0</div><div><h4>One-city vertical slice</h4><p><span class="ex">Passed 2026-08-26</span>Ahmedabad end to end, data through SOLWEIG through objectives through a greedy baseline. Physics validated as plausible, loop closed, three undeclared dependencies and one methodological bug found and fixed.</p></div><div class="wk">wk 1 to 4</div></div>
+    <div class="phr is-done"><div class="pn">1</div><div><h4>Data pipeline generalised</h4><p><span class="ex">Passed 2026-08-26</span>Nine cities built from scratch with one command, zero failures, all Tier A. Corpus of 32 validated against the real tile listing.</p></div><div class="wk">wk 4 to 8</div></div>
+    <div class="phr"><div class="pn">2</div><div><h4>The surrogate</h4><p><span class="ex">Exit</span>Held-out accuracy above threshold, and at least 100 times faster than SOLWEIG at equal tolerance.</p></div><div class="wk">wk 8 to 12</div></div>
+    <div class="phr"><div class="pn">3</div><div><h4>Gymnasium environment, Tracks A and B</h4><p><span class="ex">Exit</span>MILP, greedy, CMA-ES and PPO baselines all run on all cities within the fixed simulator-call budget.</p></div><div class="wk">wk 12 to 18</div></div>
+    <div class="phr"><div class="pn">4</div><div><h4>Tracks C and D</h4><p><span class="ex">Exit</span>Zero-shot transfer measured on held-out cities. MAP-Elites archive with meaningful coverage.</p></div><div class="wk">wk 18 to 24</div></div>
+    <div class="phr"><div class="pn">5</div><div><h4>Validation, ablations, paper</h4><p><span class="ex">Exit</span>Rediscovery check on Ahmedabad and Seville, full ablation table, preprint.</p></div><div class="wk">wk 24 to 30</div></div>
+  </div>
+</section>
+
+<section id="risks">
+  <div class="shead"><span class="n">11</span><h2>Risks</h2></div>
+  <div class="tw"><table>
+    <thead><tr><th>Risk</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>SOLWEIG too slow to search against</td><td><strong>Confirmed and quantified.</strong> 162 s warm per km&sup2;, so 45 to 78 hours per search per city. This is exactly why the surrogate is a contribution rather than an implementation detail.</td></tr>
+      <tr><td>Global height data too coarse for 1 m physics</td><td><strong>Mitigated.</strong> GlobalBuildingAtlas at 3 m with 100% completeness on the test area, against UT-GLOBUS at RMSE 9.1 m. Data-quality tier recorded per city and results stratified by tier.</td></tr>
+      <tr><td>Surrogate error swamps intervention effect</td><td><strong>Unlikely.</strong> Measured effect is 17.84&deg;C where planted and 5.93&deg;C population-weighted, which is a large signal to sit above.</td></tr>
+      <tr><td>Epidemiology does not transfer to target cities</td><td>Outdoor exposure metrics are primary. Mortality remains a clearly labelled secondary layer.</td></tr>
+      <tr><td>"Just another benchmark"</td><td>Track D quality-diversity portfolios and Track C transfer carry genuine method novelty, and the measured spillover gives both a concrete target.</td></tr>
+      <tr><td>Scope creep across 30 cities</td><td>Tiered corpus: 5 deep-validation cities, 25 breadth cities. Ship 5 if 30 slips.</td></tr>
+      <tr><td>Upstream packaging fragility</td><td><strong>Live issue.</strong> solweig-gpu 2.0.0 has undeclared dependencies on GDAL Python bindings and numba, and hardcodes CUDA-or-CPU device selection with no Apple Silicon path. Worth reporting upstream. Both WRI repos also have no license file set.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="umbra">
+  <div class="shead"><span class="n">12</span><h2>Umbra, the second artifact</h2></div>
+  <p>Named for the fully shaded core of a shadow, which is literally what SOLWEIG computes: shadow geometry driving mean radiant temperature.</p>
+  <p>En-ROADS works as a negotiation instrument because it answers in 60 milliseconds. It is global, system-dynamics, and about mitigation, so there is no overlap with this work. The two nest rather than compete: En-ROADS gives the planet's temperature trajectory, Umbra gives where to plant trees on a given block given that trajectory.</p>
+  <p>The surrogate is the only thing standing between us and that instrument. Once city-scale heat response evaluates in milliseconds rather than minutes, a planner can move a budget slider and watch the exposure map and the health burden update live. That aims directly at the governance failures above: 88% of cities have no heat budget, fewer than 5% ever evaluate an intervention, and the diagnosis is siloed decision-making.</p>
+  <p>Same core, two audiences. CoolBench is the rigorous artifact for researchers. Umbra is the instrument for the people who actually hold the budget.</p>
+</section>
+
+<section id="sources">
+  <div class="shead"><span class="n">13</span><h2>Sources</h2></div>
+  <div class="src">
+    <div>
+      <h3>Heat burden and urgency</h3>
+      <ul>
+        <li><a href="https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health">WHO, heat and health</a></li>
+        <li><a href="https://yaleclimateconnections.org/2026/06/eastern-u-s-to-broil-after-heat-wave-kills-over-1300-in-europe/">June 2026 European heatwave</a></li>
+        <li><a href="https://www.colorado.edu/today/2026/08/05/heat-worlds-deadliest-climate-hazard-are-cities-ready">Deadliest hazard, are cities ready</a></li>
+        <li><a href="https://www.undrr.org/news/chronic-heat-impacts-and-solutions-south-east-asia-and-east-africa">UNDRR, chronic heat</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>The gap</h3>
+      <ul>
+        <li><a href="https://preparecenter.org/wp-content/uploads/2026/04/RCCC_Heat-Urban-Governance_policy-brief.pdf">RCCC, Urban Heat Governance 2026</a></li>
+        <li><a href="https://www.sciencedirect.com/science/article/pii/S1364032126002029">ML methods for UHI, 2026 review</a></li>
+        <li><a href="https://unhabitat.org/handbook-on-urban-heat-management-in-the-global-south">UN-Habitat, heat in the Global South</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>The forward model we build beside</h3>
+      <ul>
+        <li><a href="https://coolcities.wri.org/data-and-methods/utci">WRI Cool Cities Lab, methods</a></li>
+        <li><a href="https://www.wri.org/research/modeling-hyperlocal-heat-exposure-open-source-data">Modeling hyperlocal heat exposure</a></li>
+        <li><a href="https://www.wri.org/research/mapping-scenarios-and-estimating-potential-heat-resilient-infrastructure-cities">Mapping scenarios, Wesley et al. 2026</a></li>
+        <li><a href="https://github.com/wri/cities-cif">wri/cities-cif</a></li>
+        <li><a href="https://github.com/wri/cities-OpenUrban">wri/cities-OpenUrban</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Closest prior art</h3>
+      <ul>
+        <li><a href="https://arxiv.org/pdf/2012.10504">CityLearn</a></li>
+        <li><a href="https://arxiv.org/html/2607.16534v1">Building2Building</a></li>
+        <li><a href="https://arxiv.org/html/2312.14196">weather2alert, RL for heat alerts</a></li>
+        <li><a href="https://www.sciencedirect.com/science/article/pii/S2212095525004328">GUHVI</a></li>
+        <li><a href="https://www.climateinteractive.org/en-roads/">En-ROADS</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Simulator and data</h3>
+      <ul>
+        <li><a href="https://umep-dev.github.io/solweig/">SOLWEIG, Rust and GPU</a></li>
+        <li><a href="https://solweig-gpu.readthedocs.io/en/latest/input_data.html">SOLWEIG-GPU input spec</a></li>
+        <li><a href="https://source.coop/tge-labs/globalbuildingatlas-lod1">GlobalBuildingAtlas on Source Cooperative</a></li>
+        <li><a href="https://essd.copernicus.org/articles/17/6647/2025/">GlobalBuildingAtlas, ESSD 2025</a></li>
+        <li><a href="https://zenodo.org/records/11156602">UT-GLOBUS</a></li>
+        <li><a href="https://registry.opendata.aws/dataforgood-fb-forests/">Meta and WRI canopy height</a></li>
+        <li><a href="https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php">GHS-POP R2023A</a></li>
+        <li><a href="https://open-meteo.com/en/docs/historical-weather-api">Open-Meteo ERA5 archive</a></li>
+        <li><a href="https://developers.google.com/earth-engine/guides/noncommercial_tiers">GEE noncommercial quotas</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Health response and methods</h3>
+      <ul>
+        <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4521077/">Gasparrini et al., temperature-attributable mortality</a></li>
+        <li><a href="http://www.ag-myresearch.com/r-code.html">Gasparrini R code</a></li>
+        <li><a href="https://link.springer.com/article/10.1007/s43762-024-00127-z">Survey, RL in spatial resource allocation</a></li>
+        <li><a href="https://www.emergentmind.com/topics/map-elites-algorithm">MAP-Elites, quality-diversity</a></li>
+        <li><a href="https://arxiv.org/pdf/1806.05865">Surrogate-assisted illumination</a></li>
+        <li><a href="https://www.sciencedirect.com/science/article/pii/S1462901121000733">Robust decision making for climate adaptation</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="colo">
+    CoolBench, research proposal v3, 2026-08-26. Phases 0 and 1 passed.<br>
+    Source of truth: <code>~/exp/shadecast/PROPOSAL.md</code> and <code>PHASE0.md</code>
+  </div>
+</section>
+
+</div>
