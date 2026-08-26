@@ -1,10 +1,15 @@
 """Surrogate design, features and model. No engine, no network."""
 
+import json
+
 import numpy as np
 import pytest
+import rasterio
 import torch
+from rasterio.transform import from_origin
 from scipy import ndimage
 
+from shadecast.repair import aoi_from_provenance
 from shadecast.surrogate import designs
 from shadecast.surrogate.features import IN_CHANNELS_ORDER, sky_openness, stack
 from shadecast.surrogate.metrics import (
@@ -188,13 +193,6 @@ def test_a_model_worse_than_nothing_has_negative_skill():
 
 def test_backfill_writes_onto_the_recorded_grid(tmp_path):
     """A rebuilt bundle that shifts the grid would invalidate hours of physics."""
-    import json
-
-    import rasterio
-    from rasterio.transform import from_origin
-
-    from shadecast.repair import aoi_from_provenance
-
     bundle = tmp_path / "testville"
     bundle.mkdir()
     (bundle / "provenance.json").write_text(
