@@ -118,6 +118,19 @@ td.n{font-family:var(--f-m);text-align:right;font-variant-numeric:tabular-nums}
 .scrollx{overflow-x:auto}
 figure.chart{margin:0;min-height:2rem;max-width:100%;overflow-x:auto}
 svg{display:block;max-width:100%;height:auto}
+/* Six series ending close together cannot all shout at once. Labels sit back until the
+   series they belong to is hovered, then that one comes forward and the rest recede. */
+.series{cursor:pointer}
+/* Opacity is set on the group, not on the text inside it. Styling the descendant meant
+   the resting rule and the active rule fought over the same declaration and the resting
+   one kept winning, so a hovered label changed weight but never brightened. */
+/* Line emphasis is CSS because real pointer hover drives :hover reliably. The matching
+   label is bolded from JS instead: a label sits outside the group being hovered, so no
+   :hover selector reaches it. */
+.slabel text{transition:font-size .1s}
+.series{cursor:pointer}
+.series .line{transition:stroke-width .12s}
+.series:hover .line{stroke-width:4}
 .legend{display:flex;flex-wrap:wrap;gap:.7rem;font-size:.72rem;color:var(--ink-2);margin-top:.4rem}
 .legend i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:.3rem;vertical-align:-1px}
 footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--rule-2);font-size:.8rem;color:var(--ink-3)}
@@ -230,6 +243,6 @@ function attachReadout(canvas,readout,getAtlas,getTile,unit){
 const fmt = (n,d=0)=> n===null||n===undefined||!isFinite(n) ? "—" : Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
 const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 </script>
-<script src="app.js?v=6aba976804"></script>
+<script src="app.js?v=2f6d671fc8"></script>
 </body>
 </html>
