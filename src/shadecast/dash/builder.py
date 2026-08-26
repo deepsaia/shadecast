@@ -27,7 +27,12 @@ from . import encode, findings
 
 logger = logging.getLogger(__name__)
 
-TILE_PX = 320
+TILE_PX = 384
+# The plan maps are shown at roughly 550 px, so 320 was a visible upscale. Placement is
+# a binary mask and compresses to almost nothing at high resolution; the cooling field is
+# continuous and is what actually costs bytes, so it takes the middle size.
+PLACE_PX = 576
+COOL_PX = 512
 ARRANGEMENT = {"clustered": "clustered", "random": "scattered", "corridor": "corridor"}
 
 
@@ -99,10 +104,10 @@ def plan_entries(city: str, surrogate_dir: Path, out_dir: Path, layers: dict) ->
     return {
         "list": entries,
         "cooling": encode.atlas(
-            [cooling[i] for i in order], out_dir / f"{city}_cool.png", size=TILE_PX, columns=5
+            [cooling[i] for i in order], out_dir / f"{city}_cool.png", size=COOL_PX, columns=5
         ),
         "placement": encode.atlas(
-            [placement[i] for i in order], out_dir / f"{city}_place.png", size=TILE_PX, columns=5
+            [placement[i] for i in order], out_dir / f"{city}_place.png", size=PLACE_PX, columns=5
         ),
     }
 

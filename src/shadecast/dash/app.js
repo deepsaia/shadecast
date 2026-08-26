@@ -99,6 +99,59 @@ function prose(...paras){
   return `<div class="prose">${paras.map(x=>`<p>${x}</p>`).join("")}</div>`;
 }
 
+/* Everything this work stands on, grouped by what it was used for. A flat alphabetical
+   list would hide which sources are load-bearing and which are context. */
+const REFERENCES = [
+["The radiation model", [
+ ["SOLWEIG 1.0: modelling spatial variations of 3D radiant fluxes and mean radiant temperature in complex urban settings", "Lindberg, Holmer and Thorsson, International Journal of Biometeorology 52, 2008", ""],
+ ["Urban Multi-scale Environmental Predictor (UMEP): an integrated tool for city-based climate services", "Lindberg et al., Environmental Modelling and Software 99, 2018", "https://umep-docs.readthedocs.io/"],
+ ["solweig-gpu, the implementation this benchmark calls", "GPL-3.0, invoked across a process boundary so this codebase stays Apache-2.0", "https://solweig-gpu.readthedocs.io/en/latest/input_data.html"],
+ ["SOLWEIG model source and documentation", "UMEP development group", "https://umep-dev.github.io/solweig/"],
+ ["Deriving the operational procedure for the Universal Thermal Climate Index", "Bröde et al., International Journal of Biometeorology 56, 2012", ""]]],
+
+["Reflective surfaces, and why those arms are quarantined", [
+ ["Evidence-based guidance on reflective pavement for urban heat mitigation in Arizona", "Nature Communications 14, 1467, 2023. Field measurement across 58 km of treated street in Phoenix: pedestrian mean radiant temperature rises significantly on the road, with no significant change on the sidewalk", "https://www.nature.com/articles/s41467-023-36972-5"],
+ ["Limited application of reflective surfaces can mitigate urban heat pollution", "Nature Communications 12, 2021", "https://www.nature.com/articles/s41467-021-23634-7"],
+ ["Optimizing retro-reflective surfaces to untrap radiation and cool cities", "Nature Cities, 2024. The physically correct version of the albedo arm, and one this engine cannot represent", "https://www.nature.com/articles/s44284-024-00047-3"],
+ ["Harnessing retro-reflective materials for urban heat island mitigation", "Discover Cities, 2025", "https://link.springer.com/article/10.1007/s44327-025-00086-y"]]],
+
+["Shaded routing, the forward problem this inverts", [
+ ["CoolWalks for active mobility in urban street networks", "Scientific Reports, 2025", "https://www.nature.com/articles/s41598-025-97200-2"],
+ ["CoolWalks: assessing the potential of shaded routing for active mobility", "arXiv:2405.01225", "https://arxiv.org/html/2405.01225v1"],
+ ["Cool routes: real-time human thermal exposure routing", "Building and Environment", "https://www.sciencedirect.com/science/article/abs/pii/S0360132326004270"],
+ ["Mitigating heat stress by reducing solar exposure in pedestrian routing", "Kolaxidis et al., Transactions in GIS, 2025", "https://onlinelibrary.wiley.com/doi/10.1111/tgis.70110"]]],
+
+["Prior systems this builds on and compares against", [
+ ["WRI Cool Cities Lab, UTCI methods", "World Resources Institute", "https://coolcities.wri.org/data-and-methods/utci"],
+ ["cities-cif, WRI's city indicator framework", "World Resources Institute", "https://github.com/wri/cities-cif"],
+ ["cities-OpenUrban, WRI's land cover and opportunity layers", "Source of the cool-roof albedo targets, 0.62 low slope and 0.28 high slope", "https://github.com/wri/cities-OpenUrban"],
+ ["En-ROADS climate policy simulator", "Climate Interactive. Checked for overlap: it is global and policy-scale, this is street-scale and spatial", "https://www.climateinteractive.org/en-roads/"],
+ ["Handbook on urban heat management in the Global South", "UN-Habitat", "https://unhabitat.org/handbook-on-urban-heat-management-in-the-global-south"]]],
+
+["Data, every source unauthenticated", [
+ ["GlobalBuildingAtlas LoD1 footprints and heights", "Source Cooperative. Chosen over Overture, which carried heights for 1 of 14,213 buildings in Ahmedabad", "https://source.coop/tge-labs/globalbuildingatlas-lod1"],
+ ["Copernicus DEM GLO-30 terrain", "AWS Open Data, unsigned", ""],
+ ["ESA WorldCover 10 m v200 2021 land cover", "AWS Open Data, unsigned", ""],
+ ["Meta and WRI Canopy Height Model, 1 m", "AWS Open Data", "https://registry.opendata.aws/dataforgood-fb-forests/"],
+ ["GHS-POP R2023A population, 100 m", "European Commission JRC, redistributed here by building volume", "https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php"],
+ ["Open-Meteo ERA5 historical archive", "Hourly meteorology, no key required", "https://open-meteo.com/en/docs/historical-weather-api"],
+ ["OpenStreetMap, via Overpass", "The walkable network behind the corridor objective", "https://www.openstreetmap.org/copyright"]]],
+
+["Method", [
+ ["OSMnx: new methods for acquiring, constructing, analyzing and visualizing complex street networks", "Boeing, Computers, Environment and Urban Systems 65, 2017", ""],
+ ["U-Net: convolutional networks for biomedical image segmentation", "Ronneberger, Fischer and Brox, MICCAI 2015. The surrogate architecture", "https://arxiv.org/abs/1505.04597"],
+ ["Evolutionary surrogate-assisted prescription", "Cognizant AI Labs. The framing behind treating this as a prescriptor over a learned predictor", "https://arxiv.org/pdf/2012.10504"]]],
+];
+
+function stepReferences(){
+  return `<section class="step" id="references"><h2><i>10</i> References</h2>
+  <p class="sub">Everything this work rests on. Sources that changed a decision carry a note saying what they changed.</p>
+  <div class="card"><div class="refs">${REFERENCES.map(([group,items])=>
+    `<div class="refgroup"><h3>${group}</h3><ul>${items.map(([title,where,url])=>
+      `<li>${url?`<a href="${url}" target="_blank" rel="noopener">${title}</a>`:`<span>${title}</span>`}<em>${where}</em></li>`
+    ).join("")}</ul></div>`).join("")}</div></div></section>`;
+}
+
 function stepGlossary(){
   return `<section class="step" id="terminology"><h2><i>09</i> Terminology</h2>
   <p class="sub">Every term the walkthrough uses, defined once. Each is linked from the step that first needs it.</p>
@@ -344,8 +397,10 @@ function stepPlans(c){
   </div>
   <div class="card" style="margin-top:.8rem">
     <div class="maps">
-      <figure><figcaption>where the trees go</figcaption><canvas id="mplace"></canvas></figure>
-      <figure><figcaption>cooling delivered (°C), hover to read</figcaption><canvas id="mcool"></canvas></figure>
+      <figure><figcaption>where the trees go</figcaption>
+        <div class="frame plain"><canvas id="mplace"></canvas><span class="readout" id="placeout">hover to read</span></div></figure>
+      <figure><figcaption>cooling delivered, hover to read</figcaption>
+        <div class="frame plain"><canvas id="mcool"></canvas><span class="readout" id="coolout">hover to read</span></div></figure>
     </div>
   </div></section>`;
 }
@@ -382,25 +437,52 @@ function stepChannel(f){
 }
 
 function stepOpen(f){
-  const open=[f.channel,f.targeting].filter(x=>x.status==="pending");
-  let s=`<section class="step"><h2><i>08</i> Open questions</h2>
-  <p class="sub">Written down before they were run. Listed here whether or not they turn out the way we expect.</p><div class="grid g3">`;
-  open.forEach(x=>{
+  const pending=[f.channel,f.targeting].filter(x=>x.status==="pending");
+  let s=`<section class="step"><h2><i>08</i> What we have, and what the benchmark still needs</h2>
+  <p class="sub">Set out for the same reason the hypotheses were: so the gap between the goal and the state of things stays visible.</p>
+  ${prose(
+    "The goal set at the outset was an open benchmark for urban heat adaptation planning: a standard set of cities, a fixed way of scoring a plan, and results anyone can reproduce without an account. That is not finished. What exists today is the machinery and a first set of results. The pipeline runs end to end from public data, the scoring is fixed in advance and reported rather than collapsed into a single number, the hypotheses were committed before testing, and five of them have now been answered. That is a study built with a benchmark's architecture, not yet a benchmark.",
+    "Three cities do test something real. Ahmedabad is hot and dry, Lagos hot and humid, Rio coastal and hilly, and they differ in density and street pattern as much as in climate. Trees beat shade structures in all three, at every budget, by a margin that barely moved. But three supports the claim that a ranking held where we looked, not that it holds generally, and it is too few to test the one hypothesis that needs variation across many cities rather than agreement among a few.",
+    "Finished would look like this: nine or more cities spanning climate and urban form, every intervention arm either trusted or excluded for a stated reason, a held-out set that nothing was tuned against, and a published spec and data bundle a stranger can run and score against without asking us for anything. Four things stand between here and there."
+  )}
+  <div class="grid g3">`;
+  pending.forEach(x=>{
     s+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:.5rem">
-      <b>${x.name}</b><span class="tag pend">running</span></div>
-      <p class="sub" style="margin:.4rem 0 .5rem">${x.question}</p>
-      <ul class="hyp" style="padding:0;margin:0">${x.hypotheses.map(h=>`<li><code>${h.split(" ")[0]}</code><span>${h.split(" ").slice(1).join(" ")}</span></li>`).join("")}</ul>
-      <p class="outcome" style="font-size:.8rem">${x.detail}</p></div>`;
+      <span>${x.name}</span><span class="tag pend">running</span></div>
+      <p class="outcome">${x.detail}</p></div>`;
   });
-  s+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>Next</b><span class="tag pend">queued</span></div>
-    <ul class="hyp" style="padding:0;margin:.4rem 0 0">
-      <li><code>H9</code><span>The gain from corridor targeting should grow with how irregular a street network is. On a perfect grid every detour is equivalent, so there should be nothing to win.</span></li>
-      <li><code>scale</code><span>Grow the corpus beyond three cities. Transfer already improves with each city added, so this is a measured bet rather than a hopeful one.</span></li>
-    </ul></div>`;
-  return s+"</div></section>";
-}
+  s+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><span>One. Scale the corpus</span><span class="tag pend">next</span></div>
+    <p class="outcome">Six more city bundles are already built and unused: Phoenix, Sydney, Nairobi, Jakarta, Khartoum and
+    London. Adding them turns "the ranking held in three cities" into a claim with enough spread to defend, and the
+    transfer curve in section 3 already shows each extra city improving prediction on a city the model has never seen.
+    This is the single step that most separates what exists from what was intended.</p></div>
 
-/* ------------------------------------ wiring ----------------------------------------- */
+    <div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><span>Two. H9, blocked on breadth</span><span class="tag pend">blocked</span></div>
+    <p class="outcome">Shaded routing is known to give no benefit on a perfectly regular grid, because every alternative is
+    equivalent. The corridor advantage should therefore grow with how irregular a street network is. Ours already spans
+    9.7x, 3.8x and 2.1x across the three cities, which is suggestive and nothing more, because three points is not a
+    correlation. The method is ready; only the cities are missing.</p></div>
+
+    <div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><span>Three. Settle the albedo defect</span><span class="tag pend">next</span></div>
+    <p class="outcome">Cool roofs and reflective pavement are excluded from every result here, because the engine reports
+    cooling where its own constants and field measurement both say warming. That removes half the action space a real city
+    has, so a benchmark that stays silent on it is incomplete. The test is already to hand: the field study was carried out
+    in Phoenix, and a Phoenix bundle is built and waiting. Running the arm there either rehabilitates two interventions or
+    turns a suspicion into a reportable upstream defect.</p></div>
+
+    <div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><span>Four. Publish a runnable spec</span><span class="tag pend">next</span></div>
+    <p class="outcome">A benchmark is something other people run. That needs frozen city bundles anyone can download, a fixed
+    task definition, a held-out set nothing was tuned against, and a scoring script. The pieces exist as a command line
+    today; what is missing is the packaging and the held-out split.</p></div>
+
+    <div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><span>Standing limits</span><span class="tag pend">known</span></div>
+    <p class="outcome">One square kilometre per city, not a whole city. One design day, so nothing here speaks to a season
+    or to a heatwave sequence. Outdoor exposure only: indoor heat drives most heat mortality among older people and this
+    does not address it. Costs are order-of-magnitude placeholders and should be replaced with local figures before any of
+    these numbers inform real spending. Retro-reflective materials cannot be represented at all.</p></div>
+  </div></section>`;
+  return s;
+}
 function paintHour(){
   const c=S.data.cities.find(x=>x.city===S.city);
   const A=S.atlas[c.hours.file];
@@ -439,7 +521,7 @@ function paintPlan(){
 async function render(){
   const c=S.data.cities.find(x=>x.city===S.city), f=S.data.findings;
   $("citymeta").textContent=`${c.name} · design day ${c.provenance.design_day} · 1 km² at 1 m`;
-  $("app").innerHTML=stepAssemble(c)+stepSimulate(c)+stepSurrogate(f)+stepFactorial(f)+stepPlans(c)+stepCorridor(f)+stepChannel(f)+stepOpen(f)+stepGlossary();
+  $("app").innerHTML=stepAssemble(c)+stepSimulate(c)+stepSurrogate(f)+stepFactorial(f)+stepPlans(c)+stepCorridor(f)+stepChannel(f)+stepOpen(f)+stepGlossary()+stepReferences();
   $("hour").value=S.hour;
   $("hour").oninput=e=>{S.hour=+e.target.value;paintHour();};
   $("play").onclick=()=>{
@@ -449,6 +531,9 @@ async function render(){
     if(S.playing) tick();
   };
   attachReadout($("frame"),$("readout"),()=>S.atlas[c.hours.file],()=>S.hour," °C");
+  const tileOf=()=>{const p=c.plans.list.find(x=>x.id===S.plan); return p?p.tile:0;};
+  attachReadout($("mcool"),$("coolout"),()=>S.atlas[c.plans.cooling.file],tileOf," °C cooler");
+  attachReadout($("mplace"),$("placeout"),()=>S.atlas[c.plans.placement.file],tileOf,"");
   // Text and charts are already on screen. Fields arrive after, together, so a slow or
   // missing image degrades to a blank map rather than a blank page.
   await Promise.all([c.hours, c.plans.cooling, c.plans.placement].map(loadAtlas));
