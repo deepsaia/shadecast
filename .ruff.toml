@@ -1,0 +1,12 @@
+line-length = 100
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "PL", "BLE", "ARG", "PTH"]
+ignore = [
+    "PLR0913",  # planning functions genuinely take many parameters
+    "PLR2004",  # thresholds are explained in context
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["PLR2004", "ARG"]
