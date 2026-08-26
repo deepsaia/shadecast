@@ -7,7 +7,6 @@ served anywhere, which matters for reproducing a result years later.
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 from typing import Annotated
@@ -16,24 +15,26 @@ import typer
 
 from .cities import CORPUS
 from .console import console
-from .dash.builder import build_city
+from .dash.builder import build_index
 from .dash.server import serve
 
 logger = logging.getLogger(__name__)
 
-BUNDLE_ROOTS = (Path("data/cities"), Path("out/corpus"))
+# out/corpus first, deliberately. The corpus is what the experiments and the surrogate
+# baselines are built from, and a stale bundle under data/cities once made the page
+# describe one city's geometry beside another one's physics.
+BUNDLE_ROOTS = (Path("out/corpus"), Path("data/cities"))
 DEFAULT_OUT = Path("data/dash")
 
 app = typer.Typer(name="dash", help="Interactive local walkthrough of what we do to a city.")
 
 
 def find_bundle(city: str) -> Path | None:
-    """Locate a built bundle for a city, preferring the canonical location."""
-    for root in BUNDLE_ROOTS:
-        candidate = root / city
-        if (candidate / "provenance.json").exists():
-            return candidate
-    return None
+    """Locate the bundle the physics was actually run on."""
+    found = [r / city for r in BUNDLE_ROOTS if (r / city / "provenance.json").exists()]
+    if len(found) > 1:
+        logger.warning("%s has %d bundles; using %s", city, len(found), found[0])
+    return found[0] if found else None
 
 
 def discover() -> list[tuple[str, Path, Path]]:
@@ -47,39 +48,64 @@ def discover() -> list[tuple[str, Path, Path]]:
     return found
 
 
+ASSETS = ("app.html", "app.js")
+
+
+def build_bundle(destination: Path, data_root: Path = Path("data")) -> int:
+    """Write the whole static bundle, including the page itself. Returns city count."""
+    cities = discover()
+    if not cities:
+        console.print(
+            "[red]No city has both a bundle and generated physics.[/] "
+            "Run 'shadecast build <city>' then 'shadecast surrogate generate'."
+        )
+        raise typer.Exit(code=1)
+
+    destination.mkdir(parents=True, exist_ok=True)
+    with console.status("[cyan]building bundle[/]"):
+        payload = build_index(cities, destination, data_root)
+
+    here = Path(__file__).parent / "dash"
+    # The page ships beside its data so the bundle stays a self-contained pile of files.
+    (destination / "index.html").write_text((here / "app.html").read_text())
+    (destination / "app.js").write_text((here / "app.js").read_text())
+
+    size = sum(f.stat().st_size for f in destination.iterdir() if f.is_file())
+    console.print(
+        f"  [green]{len(payload['cities'])} cities[/], "
+        f"{len(list(destination.iterdir()))} files, {size / 1e6:.1f} MB"
+    )
+    return len(payload["cities"])
+
+
+@app.command("build")
+def build(
+    out: Annotated[Path, typer.Option("--out", help="Bundle directory.")] = DEFAULT_OUT,
+) -> None:
+    """Build the static bundle without serving it.
+
+    Point --out at docs/ to publish the walkthrough on GitHub Pages, which serves the
+    bundle exactly as it is: the page is static files and does all its work in the
+    browser, so nothing here needs a Python process at view time.
+    """
+    build_bundle(out)
+    console.print(f"[green]built[/] into {out}")
+
+
 @app.callback(invoke_without_command=True)
 def main(
+    ctx: typer.Context,
     port: Annotated[int, typer.Option("--port", help="Port to serve on.")] = 8765,
     out: Annotated[Path | None, typer.Option("--out", help="Bundle directory.")] = None,
     rebuild: Annotated[bool, typer.Option("--rebuild", help="Regenerate the bundle.")] = False,
     open_browser: Annotated[bool, typer.Option("--open/--no-open")] = True,
 ) -> None:
-    """Build the dashboard bundle if needed, then serve it."""
+    """Build the walkthrough bundle if needed, then serve it."""
+    if ctx.invoked_subcommand is not None:
+        return
     destination = out if out else DEFAULT_OUT
-    index = destination / "index.json"
-
-    if rebuild or not index.exists():
-        cities = discover()
-        if not cities:
-            console.print(
-                "[red]No city has both a bundle and generated physics.[/] "
-                "Run 'shadecast build <city>' then 'shadecast surrogate generate'."
-            )
-            raise typer.Exit(code=1)
-
-        destination.mkdir(parents=True, exist_ok=True)
-        payload = []
-        with console.status("[cyan]building dashboard bundle[/]") as status:
-            for city, bundle, surrogate_dir in cities:
-                status.update(f"[cyan]{city}[/]: rendering frames and plans")
-                payload.append(build_city(city, bundle, surrogate_dir, destination))
-                console.print(
-                    f"  [green]{city}[/]: {len(payload[-1]['frames'])} hourly frames, "
-                    f"{len(payload[-1]['plans'])} plans"
-                )
-        index.write_text(json.dumps({"cities": payload}))
-        app_html = Path(__file__).parent / "dash" / "app.html"
-        (destination / "index.html").write_text(app_html.read_text())
+    if rebuild or not (destination / "index.json").exists():
+        build_bundle(destination)
 
     console.print(f"[green]shadecast dash[/] on http://127.0.0.1:{port}/  (ctrl-c to stop)")
     serve(destination, port=port, open_browser=open_browser)
