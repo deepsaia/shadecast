@@ -513,8 +513,11 @@ function paintPlan(){
     el.onclick=()=>{S.plan=el.dataset.id;paintPlan();};
     el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();S.plan=el.dataset.id;paintPlan();}};
   });
-  const sel=$("plist").querySelector('[aria-selected="true"]');
-  if(sel) sel.scrollIntoView({block:"nearest"});
+  // Scroll the list itself, never the page. scrollIntoView walks every scrollable
+  // ancestor, so on first paint it dragged the whole document down to the plan list
+  // and a refresh landed the reader in the middle of section 4.
+  const list=$("plist"), sel=list.querySelector('[aria-selected="true"]');
+  if(sel) list.scrollTop = Math.max(0, sel.offsetTop - (list.clientHeight - sel.offsetHeight) / 2);
   $("outcome").innerHTML=`<b>${p.arrangement}</b> at ${(p.coverage*100).toFixed(1)}% coverage costs <b>$${p.cost_m}M</b>,
      lowers average outdoor exposure by <b>${p.exposure_drop} °C</b> and moves <b>${fmt(p.people)}</b> people below the danger threshold.`;
 }
@@ -552,10 +555,9 @@ function tick(){
   const sel=$("city");
   sel.innerHTML=S.data.cities.map(c=>`<option value="${c.city}">${c.name}</option>`).join("");
   S.city=S.data.cities[0].city;
-  sel.onchange=async e=>{
-    S.city=e.target.value; S.plan=null;
-    $("app").innerHTML='<div class="loading">loading '+e.target.value+'…</div>';
-    await render();
-  };
+  // No loading placeholder here. render() writes the whole page synchronously and only
+  // the map fields arrive later, so blanking first just collapsed the page height and
+  // threw the reader's scroll position away.
+  sel.onchange=async e=>{ S.city=e.target.value; S.plan=null; await render(); };
   await render();
 })();
