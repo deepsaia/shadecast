@@ -17,3 +17,9 @@ __pycache__/
 # Working evidence logs, kept local.
 PHASE*.md
 data/dash/
+
+# Figure intermediates. The published page embeds its images, and the renderer
+# plus the generated physics reproduce them.
+docs/_*.json
+docs/_*.svg
+docs/figures/
