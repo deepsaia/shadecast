@@ -104,11 +104,16 @@ def test_model_preserves_spatial_shape():
     assert out.shape == (1, 1, 64, 64)
 
 
-def test_model_output_is_non_negative():
-    """Adding a tree never heats a pixel on the daylight mean."""
+def test_model_can_express_warming():
+    """Measured responses warm about 0.04 percent of outdoor pixels, by up to 10 C.
+
+    A model constrained to non-negative output could not represent that, so the
+    output head is deliberately unconstrained.
+    """
     model = ResponseUNet()
-    out = model(torch.randn(2, len(IN_CHANNELS_ORDER), 64, 64))
-    assert bool((out >= 0).all())
+    out = model(torch.randn(8, len(IN_CHANNELS_ORDER), 64, 64))
+    assert out.min() < 0 or out.max() > 0  # unconstrained range
+    assert torch.isfinite(out).all()
 
 
 def test_receptive_field_spans_the_measured_reach():

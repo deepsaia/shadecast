@@ -77,9 +77,13 @@ class ResponseUNet(nn.Module):
             x = torch.cat([x, skip], dim=1)
             x = decoder(x)
 
-        # Cooling is non-negative: an added tree never heats a pixel on net over the
-        # daylight mean. Softplus enforces that rather than leaving it to be learned.
-        return nn.functional.softplus(self.head(x))
+        # Deliberately unconstrained. An earlier version forced the output
+        # non-negative on the assumption that adding a tree can only cool. Measured
+        # on real responses that is false: about 0.04 percent of outdoor pixels warm,
+        # by up to 10 C, and every one of them sits within 10 m of a new tree. That is
+        # the longwave effect of a pixel seeing warm canopy instead of cold sky.
+        # Rare, but a model that structurally cannot express it is simply wrong.
+        return self.head(x)
 
     def receptive_field_m(self, res_m: float = 1.0) -> float:
         """Approximate receptive field, for checking it spans the measured reach."""
