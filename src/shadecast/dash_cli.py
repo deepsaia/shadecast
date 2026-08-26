@@ -7,6 +7,7 @@ served anywhere, which matters for reproducing a result years later.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from pathlib import Path
 from typing import Annotated
@@ -71,8 +72,17 @@ def build_bundle(destination: Path, data_root: Path = Path("data")) -> int:
 
     here = Path(__file__).parent / "dash"
     # The page ships beside its data so the bundle stays a self-contained pile of files.
-    (destination / "index.html").write_text((here / "app.html").read_text())
-    (destination / "app.js").write_text((here / "app.js").read_text())
+    script = (here / "app.js").read_text()
+    (destination / "app.js").write_text(script)
+
+    # Stamp the script reference with a hash of its contents. GitHub Pages serves assets
+    # with max-age=600, so without this a returning visitor keeps running the previous
+    # app.js for up to ten minutes after a republish and sees a page that no longer exists.
+    digest = hashlib.sha256(script.encode()).hexdigest()[:10]
+    page = (here / "app.html").read_text().replace(
+        '<script src="app.js"></script>', f'<script src="app.js?v={digest}"></script>'
+    )
+    (destination / "index.html").write_text(page)
 
     size = sum(f.stat().st_size for f in destination.iterdir() if f.is_file())
     console.print(
