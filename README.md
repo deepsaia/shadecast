@@ -27,8 +27,16 @@ shadecast build ahmedabad         # assemble one bundle, about 35 seconds
 shadecast plan data/cities/ahmedabad --kind tree --budget 10000000
 ```
 
-The physics engine is optional and lives in its own environment. See
-[CLAUDE.md](CLAUDE.md) for why, and for the licensing boundary.
+The physics engine is optional and lives in its own uv environment, which is what
+keeps its GPL licence off this project:
+
+```bash
+brew install gdal
+uv venv --python 3.12 .venv-engine
+uv pip install --python .venv-engine solweig-gpu numba "gdal==$(gdal-config --version)"
+```
+
+See [CLAUDE.md](CLAUDE.md) for why, and for the licensing boundary.
 
 ## What it does
 
