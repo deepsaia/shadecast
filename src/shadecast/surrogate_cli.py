@@ -18,7 +18,7 @@ import typer
 from .console import console
 from .surrogate.assessment import assess
 from .surrogate.dataset import default_plan, generate
-from .surrogate.patches import crop_batch
+from .surrogate.patches import crop_batch, crop_cities
 from .surrogate.training import save_report, train
 
 logger = logging.getLogger(__name__)
@@ -53,37 +53,86 @@ def generate_data(
 
 @app.command("train")
 def train_model(
-    surrogate_dir: Annotated[Path, typer.Argument(help="Directory of generated responses.")],
-    bundle: Annotated[Path, typer.Argument(help="The matching city bundle.")],
+    surrogate_dir: Annotated[
+        Path | None, typer.Argument(help="Directory of generated responses.")
+    ] = None,
+    bundle: Annotated[Path | None, typer.Argument(help="The matching city bundle.")] = None,
+    pair: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--pair",
+            help="Train across cities: SURROGATE_DIR=BUNDLE, repeatable.",
+        ),
+    ] = None,
+    holdout_city: Annotated[
+        str | None,
+        typer.Option("--holdout-city", help="Hold out this whole city to measure transfer."),
+    ] = None,
     epochs: Annotated[int, typer.Option("--epochs")] = 30,
     patch: Annotated[int, typer.Option("--patch", help="Patch side in pixels.")] = 256,
     per_entry: Annotated[int, typer.Option("--per-entry", help="Patches per design.")] = 24,
 ) -> None:
-    """Fit the response model, holding out whole designs rather than patches."""
+    """Fit the response model.
+
+    By default a whole design is held out, which measures generalisation to an unseen
+    intervention pattern. With --holdout-city a whole city is held out instead, which
+    measures transfer to unseen geometry. Those are different questions.
+    """
+    pairs: list[tuple[Path, Path]] = []
+    if pair:
+        for item in pair:
+            if "=" not in item:
+                raise typer.BadParameter(f"--pair needs SURROGATE_DIR=BUNDLE, got {item!r}")
+            left, right = item.split("=", 1)
+            pairs.append((Path(left), Path(right)))
+    elif surrogate_dir and bundle:
+        pairs.append((surrogate_dir, bundle))
+    else:
+        raise typer.BadParameter("give SURROGATE_DIR and BUNDLE, or one or more --pair")
+
+    if holdout_city and len(pairs) < 2:
+        raise typer.BadParameter("--holdout-city needs at least two cities")
+
     started = time.time()
     with console.status("[cyan]cropping patches[/]"):
-        inputs, targets, origins = crop_batch(
-            surrogate_dir, bundle, size=patch, per_entry=per_entry
-        )
+        if len(pairs) == 1:
+            inputs, targets, origins = crop_batch(
+                pairs[0][0], pairs[0][1], size=patch, per_entry=per_entry
+            )
+        else:
+            inputs, targets, origins = crop_cities(pairs, size=patch, per_entry=per_entry)
+
     console.print(
-        f"{len(inputs):,} patches of {patch}px from "
-        f"{len(set(origins))} designs in {time.time() - started:.1f}s"
+        f"{len(inputs):,} patches of {patch}px from {len(set(origins))} designs "
+        f"across {len(pairs)} cities in {time.time() - started:.1f}s"
     )
+
+    destination = pairs[0][0] if len(pairs) == 1 else Path("data/surrogate/multi")
+    destination.mkdir(parents=True, exist_ok=True)
 
     report = train(
         inputs,
         targets,
         origins,
         epochs=epochs,
-        out_path=surrogate_dir / "model.pt",
+        holdout_city=holdout_city,
+        out_path=destination / "model.pt",
     )
     report["patch_px"] = patch
+    report["cities"] = [str(b) for _, b in pairs]
     report["target_stats"] = {
         "mean_C": round(float(np.mean(targets)), 4),
         "max_C": round(float(np.max(targets)), 3),
     }
-    save_report(report, surrogate_dir / "training_report.json")
-    console.print_json(json.dumps({k: v for k, v in report.items() if k != "history"}))
+    save_report(report, destination / "training_report.json")
+    verdict = "green" if report["beats_predicting_nothing"] else "red"
+    console.print(
+        f"[{verdict}]skill {report['final_skill']:+.3f}[/]  "
+        f"MAE {report['final_test_mae_C']:.4f} C against a zero baseline of "
+        f"{report['zero_baseline_mae_C']:.4f} C  "
+        f"(holdout: {report['holdout_mode']})"
+    )
+    console.print(f"[dim]model and report written to {destination}[/]")
 
 
 @app.command("assess")
