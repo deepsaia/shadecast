@@ -27,8 +27,16 @@ shadecast build ahmedabad         # assemble one bundle, about 35 seconds
 shadecast plan data/cities/ahmedabad --kind tree --budget 10000000
 ```
 
-The physics engine is optional and lives in its own environment. See
-[CLAUDE.md](CLAUDE.md) for why, and for the licensing boundary.
+The physics engine is optional and lives in its own uv environment, which is what
+keeps its GPL licence off this project:
+
+```bash
+brew install gdal
+uv venv --python 3.12 .venv-engine
+uv pip install --python .venv-engine solweig-gpu numba "gdal==$(gdal-config --version)"
+```
+
+See [CLAUDE.md](CLAUDE.md) for why, and for the licensing boundary.
 
 ## What it does
 
@@ -44,10 +52,12 @@ window found 154,245.
 
 ## Status
 
-- **Phase 0 passed.** Ahmedabad end to end. See [PHASE0.md](PHASE0.md).
-- **Phase 1 passed.** Nine cities, zero failures, first cross-city comparison. See
-  [PHASE1.md](PHASE1.md).
-- Next: the learned surrogate, which is what makes search affordable.
+- **Phase 0 passed.** Ahmedabad end to end: data, physics, objectives, a greedy
+  baseline, and a measured 1.52 C spillover that greedy cannot see.
+- **Phase 1 passed.** Nine cities, zero failures, and the first cross city result:
+  Lagos returns 38% more cooling benefit per dollar than Ahmedabad.
+- **Phase 2 in progress.** The learned surrogate, which is what makes search
+  affordable at all.
 
 Full proposal in [PROPOSAL.md](PROPOSAL.md).
 

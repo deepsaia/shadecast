@@ -25,16 +25,28 @@ it as a **subprocess** through its own console script in its own environment, so
 the GPL stays behind the process wall and shadecast can stay permissive. Do not
 `import solweig_gpu` anywhere in `src/`.
 
-## Two environments, on purpose
+## Two environments, both uv
 
-| Env | Manager | Holds | Why |
-|---|---|---|---|
-| `.venv` | uv | shadecast + data stack | the library, permissive |
-| `coolsim` | micromamba | solweig-gpu, GDAL, numba | GPL engine, prebuilt binaries |
+| Env | Holds | Why |
+|---|---|---|
+| `.venv` | shadecast and the data stack | the library, permissively licensed |
+| `.venv-engine` | solweig-gpu, GDAL bindings, numba | the GPL engine, isolated |
 
-`solweig-gpu` has **undeclared dependencies** on GDAL Python bindings and numba.
-Homebrew took over 25 minutes resolving GDAL from source; conda-forge has it
-prebuilt. Set `SHADECAST_SOLWEIG_BIN` if the engine is not at the default path.
+Both are uv. Keeping them separate is what holds the GPL boundary: shadecast never
+imports the engine, and the two dependency sets never have to agree.
+
+```bash
+brew install gdal
+uv venv --python 3.12 .venv-engine
+uv pip install --python .venv-engine solweig-gpu numba "gdal==$(gdal-config --version)"
+```
+
+`solweig-gpu` has **undeclared dependencies** on GDAL Python bindings and numba,
+which is why they are named explicitly above. The runner finds `.venv-engine`
+automatically by walking up to the repo root; `SHADECAST_SOLWEIG_BIN` overrides it.
+
+**Never modify a venv while a background job is running from it.** Adding a package
+mid-run rebuilds the environment underneath the live process and kills it.
 
 ## Gotchas learned the hard way
 
@@ -58,6 +70,14 @@ prebuilt. Set `SHADECAST_SOLWEIG_BIN` if the engine is not at the default path.
   ~283 s. The action space should exploit that asymmetry.
 - **macOS spawns rather than forks**, so anything invoking the engine needs a
   `__main__` guard.
+- **`ruff` respects `.gitignore`.** An unanchored `data/` pattern meant to exclude
+  built bundles also matched `src/shadecast/data/`, so ruff silently skipped six
+  modules while reporting all checks passed. Anchor ignore patterns to the root.
+- **A tree's cooling lands in its shadow, not on its own pixel.** Measured: 0.06 C
+  at the tree, 0.88 C mean and 14.3 C peak at 1 to 2 m away.
+- **Adding a tree does not only cool.** About 0.04 percent of outdoor pixels warm,
+  by up to 10 C, all within 10 m of the new tree. That is longwave from warm canopy
+  replacing cold sky. Do not constrain the surrogate output to be non-negative.
 
 ## Layout
 

@@ -1,4 +1,5 @@
 .venv/
+.venv-engine/
 __pycache__/
 *.pyc
 .DS_Store
@@ -12,3 +13,13 @@ __pycache__/
 
 # Cloned upstream repos kept for reference only.
 /vendor/
+
+# Working evidence logs, kept local.
+PHASE*.md
+data/dash/
+
+# Figure intermediates. The published page embeds its images, and the renderer
+# plus the generated physics reproduce them.
+docs/_*.json
+docs/_*.svg
+docs/figures/

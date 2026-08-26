@@ -28,22 +28,44 @@ from .result import RunResult
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_BIN = str(Path("~/.micromamba/envs/coolsim/bin/thermal_comfort").expanduser())
 REQUIRED_INPUTS = ("Building_DSM.tif", "DEM.tif", "Trees.tif", "met.txt")
+
+# The engine lives in its own uv environment beside the project one. Keeping it
+# separate is what holds the GPL boundary: shadecast never imports it, and the two
+# dependency sets never have to agree.
+ENGINE_VENV = ".venv-engine"
+ENGINE_SCRIPT = "thermal_comfort"
+
+
+def candidate_paths() -> list[Path]:
+    """Where the engine console script might be, most specific first."""
+    override = os.environ.get("SHADECAST_SOLWEIG_BIN")
+    found = [Path(override)] if override else []
+    # Walk up from this module to the repo root, so the command works from anywhere.
+    for parent in Path(__file__).resolve().parents:
+        found.append(parent / ENGINE_VENV / "bin" / ENGINE_SCRIPT)
+        if (parent / "pyproject.toml").exists():
+            break
+    found.append(Path.cwd() / ENGINE_VENV / "bin" / ENGINE_SCRIPT)
+    return found
 
 
 def engine_bin() -> str:
     """Locate the engine console script, preferring an explicit override."""
-    candidate = os.environ.get("SHADECAST_SOLWEIG_BIN") or DEFAULT_BIN
-    if Path(candidate).exists():
-        return candidate
-    found = shutil.which("thermal_comfort") or shutil.which("solweig_gpu")
-    if found:
-        return found
+    for candidate in candidate_paths():
+        if candidate.exists():
+            return str(candidate)
+    on_path = shutil.which(ENGINE_SCRIPT) or shutil.which("solweig_gpu")
+    if on_path:
+        return on_path
     raise EngineNotFound(
-        "SOLWEIG engine not found. Install solweig-gpu in a separate environment "
-        "(it needs GDAL bindings and numba, both undeclared) and set "
-        "SHADECAST_SOLWEIG_BIN to its console script."
+        "SOLWEIG engine not found. Create its environment with:\n"
+        "  brew install gdal\n"
+        f"  uv venv --python 3.12 {ENGINE_VENV}\n"
+        f"  uv pip install --python {ENGINE_VENV} solweig-gpu numba "
+        '"gdal==$(gdal-config --version)"\n'
+        "solweig-gpu does not declare its GDAL or numba dependencies, which is why "
+        "they are named explicitly. Set SHADECAST_SOLWEIG_BIN to override the path."
     )
 
 
@@ -145,11 +167,22 @@ def run(
     elapsed = time.time() - started
 
     tmrt_path = next(base_path.glob("output_folder/*/TMRT_*.tif"), None)
-    if completed.returncode != 0 or tmrt_path is None:
-        tail = "\n".join((completed.stderr or completed.stdout or "").splitlines()[-15:])
+    tail = "\n".join((completed.stderr or completed.stdout or "").splitlines()[-15:])
+
+    if tmrt_path is None:
         raise RuntimeError(
-            f"engine failed for {base_path} (rc={completed.returncode}) "
+            f"engine produced no Tmrt for {base_path} (rc={completed.returncode}) "
             f"after {elapsed:.0f}s:\n{tail}"
+        )
+    if completed.returncode != 0:
+        # The engine writes Tmrt before the derived comfort indices and can fail on
+        # the latter while Tmrt is complete and valid. Tmrt is all we consume, so
+        # this is recoverable, but it is surfaced loudly rather than swallowed.
+        logger.warning(
+            "engine exited %d for %s but Tmrt was written; continuing. Tail:\n%s",
+            completed.returncode,
+            base_path,
+            tail,
         )
 
     (base_path / "engine.json").write_text(
