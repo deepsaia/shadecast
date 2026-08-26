@@ -2,77 +2,77 @@
 
 const EXPLAIN = {
   assemble: [
-    ["What a city bundle is",
+    ["bundle", "What a city bundle is",
      "Five raster layers covering one square kilometre at <em>one metre</em> per pixel, all snapped to the same grid: building heights, bare ground elevation, tree canopy height, land cover class, and an hourly weather file. The physics engine requires every layer to share an extent and a pixel size, so we guarantee that by construction rather than by hope."],
-    ["Why credential-free matters",
+    ["credfree", "Why credential-free matters",
      "Every source here is public and unauthenticated, so anyone can rebuild any city without an account, a quota, or a paid key. Credentials are needed at <em>build</em> time by nobody and at <em>use</em> time by nobody. That is what makes this a benchmark others can actually run rather than a result others must take on trust."],
-    ["Design day",
+    ["designday", "Design day",
      "One representative hot day drawn from reanalysis weather, which the whole simulation runs on. Using a real day rather than a monthly average keeps sun angles, air temperature and solar load physically consistent with each other."],
-    ["Quality tier",
+    ["tier", "Quality tier",
      "A label recording how good the inputs were for this city, because global open data is uneven. A result carries its tier so a weak-input city is never silently compared against a strong-input one."]
   ],
   simulate: [
-    ["Mean radiant temperature, or Tmrt",
+    ["tmrt", "Mean radiant temperature, or Tmrt",
      "The single temperature of an imaginary uniform enclosure that would load a human body with the same radiant heat as the real surroundings do. It sums the sunlight striking you plus the infrared radiating off pavement, walls and sky. On an open sunny street it runs <em>15 to 25 °C above air temperature</em>; step into shade and it falls within seconds. This is the quantity a body actually feels."],
-    ["Why not just air temperature",
+    ["notair", "Why not just air temperature",
      "Air temperature barely changes across a street. Planting a tree moves it by a few tenths of a degree, which is why shade looks almost worthless if you measure air. The same tree can drop Tmrt by <em>more than 20 °C</em> in its own shadow. Measuring the wrong variable is the fastest way to conclude that shade does not work."],
-    ["SOLWEIG",
+    ["solweig", "SOLWEIG",
      "The radiation model that computes Tmrt. For every square metre and every hour it works out what that point can see of sun, sky, ground and building, then sums the energy arriving from each direction. We run it as a separate process so that its GPL licence stays outside this Apache-2.0 codebase."],
-    ["Reading the map",
+    ["readmap", "Reading the map",
      "Colour is Tmrt on a single scale held fixed across all 24 hours, so the animation shows the city genuinely heating and cooling rather than rescaling itself. <em>Hover any pixel to read its actual temperature.</em>"]
   ],
   surrogate: [
-    ["The problem",
+    ["slow", "The problem",
      "One physics run takes about <em>160 seconds</em>. Searching even a few thousand candidate plans would take weeks of compute, so the search that actually matters is unaffordable if every candidate needs the engine."],
-    ["Design of experiments",
+    ["doe", "Design of experiments",
      "Instead of simulating one plan per run, we scatter many small probes through a single run, spaced further apart than the distance over which one probe's cooling can reach. Because their effects never overlap, they can be read back as independent measurements: one engine call yields roughly <em>a hundred</em> observations instead of one."],
-    ["The surrogate",
+    ["surrogate", "The surrogate",
      "A convolutional network trained on those observations to predict the cooling field a plan produces, without running the physics. It answers in about half a second instead of 160."],
-    ["Skill score, and why plain error would mislead",
+    ["skill", "Skill score, and why plain error would mislead",
      "Skill measures how much better a prediction is than predicting <em>no change at all</em>. Zero means no better than doing nothing; one means perfect. It matters because a cooling field is almost entirely zero, so a model that confidently predicts nothing everywhere earns a flattering low average error while being completely useless. Skill is the metric that refuses to reward that."],
-    ["Transfer",
+    ["transfer", "Transfer",
      "Whether a model trained on some cities can predict a city it has never seen. This is the difference between a tool that works anywhere and one that must be refitted per city."]
   ],
   factorial: [
-    ["Full factorial",
+    ["factorial", "Full factorial",
      "Every combination of the things being varied, run in full: each intervention type, at each budget, in each city. Running the complete grid rather than a sample is what allows a claim that the ranking holds <em>everywhere</em>, instead of merely on average."],
-    ["Efficiency",
+    ["efficiency", "Efficiency",
      "Degree-hours of dangerous heat removed per <em>$1,000</em> spent. It counts only outdoor ground, because the model is a pedestrian model and its value over a rooftop is not a temperature anyone experiences, and it weights each place by how many people are near it."],
-    ["Pre-registration",
+    ["prereg", "Pre-registration",
      "The hypotheses, their predicted numbers, and the conditions that would prove them wrong, all committed to version control <em>before</em> the experiment ran. It removes the option of deciding afterwards which result was the one we meant to test. An earlier finding of ours was retracted for exactly that missing discipline."],
-    ["What the two arms are",
+    ["arms", "What the two arms are",
      "<em>Trees</em> are living canopy: they cast shade and cool by evaporation, but take years to mature and need water. <em>Shade structures</em> are built canopies such as sails or pergolas: instant, maintenance-light, and far more expensive per square metre covered."]
   ],
   channel: [
-    ["De-paving",
+    ["depave", "De-paving",
      "Lifting sealed surface and putting vegetation in its place. Here it is asphalt replaced by unmanaged grass, and permeable paving is the halfway house: a lighter, rougher surface that still takes traffic."],
-    ["Which channel it works through",
+    ["channel", "Which channel it works through",
      "Not reflectivity. The model's own table gives asphalt a surface heating coefficient of <em>0.58</em> and grass <em>0.21</em>, so the ground simply emits less infrared at the people standing on it. Nothing is bounced at anybody, which is what makes this arm trustworthy."],
-    ["The control that makes it a measurement",
+    ["control", "The control that makes it a measurement",
      "Every run here feeds the engine a land cover map, and the ordinary baseline was produced without one. Comparing against that baseline would have measured <em>land cover switched on</em> mixed together with <em>asphalt became grass</em>, inseparably. So each city pays for an extra run holding land cover unchanged, and every number is measured against that."],
-    ["Why it barely moves the city average",
+    ["aggregate", "Why it barely moves the city average",
      "De-paving cools the ground you actually replace and almost nothing beyond it. A tree also shades well past its own trunk. So a large local effect, <em>4.4 °C</em> on treated ground, becomes a small city-wide one once it is spread over the people who live there."]
   ],
   corridor: [
-    ["The question",
+    ["question", "The question",
      "A budget can cool the <em>hottest ground</em>, or it can cool the ground <em>people actually walk on</em>. Those are not the same places, and until you build both plans and simulate both, there is no way to know how far apart they are."],
-    ["Walking network",
+    ["network", "Walking network",
      "Every footway, path and street a person on foot may use, taken from OpenStreetMap and laid on the same grid as the heat. About 19 km of it inside one square kilometre."],
-    ["How a walker is modelled",
+    ["walker", "How a walker is modelled",
      "People do not take the coolest possible route at any cost, nor the shortest regardless of sun. Each street is given a <em>perceived</em> length that grows with its heat, so a walker trades distance against exposure. Routes are chosen on perceived cost and then scored on the heat actually met along the route chosen, which keeps the choosing and the scoring honest about each other."],
-    ["Corridor value",
+    ["corridorvalue", "Corridor value",
      "For each street, the total trip heat carried along it: how many people-trips pass, multiplied by how hot it is where they pass. It is high where many unavoidable routes funnel through the same hot ground, and low where a street is hot but easy to walk around. An area average cannot tell those two apart; this is the whole reason for the objective."],
-    ["Plan overlap",
+    ["overlap", "Plan overlap",
      "The share of planted positions the two plans have in common. Near zero means the two objectives are choosing almost entirely different places, so the choice of objective is not a detail, it decides what gets built."],
-    ["The honest caveat",
+    ["caveat", "The honest caveat",
      "That corridor targeting wins on the corridor measure is partly definitional, since that is what it optimises. The findings that are <em>not</em> definitional are how little the two plans overlap, how large the gap is, and that in Ahmedabad the corridor plan wins on the area measure too."]
   ],
   plans: [
-    ["Coverage",
+    ["coverage", "Coverage",
      "The fraction of the square kilometre that receives an intervention. It is the simplest dial a planner has and it doubles as a stand-in for budget."],
-    ["Arrangement",
+    ["arrangement", "Arrangement",
      "How the same quantity of canopy is distributed: <em>clustered</em> into a few dense groves, or <em>scattered</em> evenly across the area. Same money, same total canopy, different geometry."],
-    ["The trade-off",
+    ["tradeoff", "The trade-off",
      "Two reasonable objectives disagree. Spreading canopy lowers the <em>average</em> exposure across everyone, while concentrating it pulls more individual people below the dangerous threshold. There is no arrangement that wins both, so the benchmark reports both and refuses to collapse them into one score. Choosing between them is a political decision, not a modelling one."]
   ]
 };
@@ -81,15 +81,22 @@ const EXPLAIN = {
    Inline they crowded out the thing each step was actually showing. */
 const TERM_ORDER = ["assemble","simulate","surrogate","factorial","plans","corridor","channel"];
 const TERMS = [];
-TERM_ORDER.forEach(key=>(EXPLAIN[key]||[]).forEach(([title,body])=>{
-  TERMS.push({n:TERMS.length+1, key, title, body});
+const TERM_BY_SLUG = {};
+TERM_ORDER.forEach(key=>(EXPLAIN[key]||[]).forEach(([slug,title,body])=>{
+  const t={n:TERMS.length+1, key, slug, title, body};
+  TERMS.push(t); TERM_BY_SLUG[slug]=t;
 }));
 
-function why(key){
-  const mine=TERMS.filter(t=>t.key===key);
-  if(!mine.length) return "";
-  return `<p class="terms">Terms: ${mine.map(t=>
-    `<a href="#t${t.n}"><span class="rn">${t.n}</span>${t.title}</a>`).join("")}</p>`;
+/* A term is cited where it is used, as a superscript, and defined once at the foot. */
+function ref(slug){
+  const t=TERM_BY_SLUG[slug];
+  return t ? `<sup class="ref"><a href="#t${t.n}" title="${t.title}">${t.n}</a></sup>` : "";
+}
+
+
+
+function prose(...paras){
+  return `<div class="prose">${paras.map(x=>`<p>${x}</p>`).join("")}</div>`;
 }
 
 function stepGlossary(){
@@ -182,8 +189,8 @@ function stepCorridor(f){
   if(t.status!=="done") return "";
   const v=t.verdict||{};
   return `<section class="step"><h2><i>06</i> Cool the hottest ground, or the ground people walk on?</h2>
-  <p class="sub">Two plans per city at the same budget, both simulated for real, each scored on both objectives.</p>
-  ${why("corridor")}
+  <p class="sub">A budget can cool the hottest ground or the ground people walk on${ref("question")}, and those are not the same places. Over the walking network${ref("network")}, with a walker who trades distance against sun${ref("walker")}, each street earns a corridor value${ref("corridorvalue")}. Both plans are then built, simulated, and their plan overlap${ref("overlap")} measured. One honest caveat${ref("caveat")} is stated up front.</p>
+  ${prose("Published work on shaded routing solves the forward problem: given the shade a city already has, find the coolest way across it. That is useful to a walker and no use at all to a planner, who has to decide where the shade should go in the first place. This is the inverse of that question, and as far as we can tell it is unclaimed.", "The mechanism is that trip heat concentrates. Where alternatives exist, walkers already route around the worst streets, so cooling those streets buys less than the heat map suggests. Where a route is forced, everyone funnels through the same hot ground and cooling it buys a great deal. An area average scores those two situations identically, which is precisely the failure this objective exists to fix.")}
   <div class="grid g3">
     <div class="card">
       <figure class="chart scrollx">${corridorChart(t.rows)}</figure>
@@ -223,8 +230,8 @@ function tradeoffChart(plans,selected){
 function stepAssemble(c){
   const p=c.provenance;
   return `<section class="step"><h2><i>01</i> Assemble a city from open data</h2>
-  <p class="sub">Before any physics, the city has to exist as numbers. Five layers, one metre, one grid, no credentials.</p>
-  ${why("assemble")}
+  <p class="sub">Before any physics the city has to exist as numbers: a city bundle${ref("bundle")} of five layers at one metre on one grid, assembled from public sources with no credentials anywhere${ref("credfree")}, pinned to a single design day${ref("designday")} and labelled with a quality tier${ref("tier")}.</p>
+  ${prose("Every layer is a raster, and they have to agree exactly. The engine will not run if the building model, the terrain, the canopy and the land cover disagree about extent or pixel size by even one cell. Rather than checking for that afterwards, the builder resamples everything onto a single grid defined by the study area itself, so agreement holds by construction rather than by inspection.", "The harder constraint is the credential rule. It would be far easier to pull building heights from a commercial API, but a benchmark that needs three accounts is one almost nobody will reproduce. Everything here came from unauthenticated public endpoints, and each layer carries its source with it, which is what the chips below record.")}
   <div class="card">
     <div class="grid g4" >
       <div class="kv"><div class="n">${fmt(p.buildings)}</div><div class="l">buildings with heights</div></div>
@@ -239,8 +246,8 @@ function stepAssemble(c){
 
 function stepSimulate(c){
   return `<section class="step"><h2><i>02</i> Simulate the heat a body actually feels</h2>
-  <p class="sub">The engine computes mean radiant temperature for every square metre, every hour of the design day.</p>
-  ${why("simulate")}
+  <p class="sub">SOLWEIG${ref("solweig")} computes mean radiant temperature${ref("tmrt")} for every square metre and every hour. That is the heat a body actually feels, which is not air temperature${ref("notair")} and behaves very differently from it. Hover any pixel to read its value${ref("readmap")}.</p>
+  ${prose("The model works by asking, for every square metre, what that point can see. Ground under dense canopy sees little sky and little sun. Ground in the middle of a car park sees all of both, plus hot asphalt radiating back up at it. Adding the energy arriving from every direction gives the radiant load on a body standing there.", "Watch the whole day rather than any single hour. The peak does not fall at noon, and the shade pattern sweeps across the city as the sun moves, which is exactly why a plan judged at one instant can look far better or far worse than it really is.")}
   <div class="scrub">
     <div class="card">
       <div class="frame">
@@ -268,8 +275,8 @@ function stepSurrogate(f){
   const s=f.surrogate;
   if(s.status!=="done") return "";
   return `<section class="step"><h2><i>03</i> Learn a fast stand-in for the physics</h2>
-  <p class="sub">Physics is too slow to search with. A trained model makes the search affordable without giving up the physics as ground truth.</p>
-  ${why("surrogate")}
+  <p class="sub">Physics is too slow to search with${ref("slow")}. A design of experiments${ref("doe")} scatters non-overlapping probes through a single run, so it yields around a hundred measurements instead of one, and the surrogate${ref("surrogate")} trained on them answers in half a second. It is judged on skill score${ref("skill")} rather than plain error, and on transfer${ref("transfer")} to a city it has never seen.</p>
+  ${prose("The engine remains the ground truth, and every headline number on this page is a real run. The surrogate exists only to make the search step affordable, by ranking thousands of candidate plans well enough that scarce physics time gets spent on the few worth simulating properly.", "Transfer is the result that decides whether any of this scales. A model that must be refitted for each new city is a per-city tool, not a benchmark. Held out of training entirely, Rio was predicted better by a model that had seen two other cities than by one that had seen a single city, which is the concrete argument for growing the corpus.")}
   <div class="grid g3">
     <div class="card"><div class="grid g4">
       <div class="kv"><div class="n">${s.skill}</div><div class="l">skill against predicting no change, on plans it never saw</div></div>
@@ -293,8 +300,8 @@ function stepFactorial(f){
   const v=x.verdict||{};
   const spread=x.spreads&&x.spreads.length?x.spreads:[];
   return `<section class="step"><h2><i>04</i> Ask which measure buys the most cooling per dollar</h2>
-  <p class="sub">${x.cells} cells, every one a real physics run: two intervention types, three budgets, three cities on three continents.</p>
-  ${why("factorial")}
+  <p class="sub">A full factorial${ref("factorial")} of ${x.cells} cells, every one a real physics run: trees against shade structures${ref("arms")}, three budgets, three cities on three continents, ranked by efficiency${ref("efficiency")} and tested against pre-registered${ref("prereg")} predictions.</p>
+  ${prose("Price per square metre is misleading on its own. Shade structures cost roughly four times what trees cost for the same ground covered, but they work the day they go up and need very little maintenance, while a tree takes years to reach the canopy assumed here and wants water in the meantime. The question stays genuinely open until the radiation budget settles it.", "The ranking held in every city and the margin barely moved across an eighteenfold span of budget. What did move, by a factor of twenty, is how many people happen to be standing in the cooled space. The same physics is worth very different amounts depending on who is nearby, and that is what pushes this whole problem toward targeting.")}
   <div class="grid g3">
     <div class="card">
       <figure class="chart scrollx">${factorialChart(x.rows)}</figure>
@@ -321,9 +328,9 @@ function stepFactorial(f){
 
 function stepPlans(c){
   return `<section class="step"><h2><i>05</i> Ask where to put it</h2>
-  <p class="sub">Same budget, same canopy, different geometry. Select a plan to see where the trees go and what cooling arrives.</p>
-  ${why("plans")}
-  <div class="scrub">
+  <p class="sub">Same budget and the same total canopy, at each level of coverage${ref("coverage")} and in different arrangements${ref("arrangement")}. Two reasonable objectives disagree about which wins, and that trade-off${ref("tradeoff")} is reported rather than quietly resolved. Select a plan to see where the trees go and what cooling arrives.</p>
+  ${prose("These plans were generated to sweep the design space rather than to be good, so several are deliberately poor. What matters is the shape of the frontier they trace, not any single point on it.", "The disagreement between the two objectives is real and does not go away with a larger budget. Spreading canopy thinly helps almost everyone a little; concentrating it rescues fewer people more completely. Both are defensible, so the benchmark reports both and leaves the weighting to whoever is accountable for the decision.")}
+  <div class="scrub wide">
     <div class="card">
       <div style="font-size:.74rem;color:var(--ink-3);margin-bottom:.3rem">Every generated plan, scored on both objectives</div>
       <figure class="chart" id="tradeoff"></figure>
@@ -349,8 +356,8 @@ function stepChannel(f){
   const v=x.verdict||{}, m=v.mean_treated_drop_C||{};
   const cells=x.rows.flatMap(r=>r.cells.filter(c=>c.pixels).map(c=>({city:r.city,...c})));
   return `<section class="step"><h2><i>07</i> Try a second cooling mechanism, not just shade</h2>
-  <p class="sub">Trees and awnings both work by blocking sun. This asks whether making the ground itself cooler works too, through a channel we can trust.</p>
-  ${why("channel")}
+  <p class="sub">Trees and awnings both work by blocking sun. De-paving${ref("depave")} instead makes the ground itself cooler, through emission rather than reflection${ref("channel")}, which is why it stays usable while the albedo arms are quarantined. Each city pays for a control run that makes it a measurement${ref("control")}. Watch how little it moves the city figure${ref("aggregate")}.</p>
+  ${prose("This arm exists because the shortwave arms are quarantined. Cool roofs and reflective pavement both work by bouncing sunlight, and this engine reports cooling where its own constants and field measurement in Phoenix both say warming, so nothing it produces about them can be trusted. De-paving acts through a different channel and is unaffected by that defect.", "The result splits cleanly into a large local effect and a small city-wide one, and the gap is the instructive part. Replacing a square metre of asphalt cools that square metre. A tree standing on it also shades the square metres around it. Shade wins budgets because its effect travels, which is the same reason trees beat de-paving on cost-effectiveness.")}
   <div class="grid g3">
     <div class="card">
       <table><thead><tr><th>City</th><th>Surface</th><th class="n">Heating coef.</th><th class="n">Treated ground</th><th class="n">City-wide</th></tr></thead><tbody>

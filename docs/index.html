@@ -43,10 +43,13 @@ select{font-family:var(--f-b);font-size:.95rem;padding:.35rem .6rem;border:1px s
 .kv .l{font-size:.74rem;color:var(--ink-3);line-height:1.3}
 .chain{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem}
 .chip{font-family:var(--f-m);font-size:.68rem;background:var(--card-2);border:1px solid var(--rule);border-radius:3px;padding:.25rem .5rem;color:var(--ink-2)}
-/* definitions live in the glossary; steps carry only a compact pointer */
-.terms{margin:.1rem 0 .9rem;font-size:.78rem;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:.35rem .5rem;align-items:center}
-.terms a{display:inline-flex;align-items:center;gap:.32rem;color:var(--ink-2);text-decoration:none;border:1px solid var(--rule);background:var(--card);border-radius:99px;padding:.1rem .55rem .1rem .25rem}
-.terms a:hover{border-color:var(--accent);color:var(--ink)}
+/* terms are cited inline as superscripts and defined once in the glossary */
+.prose{max-width:72ch;margin:0 0 1rem}
+.prose p{margin:0 0 .7rem;font-size:.9rem;color:var(--ink-2);line-height:1.6}
+.prose p:last-child{margin-bottom:0}
+sup.ref{font-size:.62em;line-height:0;vertical-align:super}
+sup.ref a{color:var(--accent);text-decoration:none;font-family:var(--f-m);font-weight:600;padding:0 .05em}
+sup.ref a:hover{text-decoration:underline}
 .rn{display:inline-grid;place-items:center;min-width:1.15rem;height:1.15rem;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--f-m);font-size:.62rem;font-weight:600}
 @media (prefers-color-scheme:dark){.rn{color:#08201d}}
 .glossary{list-style:none;margin:0;padding:0;display:grid;gap:1rem;counter-reset:none}
@@ -57,6 +60,7 @@ select{font-family:var(--f-b);font-size:.95rem;padding:.35rem .6rem;border:1px s
 .glossary p{margin:.2rem 0 0;font-size:.845rem;color:var(--ink-2);line-height:1.5}
 .glossary em{font-style:normal;color:var(--ink);font-weight:600}
 .scrub{display:grid;grid-template-columns:minmax(0,1fr) 17rem;gap:1rem}
+.scrub.wide{grid-template-columns:minmax(0,1fr) minmax(0,26rem)}
 @media(max-width:820px){.scrub{grid-template-columns:1fr}}
 .frame{position:relative;max-width:33rem;margin:0 auto;border:1px solid var(--rule);border-radius:5px;overflow:hidden;background:var(--card-2)}
 .frame canvas{display:block;width:100%;height:auto;image-rendering:auto}
