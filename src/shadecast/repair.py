@@ -66,7 +66,7 @@ def backfill(bundle: Path) -> list[str]:
     if not (bundle / "landcover_umep.tif").exists() and (bundle / "landcover.tif").exists():
         with rasterio.open(bundle / "landcover.tif") as src:
             cover = src.read(1)
-        _write_like(bundle, "landcover_umep.tif", to_umep(cover, heights), "uint8")
+        _write_like(bundle, "landcover_umep.tif", to_umep(cover, heights), "float32")
         written.append("landcover_umep.tif")
 
     return written

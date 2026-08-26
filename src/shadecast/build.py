@@ -131,7 +131,9 @@ def build_city(
     wc = R.worldcover(aoi)
     _write(out_dir / "landcover.tif", wc, aoi, dtype="uint8")
     umep = LC.to_umep(wc, bh)
-    _write(out_dir / "landcover_umep.tif", umep, aoi, dtype="uint8")
+    # float32, not an integer type. The engine substitutes float albedos into a copy
+    # of this grid, so an integer raster truncates every albedo to zero with no error.
+    _write(out_dir / "landcover_umep.tif", umep, aoi, dtype="float32")
     prov["landcover"] = {
         "source": "ESA WorldCover 10m v200 2021 (AWS Open Data, unsigned)",
         "umep_mix": LC.summarise(umep),
