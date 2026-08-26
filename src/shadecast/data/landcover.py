@@ -12,6 +12,7 @@ Trees are NOT a ground class. SOLWEIG takes vegetation from the canopy model
 Building footprints override WorldCover, because a 3 m building raster localises
 roofs far better than a 10 m "built-up" class does.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -20,17 +21,17 @@ COBBLE, ASPHALT, ROOF, GRASS, SOIL, WATER = 0, 1, 2, 5, 6, 7
 
 # ESA WorldCover -> UMEP ground class
 WORLDCOVER_TO_UMEP: dict[int, int] = {
-    10: GRASS,    # tree cover: ground beneath, canopy comes from the CDSM
-    20: GRASS,    # shrubland
-    30: GRASS,    # grassland
-    40: GRASS,    # cropland
+    10: GRASS,  # tree cover: ground beneath, canopy comes from the CDSM
+    20: GRASS,  # shrubland
+    30: GRASS,  # grassland
+    40: GRASS,  # cropland
     50: ASPHALT,  # built-up: sealed surface by default
-    60: SOIL,     # bare / sparse vegetation
-    70: SOIL,     # snow and ice
+    60: SOIL,  # bare / sparse vegetation
+    70: SOIL,  # snow and ice
     80: WATER,
-    90: WATER,    # herbaceous wetland
-    95: GRASS,    # mangroves
-    100: GRASS,   # moss and lichen
+    90: WATER,  # herbaceous wetland
+    95: GRASS,  # mangroves
+    100: GRASS,  # moss and lichen
 }
 
 # Albedo values used for intervention classes. UMEP's stock table has no cool
@@ -49,7 +50,16 @@ def to_umep(worldcover: np.ndarray, building_height: np.ndarray) -> np.ndarray:
 
 
 def summarise(umep: np.ndarray) -> dict[str, float]:
-    names = {COBBLE: "cobble", ASPHALT: "asphalt", ROOF: "roof",
-             GRASS: "grass", SOIL: "soil", WATER: "water"}
+    names = {
+        COBBLE: "cobble",
+        ASPHALT: "asphalt",
+        ROOF: "roof",
+        GRASS: "grass",
+        SOIL: "soil",
+        WATER: "water",
+    }
     u, c = np.unique(umep, return_counts=True)
-    return {names.get(int(k), str(k)): round(float(v) / umep.size, 4) for k, v in zip(u, c)}
+    return {
+        names.get(int(code), str(code)): round(float(count) / umep.size, 4)
+        for code, count in zip(u, c, strict=True)
+    }
