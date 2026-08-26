@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 import time
 from pathlib import Path
@@ -82,9 +83,34 @@ def entry_id(family: str, seed: int) -> str:
 def generate(
     bundle: Path, out_dir: Path, plan: list[dict] | None = None, kind: str = "tree"
 ) -> dict:
-    """Run every design in the plan and store the resulting response fields."""
+    """Run every design in the plan and store the resulting response fields.
+
+    Holds an exclusive lock on the output directory. Two generators sharing one
+    directory corrupt each other, because each deletes the engine scratch output
+    after reading it and will happily delete the other's work in progress. That
+    happened once and cost an hour of physics before it was noticed.
+    """
     bundle, out_dir = Path(bundle), Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    lock = out_dir / ".generating.lock"
+    try:
+        handle = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError as exc:
+        raise RuntimeError(
+            f"another generator already holds {lock}. Generation is not safe to run "
+            f"twice on one directory. Remove the lock only if none is running."
+        ) from exc
+    os.write(handle, str(os.getpid()).encode())
+    os.close(handle)
+    try:
+        return _generate(bundle, out_dir, plan, kind)
+    finally:
+        lock.unlink(missing_ok=True)
+
+
+def _generate(bundle: Path, out_dir: Path, plan: list[dict] | None, kind: str) -> dict:
+    """Body of :func:`generate`, run while the directory lock is held."""
     provenance = json.loads((bundle / "provenance.json").read_text())
     design_day = provenance["met"]["design_day"]
     plan = plan if plan is not None else default_plan()
