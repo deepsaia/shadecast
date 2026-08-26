@@ -184,3 +184,37 @@ def test_a_model_worse_than_nothing_has_negative_skill():
     result = skill(truth, noisy)
     assert result["skill"] < 0
     assert not result["beats_predicting_nothing"]
+
+
+def test_backfill_writes_onto_the_recorded_grid(tmp_path):
+    """A rebuilt bundle that shifts the grid would invalidate hours of physics."""
+    import json
+
+    import rasterio
+    from rasterio.transform import from_origin
+
+    from shadecast.repair import aoi_from_provenance
+
+    bundle = tmp_path / "testville"
+    bundle.mkdir()
+    (bundle / "provenance.json").write_text(
+        json.dumps(
+            {"aoi": {"name": "testville", "lat": 23.0, "lon": 72.5, "side_m": 100, "res_m": 1.0}}
+        )
+    )
+    profile = {
+        "driver": "GTiff",
+        "height": 100,
+        "width": 100,
+        "count": 1,
+        "dtype": "float32",
+        "crs": "EPSG:32643",
+        "transform": from_origin(250000, 2548000, 1.0, 1.0),
+    }
+    with rasterio.open(bundle / "DEM.tif", "w", **profile) as dst:
+        dst.write(np.zeros((100, 100), dtype="float32"), 1)
+
+    aoi = aoi_from_provenance(bundle)
+    assert aoi.side_m == 100
+    assert aoi.res_m == 1.0
+    assert aoi.utm_epsg == 32643
