@@ -68,6 +68,38 @@ def sampling_weights(placement: np.ndarray, res_m: float = 1.0) -> np.ndarray:
     return weights / weights.sum()
 
 
+def crop_cities(
+    pairs: list[tuple[Path, Path]],
+    size: int = 256,
+    per_entry: int = 24,
+    seed: int = 0,
+) -> tuple[np.ndarray, np.ndarray, list[str]]:
+    """Crop patches from several cities into one training set.
+
+    Origins are tagged ``city/design`` so a split can hold out either a design
+    within a city, which measures generalisation to an unseen intervention, or a
+    whole city, which measures transfer. Those are different questions and the
+    benchmark reports both.
+    """
+    all_inputs: list[np.ndarray] = []
+    all_targets: list[np.ndarray] = []
+    all_origins: list[str] = []
+    for index, (surrogate_dir, bundle) in enumerate(pairs):
+        inputs, targets, origins = crop_batch(
+            surrogate_dir, bundle, size=size, per_entry=per_entry, seed=seed + index
+        )
+        city = Path(bundle).name
+        all_inputs.append(inputs)
+        all_targets.append(targets)
+        all_origins.extend(f"{city}/{origin}" for origin in origins)
+        logger.info("%s: %d patches from %d designs", city, len(inputs), len(set(origins)))
+    return (
+        np.concatenate(all_inputs),
+        np.concatenate(all_targets),
+        all_origins,
+    )
+
+
 def crop_batch(
     surrogate_dir: Path, bundle: Path, size: int = 256, per_entry: int = 24, seed: int = 0
 ) -> tuple[np.ndarray, np.ndarray, list[str]]:
