@@ -196,6 +196,46 @@ function transferChart(t){
   return s+"</svg>";
 }
 
+function linkSeriesHover(root){
+  if(!root) return;
+  // Labels are already spread far enough apart to read, so hovering only emphasises:
+  // it thickens the line and bolds its label. Nothing is dimmed and nothing is hidden,
+  // which keeps the chart fully legible without a pointer and in print.
+  root.querySelectorAll(".series").forEach(g=>{
+    const label=root.querySelector(`.slabel[data-s="${g.dataset.s}"] text`);
+    const set=on=>{
+      if(label){ label.style.fontWeight = on ? "700" : ""; label.style.fontSize = on ? "9.5px" : ""; }
+    };
+    g.addEventListener("mouseenter",()=>set(true));
+    g.addEventListener("mouseleave",()=>set(false));
+  });
+}
+function factorialDesign(rows){
+  const budgets=[...new Set(rows.map(r=>r.budget_usd))].sort((a,b)=>a-b);
+  const cities=[...new Set(rows.map(r=>r.city))].sort();
+  const kinds=["tree","shade"];
+  const lanes=[]; cities.forEach(c=>kinds.forEach(k=>lanes.push([c,k])));
+  const PL=124,PT=30,PR=14,PB=14,CW=104,CH=30,GAP=3;
+  const W=PL+budgets.length*(CW+GAP)+PR, H=PT+lanes.length*(CH+GAP)+PB;
+  const vals=rows.map(r=>r.efficiency), vmax=Math.max(...vals);
+  const RAMP_EFF=[[237,245,243],[168,214,206],[95,180,166],[32,134,120],[10,78,69]];
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="The factorial design: every intervention type by every budget by every city">`;
+  budgets.forEach((b,i)=>{ s+=`<text x="${PL+i*(CW+GAP)+CW/2}" y="${PT-10}" font-size="9.5" fill="var(--ink-2)" text-anchor="middle">$${(b/1e6).toFixed(1)}M</text>`;});
+  lanes.forEach(([city,kind],r)=>{
+    const y=PT+r*(CH+GAP);
+    s+=`<text x="${PL-8}" y="${y+CH/2+3.5}" font-size="9.5" fill="var(--ink-2)" text-anchor="end">${city} · ${kind}</text>`;
+    budgets.forEach((b,i)=>{
+      const cell=rows.find(x=>x.city===city&&x.kind===kind&&x.budget_usd===b);
+      const x=PL+i*(CW+GAP);
+      if(!cell){ s+=`<rect x="${x}" y="${y}" width="${CW}" height="${CH}" rx="3" fill="none" stroke="var(--rule)" stroke-dasharray="3 3"/>`; return; }
+      const t=cell.efficiency/vmax, [R,G,B]=ramp(RAMP_EFF,t);
+      s+=`<rect x="${x}" y="${y}" width="${CW}" height="${CH}" rx="3" fill="rgb(${R|0},${G|0},${B|0})"><title>${city}, ${kind}, $${(b/1e6).toFixed(1)}M: ${cell.efficiency} per $1k, ${cell.exposure_drop_C} °C, ${cell.units} units</title></rect>`;
+      s+=`<text x="${x+CW/2}" y="${y+CH/2+3.5}" font-size="10" font-family="var(--f-m)" text-anchor="middle" fill="${t>0.55?"#fff":"var(--ink)"}" style="pointer-events:none">${cell.efficiency.toFixed(1)}</text>`;
+    });
+  });
+  return s+"</svg>";
+}
+
 function factorialChart(rows){
   const W=560,H=250,PL=48,PR=120,PT=16,PB=38;
   const budgets=[...new Set(rows.map(r=>r.budget_usd))].sort((a,b)=>a-b);
@@ -206,15 +246,41 @@ function factorialChart(rows){
   const Y=v=>PT+(1-v/emax)*(H-PT-PB);
   let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Cooling efficiency against budget, by city and intervention type">`;
   [0,40,80,120].forEach(g=>{ if(g<=emax) s+=`<line x1="${PL}" y1="${Y(g)}" x2="${W-PR}" y2="${Y(g)}" stroke="var(--rule)"/><text x="${PL-5}" y="${Y(g)+3}" font-size="8.5" fill="var(--ink-3)" text-anchor="end">${g}</text>`;});
+  // Axes stay drawn whatever the series are doing, so the chart is still readable while
+  // a hovered series dims the rest.
+  s+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H-PB}" stroke="var(--rule-2)" stroke-width="1"/>`;
+  s+=`<line x1="${PL}" y1="${H-PB}" x2="${W-PR}" y2="${H-PB}" stroke="var(--rule-2)" stroke-width="1"/>`;
   budgets.forEach((b,i)=>{ s+=`<text x="${X(i)}" y="${H-16}" font-size="9" fill="var(--ink-2)" text-anchor="middle">$${(b/1e6).toFixed(1)}M</text>`;});
+  // Labels are collected rather than drawn inline: six series ending close together
+  // stacked four labels on top of each other and none of them could be read.
+  const labels=[];
   cities.forEach(city=>["tree","shade"].forEach(kind=>{
     const pts=budgets.map((b,i)=>{const r=rows.find(r=>r.city===city&&r.kind===kind&&r.budget_usd===b); return r?{x:X(i),y:Y(r.efficiency),r}:null;}).filter(Boolean);
     if(pts.length<2) return;
-    s+=`<polyline fill="none" stroke="${COL[city]||"var(--accent)"}" stroke-width="2" ${kind==="shade"?'stroke-dasharray="4 3" opacity=".75"':""} points="${pts.map(p=>`${p.x},${p.y}`).join(" ")}"/>`;
-    pts.forEach(p=>{ s+=`<circle cx="${p.x}" cy="${p.y}" r="${kind==="tree"?4:3}" fill="${kind==="tree"?(COL[city]||"var(--accent)"):"var(--card)"}" stroke="${COL[city]||"var(--accent)"}" stroke-width="2"><title>${city} ${kind}, $${(p.r.budget_usd/1e6).toFixed(1)}M: ${p.r.efficiency} per $1k, ${p.r.exposure_drop_C} °C, ${fmt(p.r.people)} people</title></circle>`;});
+    const col=COL[city]||"var(--accent)";
+    const id=`${city}-${kind}`;
+    const path=pts.map(p=>`${p.x},${p.y}`).join(" ");
+    s+=`<g class="series" data-s="${id}">`;
+    // An invisible fat line under the real one: a 2 px stroke is almost impossible to hover.
+    s+=`<polyline fill="none" stroke="transparent" stroke-width="14" points="${path}"/>`;
+    s+=`<polyline class="line" fill="none" stroke="${col}" stroke-width="2" ${kind==="shade"?'stroke-dasharray="4 3"':""} points="${path}"/>`;
+    pts.forEach(p=>{ s+=`<circle cx="${p.x}" cy="${p.y}" r="${kind==="tree"?4:3}" fill="${kind==="tree"?col:"var(--card)"}" stroke="${col}" stroke-width="2"><title>${city} ${kind}, $${(p.r.budget_usd/1e6).toFixed(1)}M: ${p.r.efficiency} per $1k, ${p.r.exposure_drop_C} °C, ${fmt(p.r.people)} people</title></circle>`;});
+    s+=`</g>`;
     const last=pts[pts.length-1];
-    s+=`<text x="${W-PR+6}" y="${last.y+3}" font-size="8.5" fill="${COL[city]||"var(--accent)"}">${city} ${kind}</text>`;
+    labels.push({y:last.y, anchor:last.y, col, text:`${city} ${kind}`, id});
   }));
+  const MIN=11;
+  labels.sort((a,b)=>a.y-b.y);
+  for(let i=1;i<labels.length;i++) if(labels[i].y-labels[i-1].y<MIN) labels[i].y=labels[i-1].y+MIN;
+  const overflow=labels.length ? labels[labels.length-1].y-(H-PB) : 0;
+  if(overflow>0) labels.forEach(l=>{l.y-=overflow;});
+  labels.forEach(l=>{
+    s+=`<g class="slabel" data-s="${l.id}">`;
+    // A leader keeps a nudged label attached to the line it belongs to.
+    if(Math.abs(l.y-l.anchor)>1.5)
+      s+=`<path d="M${W-PR} ${l.anchor} L${W-PR+4} ${l.y-3}" stroke="${l.col}" stroke-width="1" fill="none" opacity=".45"/>`;
+    s+=`<text x="${W-PR+6}" y="${l.y}" font-size="8.5" fill="${l.col}">${l.text}</text></g>`;
+  });
   s+=`<text x="10" y="${PT+4}" font-size="8" fill="var(--ink-3)" transform="rotate(-90 10 ${PT+4})" text-anchor="end">efficiency per $1k</text>`;
   return s+"</svg>";
 }
@@ -355,10 +421,16 @@ function stepFactorial(f){
   const spread=x.spreads&&x.spreads.length?x.spreads:[];
   return `<section class="step"><h2><i>04</i> Ask which measure buys the most cooling per dollar</h2>
   <p class="sub">A full factorial${ref("factorial")} of ${x.cells} cells, every one a real physics run: trees against shade structures${ref("arms")}, three budgets, three cities on three continents, ranked by efficiency${ref("efficiency")} and tested against pre-registered${ref("prereg")} predictions.</p>
+  ${prose(
+    "The design is a full factorial: two intervention types crossed with three budgets crossed with three cities, so 18 combinations, and all 18 were simulated rather than sampled. The grid below is the design itself, one square per run, shaded by the cooling it bought per thousand dollars; the chart under it reads the same numbers as effects."
+  )}
   ${prose("Price per square metre is misleading on its own. Shade structures cost roughly four times what trees cost for the same ground covered, but they work the day they go up and need very little maintenance, while a tree takes years to reach the canopy assumed here and wants water in the meantime. The question stays genuinely open until the radiation budget settles it.", "The ranking held in every city and the margin barely moved across an eighteenfold span of budget. What did move, by a factor of twenty, is how many people happen to be standing in the cooled space. The same physics is worth very different amounts depending on who is nearby, and that is what pushes this whole problem toward targeting.")}
   <div class="grid g3">
     <div class="card">
-      <figure class="chart scrollx">${factorialChart(x.rows)}</figure>
+      <div style="font-size:.74rem;color:var(--ink-3);margin-bottom:.4rem">The design: every cell was run</div>
+      <figure class="chart scrollx">${factorialDesign(x.rows)}</figure>
+      <div class="legend"><span>each cell is one physics run, shaded by cooling per $1,000</span><span>darker is more efficient</span></div>
+      <figure class="chart scrollx" id="factorial" style="margin-top:1rem">${factorialChart(x.rows)}</figure>
       <div class="legend"><span>solid = trees</span><span>dashed = shade structures</span><span>lines fall to the right because each extra dollar buys less</span></div>
     </div>
     <div class="card">
@@ -534,6 +606,7 @@ async function render(){
     $("play").setAttribute("aria-pressed",String(S.playing));
     if(S.playing) tick();
   };
+  linkSeriesHover($("factorial"));
   attachReadout($("frame"),$("readout"),()=>S.atlas[c.hours.file],()=>S.hour," °C");
   const tileOf=()=>{const p=c.plans.list.find(x=>x.id===S.plan); return p?p.tile:0;};
   attachReadout($("mcool"),$("coolout"),()=>S.atlas[c.plans.cooling.file],tileOf," °C cooler");
