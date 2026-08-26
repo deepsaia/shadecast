@@ -140,7 +140,8 @@ const REFERENCES = [
 ["Method", [
  ["OSMnx: new methods for acquiring, constructing, analyzing and visualizing complex street networks", "Boeing, Computers, Environment and Urban Systems 65, 2017", ""],
  ["U-Net: convolutional networks for biomedical image segmentation", "Ronneberger, Fischer and Brox, MICCAI 2015. The surrogate architecture", "https://arxiv.org/abs/1505.04597"],
- ["Evolutionary surrogate-assisted prescription", "Cognizant AI Labs. The framing behind treating this as a prescriptor over a learned predictor", "https://arxiv.org/pdf/2012.10504"]]],
+ ["Evolutionary surrogate-assisted prescription", "Cognizant AI Labs. The framing behind treating this as a prescriptor over a learned predictor", "https://arxiv.org/pdf/2012.10504"],
+ ["en-roads-py, evolutionary prescription applied to En-ROADS", "Cognizant AI Labs. A working implementation of the prescriptor pattern over a fixed simulator, and the closest existing analogue to what the planner here does over SOLWEIG", "https://github.com/cognizant-ai-labs/en-roads-py"]]],
 ];
 
 function stepReferences(){
@@ -301,7 +302,7 @@ function stepSimulate(c){
   return `<section class="step"><h2><i>02</i> Simulate the heat a body actually feels</h2>
   <p class="sub">SOLWEIG${ref("solweig")} computes mean radiant temperature${ref("tmrt")} for every square metre and every hour. That is the heat a body actually feels, which is not air temperature${ref("notair")} and behaves very differently from it. Hover any pixel to read its value${ref("readmap")}.</p>
   ${prose("The model works by asking, for every square metre, what that point can see. Ground under dense canopy sees little sky and little sun. Ground in the middle of a car park sees all of both, plus hot asphalt radiating back up at it. Adding the energy arriving from every direction gives the radiant load on a body standing there.", "Watch the whole day rather than any single hour. The peak does not fall at noon, and the shade pattern sweeps across the city as the sun moves, which is exactly why a plan judged at one instant can look far better or far worse than it really is.")}
-  <div class="scrub">
+  <div class="scrub map">
     <div class="card">
       <div class="frame">
         <canvas id="frame" width="320" height="320" aria-label="Mean radiant temperature map"></canvas>
