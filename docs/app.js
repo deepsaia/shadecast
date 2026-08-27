@@ -129,13 +129,16 @@ const REFERENCES = [
  ["Handbook on urban heat management in the Global South", "UN-Habitat", "https://unhabitat.org/handbook-on-urban-heat-management-in-the-global-south"]]],
 
 ["Data, every source unauthenticated", [
- ["GlobalBuildingAtlas LoD1 footprints and heights", "Source Cooperative. Chosen over Overture, which carried heights for 1 of 14,213 buildings in Ahmedabad", "https://source.coop/tge-labs/globalbuildingatlas-lod1"],
- ["Copernicus DEM GLO-30 terrain", "AWS Open Data, unsigned", ""],
- ["ESA WorldCover 10 m v200 2021 land cover", "AWS Open Data, unsigned", ""],
- ["Meta and WRI Canopy Height Model, 1 m", "AWS Open Data", "https://registry.opendata.aws/dataforgood-fb-forests/"],
- ["GHS-POP R2023A population, 100 m", "European Commission JRC, redistributed here by building volume", "https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php"],
- ["Open-Meteo ERA5 historical archive", "Hourly meteorology, no key required", "https://open-meteo.com/en/docs/historical-weather-api"],
- ["OpenStreetMap, via Overpass", "The walkable network behind the corridor objective", "https://www.openstreetmap.org/copyright"]]],
+ ["GlobalBuildingAtlas LoD1 footprints and heights", "Source Cooperative. Chosen over Overture, which carried heights for 1 of 14,213 buildings in Ahmedabad. Tiled 5 degrees and read straight as GeoParquet, so one city needs one file rather than a global scan", "https://source.coop/tge-labs/globalbuildingatlas-lod1", "https://data.source.coop/tge-labs/globalbuildingatlas-lod1/{tile}.parquet"],
+ ["Copernicus DEM GLO-30 terrain", "AWS Open Data, unsigned. Tiled 1 degree, read as a windowed cloud-optimised GeoTIFF", "https://registry.opendata.aws/copernicus-dem/", "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_{ns}{lat}_00_{ew}{lon}_00_DEM/Copernicus_DSM_COG_10_{ns}{lat}_00_{ew}{lon}_00_DEM.tif"],
+ ["ESA WorldCover 10 m v200 2021 land cover", "AWS Open Data, unsigned. Tiled 3 degrees, resampled nearest because a class code must never be interpolated", "https://esa-worldcover.org/", "https://esa-worldcover.s3.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_{ns}{lat}{ew}{lon}_Map.tif"],
+ ["Meta and WRI Canopy Height Model, 1 m", "AWS Open Data. Tiled by quadkey against a global footprint index that is fetched once and cached", "https://registry.opendata.aws/dataforgood-fb-forests/", "https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float/chm/{quadkey}.tif"],
+ ["GHS-POP R2023A population, 100 m", "European Commission JRC, redistributed here across building volume. Chosen over WorldPop, whose server refuses HTTP range requests, which makes a windowed read impossible and forces a whole-country download", "https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php", "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E2020_GLOBE_R2023A_54009_100/V1-0/tiles/GHS_POP_E2020_GLOBE_R2023A_54009_100_V1_0_R{row}_C{col}.zip"],
+ ["Open-Meteo ERA5 historical archive", "Hourly meteorology, no key required, chosen over Copernicus CDS which needs an account and a credentials file. Hourly variables requested: temperature_2m, relative_humidity_2m, wind_speed_10m, wind_direction_10m, surface_pressure, shortwave_radiation, direct_radiation, diffuse_radiation", "https://open-meteo.com/en/docs/historical-weather-api", "https://archive-api.open-meteo.com/v1/archive"],
+ ["OpenStreetMap, via Overpass", "The walkable network behind the corridor objective, queried through OSMnx and cached as GraphML per study area because Overpass is a shared free service", "https://www.openstreetmap.org/copyright", "https://overpass-api.de/api/interpreter"]]],
+
+["Validation, the one source outside the credential-free path", [
+ ["Landsat Collection 2 Level 2 surface temperature", "Used only to check that simulated heat lands where the satellite saw heat, never to build a bundle. Reached through Microsoft Planetary Computer, which signs each request with a short-lived token, so this is the one place a broker sits in the path. Collection landsat-c2-l2, asset lwir11", "https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2", "https://planetarycomputer.microsoft.com/api/stac/v1"]]],
 
 ["Method", [
  ["OSMnx: new methods for acquiring, constructing, analyzing and visualizing complex street networks", "Boeing, Computers, Environment and Urban Systems 65, 2017", ""],
@@ -148,8 +151,8 @@ function stepReferences(){
   return `<section class="step" id="references"><h2><i>10</i> References</h2>
   <p class="sub">Everything this work rests on. Sources that changed a decision carry a note saying what they changed.</p>
   <div class="card"><div class="refs">${REFERENCES.map(([group,items])=>
-    `<div class="refgroup"><h3>${group}</h3><ul>${items.map(([title,where,url])=>
-      `<li>${url?`<a href="${url}" target="_blank" rel="noopener">${title}</a>`:`<span>${title}</span>`}<em>${where}</em></li>`
+    `<div class="refgroup"><h3>${group}</h3><ul>${items.map(([title,where,url,endpoint])=>
+      `<li>${url?`<a href="${url}" target="_blank" rel="noopener">${title}</a>`:`<span>${title}</span>`}<em>${where}</em>${endpoint?`<code class="endpoint">${endpoint}</code>`:""}</li>`
     ).join("")}</ul></div>`).join("")}</div></div></section>`;
 }
 
