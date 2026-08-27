@@ -44,6 +44,8 @@ select{font-family:var(--f-b);font-size:.95rem;padding:.35rem .6rem;border:1px s
 .step{margin:0 0 2rem;scroll-margin-top:4.5rem}
 .step > h2{font-size:1.05rem;margin:0 0 .15rem;display:flex;align-items:baseline;gap:.6rem}
 .step > h2 i{font-family:var(--f-m);font-size:.7rem;color:var(--accent);font-style:normal}
+.step > h2 a.sn{text-decoration:none;flex:none}
+.step > h2 a.sn:hover i{text-decoration:underline}
 .step > p.sub{margin:.1rem 0 .9rem;color:var(--ink-2);font-size:.9rem}
 .card{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:1rem}
 .grid{display:grid;gap:.8rem}
@@ -253,6 +255,6 @@ function attachReadout(canvas,readout,getAtlas,getTile,unit){
 const fmt = (n,d=0)=> n===null||n===undefined||!isFinite(n) ? "—" : Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
 const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 </script>
-<script src="app.js?v=1b52675018"></script>
+<script src="app.js?v=d187574c38"></script>
 </body>
 </html>
