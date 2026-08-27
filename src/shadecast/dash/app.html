@@ -41,6 +41,20 @@ h1 span{color:var(--accent);font-family:var(--f-m);font-size:.8rem;letter-spacin
 select{font-family:var(--f-b);font-size:.95rem;padding:.35rem .6rem;border:1px solid var(--rule-2);border-radius:4px;background:var(--card);color:var(--ink)}
 .lede{color:var(--ink-2);font-size:.95rem;margin:0 0 1.6rem}
 .lede b{color:var(--ink)}
+.scope{margin:0 0 1.2rem}
+.scope h3,.index h3{font-size:.74rem;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin:0 0 .5rem;font-weight:650}
+.scope > p{margin:0 0 .9rem;color:var(--ink-2);font-size:.88rem;line-height:1.55}
+.scope p.note{margin:.8rem 0 0;font-size:.78rem;color:var(--ink-3);line-height:1.5}
+.scope p.note b{color:var(--ink-2)}
+/* Ten entries read as a wall in one column, so they split once there is room for two. */
+.index{margin:0 0 1.6rem}
+.index ol{list-style:none;margin:0;padding:0;display:grid;gap:0}
+@media(min-width:760px){.index ol{grid-template-columns:1fr 1fr;column-gap:1.8rem}}
+.index li a{display:grid;grid-template-columns:auto 1fr;gap:.6rem;align-items:baseline;
+  padding:.32rem .1rem;text-decoration:none;color:var(--ink);font-size:.85rem;
+  border-bottom:1px solid var(--rule)}
+.index li a:hover{color:var(--accent)}
+.index li a i{font-family:var(--f-m);font-size:.7rem;color:var(--accent);font-style:normal}
 .step{margin:0 0 2rem;scroll-margin-top:4.5rem}
 .step > h2{font-size:1.05rem;margin:0 0 .15rem;display:flex;align-items:baseline;gap:.6rem}
 .step > h2 i{font-family:var(--f-m);font-size:.7rem;color:var(--accent);font-style:normal}
@@ -170,6 +184,33 @@ data with no API key at any step, every number produced by a real physics run ra
 learned approximation, and every hypothesis committed to version control before it was tested,
 including one that missed. Section 8 sets out plainly what is still missing and what it would
 take to close the gap.</p>
+
+<div class="card scope">
+  <h3>Any populated place on Earth</h3>
+  <p>Nothing here is confined to the three cities in the selector, or to the 32 in the corpus.
+  Every source is globally tiled and needs no account, and the study area is chosen by scanning
+  population density, so the only requirement is that somebody lives in the search window. Six
+  cities outside the corpus were checked directly, across five continents plus Iceland at 64
+  degrees north and Fiji on the 180th meridian: every source returned a file for all six.
+  What limits this work is not the data, it is the physics.</p>
+  <table>
+    <thead><tr><th>Cost</th><th>One city</th><th>32 cities</th><th>1,000 cities</th></tr></thead>
+    <tbody>
+      <tr><td>Bundle on disk</td><td class="n">5.3 to 8.0 MB</td><td class="n">170 to 260 MB</td><td class="n">5.3 to 8.0 GB</td></tr>
+      <tr><td>Build, credential-free</td><td class="n">30 to 72 s</td><td class="n">16 to 38 min</td><td class="n">8.4 to 20 h</td></tr>
+      <tr><td>Physics, one evaluation</td><td class="n">162 to 283 s</td><td class="n">1.4 to 2.5 h</td><td class="n">45 to 79 h</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Only the first column was run: nine bundles built at 1 km&sup2; and 1 m, from 5.3
+  to 8.0 MB and 30.4 to 71.7 s each, with the physics timed on the same grid. The other two columns
+  scale that measurement linearly and have <b>not</b> been run. Builds parallelise freely because
+  every source is an independent HTTP read, and the population cache amortises: nine cities cost
+  297 MB of GHS-POP tiles between them rather than each. Physics does not parallelise away. One
+  search of 1,000 evaluations on a single city costs the same as one evaluation on 1,000 cities,
+  and a benchmark needs both, which is the whole reason a learned surrogate is the next step.</p>
+</div>
+
+<nav class="card index" id="index" aria-label="Contents"></nav>
 
 <div id="app"><div class="loading">loading…</div></div>
 
