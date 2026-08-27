@@ -99,12 +99,38 @@ function prose(...paras){
   return `<div class="prose">${paras.map(x=>`<p>${x}</p>`).join("")}</div>`;
 }
 
-/* One place that knows a step's identity, so the section, its number and its anchor can
-   never drift apart. Every section is addressable by name or by number: /#assemble and
-   /#1 both land on the first step. */
-function stepHead(slug, n, title){
+/* The ten steps in the order they are rendered. One source of truth for each section's
+   anchor, its printed number and its row in the index, so the three cannot drift apart.
+   Every section is addressable by name or by number: /#assemble and /#1 are the same step. */
+const STEPS = [
+  ["assemble", "Assemble a city from open data"],
+  ["simulate", "Simulate the heat a body actually feels"],
+  ["surrogate", "Learn a fast stand-in for the physics"],
+  ["measures", "Ask which measure buys the most cooling per dollar"],
+  ["placement", "Ask where to put it"],
+  ["corridor", "Cool the hottest ground, or the ground people walk on?"],
+  ["mechanism", "Try a second cooling mechanism, not just shade"],
+  ["status", "What we have, and what the benchmark still needs"],
+  ["terminology", "Terminology"],
+  ["references", "References"],
+];
+
+function stepNumber(slug){
+  return String(STEPS.findIndex(s => s[0] === slug) + 1).padStart(2, "0");
+}
+
+function stepHead(slug){
+  const n = stepNumber(slug), title = (STEPS.find(s => s[0] === slug) || ["", ""])[1];
   return `<section class="step" id="${slug}" data-n="${n}">`
     + `<h2><a class="sn" href="#${slug}" aria-label="Link to section ${n}, ${title}"><i>${n}</i></a> ${title}</h2>`;
+}
+
+/* The index is navigation, so it sits above the steps and outside the part of the page
+   that render() rewrites when the city changes. */
+function pageIndex(){
+  return `<h3>Contents</h3><ol>${STEPS.map(([slug, title], i) =>
+    `<li><a href="#${slug}"><i>${String(i + 1).padStart(2, "0")}</i><span>${title}</span></a></li>`
+  ).join("")}</ol>`;
 }
 
 /* Everything this work stands on, grouped by what it was used for. A flat alphabetical
@@ -156,7 +182,7 @@ const REFERENCES = [
 ];
 
 function stepReferences(){
-  return `${stepHead("references","10","References")}
+  return `${stepHead("references")}
   <p class="sub">Everything this work rests on. Sources that changed a decision carry a note saying what they changed.</p>
   <div class="card"><div class="refs">${REFERENCES.map(([group,items])=>
     `<div class="refgroup"><h3>${group}</h3><ul>${items.map(([title,where,url,endpoint])=>
@@ -165,7 +191,7 @@ function stepReferences(){
 }
 
 function stepGlossary(){
-  return `${stepHead("terminology","09","Terminology")}
+  return `${stepHead("terminology")}
   <p class="sub">Every term the walkthrough uses, defined once. Each is linked from the step that first needs it.</p>
   <div class="card"><ol class="glossary">${TERMS.map(t=>
     `<li id="t${t.n}"><span class="rn">${t.n}</span><div><b>${t.title}</b><p>${t.body}</p></div></li>`).join("")}</ol></div></section>`;
@@ -319,7 +345,7 @@ function stepCorridor(f){
   const t=f.targeting;
   if(t.status!=="done") return "";
   const v=t.verdict||{};
-  return `${stepHead("corridor","06","Cool the hottest ground, or the ground people walk on?")}
+  return `${stepHead("corridor")}
   <p class="sub">A budget can cool the hottest ground or the ground people walk on${ref("question")}, and those are not the same places. Over the walking network${ref("network")}, with a walker who trades distance against sun${ref("walker")}, each street earns a corridor value${ref("corridorvalue")}. Both plans are then built, simulated, and their plan overlap${ref("overlap")} measured. One honest caveat${ref("caveat")} is stated up front.</p>
   ${prose("Published work on shaded routing solves the forward problem: given the shade a city already has, find the coolest way across it. That is useful to a walker and no use at all to a planner, who has to decide where the shade should go in the first place. This is the inverse of that question, and as far as we can tell it is unclaimed.", "The mechanism is that trip heat concentrates. Where alternatives exist, walkers already route around the worst streets, so cooling those streets buys less than the heat map suggests. Where a route is forced, everyone funnels through the same hot ground and cooling it buys a great deal. An area average scores those two situations identically, which is precisely the failure this objective exists to fix.")}
   <div class="grid g3">
@@ -360,7 +386,7 @@ function tradeoffChart(plans,selected){
 /* ------------------------------------ steps ------------------------------------------ */
 function stepAssemble(c){
   const p=c.provenance;
-  return `${stepHead("assemble","01","Assemble a city from open data")}
+  return `${stepHead("assemble")}
   <p class="sub">Before any physics the city has to exist as numbers: a city bundle${ref("bundle")} of five layers at one metre on one grid, assembled from public sources with no credentials anywhere${ref("credfree")}, pinned to a single design day${ref("designday")} and labelled with a quality tier${ref("tier")}.</p>
   ${prose("Every layer is a raster, and they have to agree exactly. The engine will not run if the building model, the terrain, the canopy and the land cover disagree about extent or pixel size by even one cell. Rather than checking for that afterwards, the builder resamples everything onto a single grid defined by the study area itself, so agreement holds by construction rather than by inspection.", "The harder constraint is the credential rule. It would be far easier to pull building heights from a commercial API, but a benchmark that needs three accounts is one almost nobody will reproduce. Everything here came from unauthenticated public endpoints, and each layer carries its source with it, which is what the chips below record.")}
   <div class="card">
@@ -376,7 +402,7 @@ function stepAssemble(c){
 }
 
 function stepSimulate(c){
-  return `${stepHead("simulate","02","Simulate the heat a body actually feels")}
+  return `${stepHead("simulate")}
   <p class="sub">SOLWEIG${ref("solweig")} computes mean radiant temperature${ref("tmrt")} for every square metre and every hour. That is the heat a body actually feels, which is not air temperature${ref("notair")} and behaves very differently from it. Hover any pixel to read its value${ref("readmap")}.</p>
   ${prose("The model works by asking, for every square metre, what that point can see. Ground under dense canopy sees little sky and little sun. Ground in the middle of a car park sees all of both, plus hot asphalt radiating back up at it. Adding the energy arriving from every direction gives the radiant load on a body standing there.", "Watch the whole day rather than any single hour. The peak does not fall at noon, and the shade pattern sweeps across the city as the sun moves, which is exactly why a plan judged at one instant can look far better or far worse than it really is.")}
   <div class="scrub map">
@@ -405,7 +431,7 @@ function stepSimulate(c){
 function stepSurrogate(f){
   const s=f.surrogate;
   if(s.status!=="done") return "";
-  return `${stepHead("surrogate","03","Learn a fast stand-in for the physics")}
+  return `${stepHead("surrogate")}
   <p class="sub">Physics is too slow to search with${ref("slow")}. A design of experiments${ref("doe")} scatters non-overlapping probes through a single run, so it yields around a hundred measurements instead of one, and the surrogate${ref("surrogate")} trained on them answers in half a second. It is judged on skill score${ref("skill")} rather than plain error, and on transfer${ref("transfer")} to a city it has never seen.</p>
   ${prose("The engine remains the ground truth, and every headline number on this page is a real run. The surrogate exists only to make the search step affordable, by ranking thousands of candidate plans well enough that scarce physics time gets spent on the few worth simulating properly.", "Transfer is the result that decides whether any of this scales. A model that must be refitted for each new city is a per-city tool, not a benchmark. Held out of training entirely, Rio was predicted better by a model that had seen two other cities than by one that had seen a single city, which is the concrete argument for growing the corpus.")}
   <div class="grid g3">
@@ -430,7 +456,7 @@ function stepFactorial(f){
   if(x.status!=="done") return "";
   const v=x.verdict||{};
   const spread=x.spreads&&x.spreads.length?x.spreads:[];
-  return `${stepHead("measures","04","Ask which measure buys the most cooling per dollar")}
+  return `${stepHead("measures")}
   <p class="sub">A full factorial${ref("factorial")} of ${x.cells} cells, every one a real physics run: trees against shade structures${ref("arms")}, three budgets, three cities on three continents, ranked by efficiency${ref("efficiency")} and tested against pre-registered${ref("prereg")} predictions.</p>
   ${prose(
     "The design is a full factorial: two intervention types crossed with three budgets crossed with three cities, so 18 combinations, and all 18 were simulated rather than sampled. The grid below is the design itself, one square per run, shaded by the cooling it bought per thousand dollars; the chart under it reads the same numbers as effects."
@@ -464,7 +490,7 @@ function stepFactorial(f){
 }
 
 function stepPlans(c){
-  return `${stepHead("placement","05","Ask where to put it")}
+  return `${stepHead("placement")}
   <p class="sub">Same budget and the same total canopy, at each level of coverage${ref("coverage")} and in different arrangements${ref("arrangement")}. Two reasonable objectives disagree about which wins, and that trade-off${ref("tradeoff")} is reported rather than quietly resolved. Select a plan to see where the trees go and what cooling arrives.</p>
   ${prose("These plans were generated to sweep the design space rather than to be good, so several are deliberately poor. What matters is the shape of the frontier they trace, not any single point on it.", "The disagreement between the two objectives is real and does not go away with a larger budget. Spreading canopy thinly helps almost everyone a little; concentrating it rescues fewer people more completely. Both are defensible, so the benchmark reports both and leaves the weighting to whoever is accountable for the decision.")}
   <div class="scrub wide">
@@ -494,7 +520,7 @@ function stepChannel(f){
   if(x.status!=="done") return "";
   const v=x.verdict||{}, m=v.mean_treated_drop_C||{};
   const cells=x.rows.flatMap(r=>r.cells.filter(c=>c.pixels).map(c=>({city:r.city,...c})));
-  return `${stepHead("mechanism","07","Try a second cooling mechanism, not just shade")}
+  return `${stepHead("mechanism")}
   <p class="sub">Trees and awnings both work by blocking sun. De-paving${ref("depave")} instead makes the ground itself cooler, through emission rather than reflection${ref("channel")}, which is why it stays usable while the albedo arms are quarantined. Each city pays for a control run that makes it a measurement${ref("control")}. Watch how little it moves the city figure${ref("aggregate")}.</p>
   ${prose("This arm exists because the shortwave arms are quarantined. Cool roofs and reflective pavement both work by bouncing sunlight, and this engine reports cooling where its own constants and field measurement in Phoenix both say warming, so nothing it produces about them can be trusted. De-paving acts through a different channel and is unaffected by that defect.", "The result splits cleanly into a large local effect and a small city-wide one, and the gap is the instructive part. Replacing a square metre of asphalt cools that square metre. A tree standing on it also shades the square metres around it. Shade wins budgets because its effect travels, which is the same reason trees beat de-paving on cost-effectiveness.")}
   <div class="grid g3">
@@ -522,7 +548,7 @@ function stepChannel(f){
 
 function stepOpen(f){
   const pending=[f.channel,f.targeting].filter(x=>x.status==="pending");
-  let s=`${stepHead("status","08","What we have, and what the benchmark still needs")}
+  let s=`${stepHead("status")}
   <p class="sub">Set out for the same reason the hypotheses were: so the gap between the goal and the state of things stays visible.</p>
   ${prose(
     "The goal set at the outset was an open benchmark for urban heat adaptation planning: a standard set of cities, a fixed way of scoring a plan, and results anyone can reproduce without an account. That is not finished. What exists today is the machinery and a first set of results. The pipeline runs end to end from public data, the scoring is fixed in advance and reported rather than collapsed into a single number, the hypotheses were committed before testing, and five of them have now been answered. That is a study built with a benchmark's architecture, not yet a benchmark.",
@@ -658,6 +684,7 @@ function gotoStep(hash){
   // the map fields arrive later, so blanking first just collapsed the page height and
   // threw the reader's scroll position away.
   sel.onchange=async e=>{ S.city=e.target.value; S.plan=null; await render(); };
+  $("index").innerHTML=pageIndex();
   await render();
   gotoStep(location.hash);
   addEventListener("hashchange", () => gotoStep(location.hash));
