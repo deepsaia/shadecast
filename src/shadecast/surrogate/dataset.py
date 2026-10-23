@@ -258,20 +258,34 @@ def run_designs(
     failures: list[str] = []
     with ThreadPoolExecutor(max_workers=jobs) as pool:
         futures = {pool.submit(run_design, context, spec, progress): spec for spec in pending}
-        for future in as_completed(futures):
-            spec = futures[future]
-            name = entry_id(spec["family"], spec["seed"])
-            try:
-                meta = future.result()
-            except (RuntimeError, OSError, subprocess.TimeoutExpired) as error:
-                # One failed engine run must not throw away the others still running.
-                logger.error("design %s failed: %s", name, error)
-                progress.design_failed(name, str(error).splitlines()[0])
-                failures.append(name)
-                continue
-            if meta is not None:
-                results[name] = meta
+        try:
+            collect_results(futures, progress, results, failures)
+        except KeyboardInterrupt:
+            # Ctrl-C reaches the engine processes too, so the running designs end on their
+            # own; what must not happen is the queued ones starting after the interrupt.
+            logger.warning("interrupted: cancelling the designs not yet started")
+            pool.shutdown(wait=False, cancel_futures=True)
+            raise
     return failures
+
+
+def collect_results(
+    futures: dict, progress: GenerationProgress, results: dict[str, dict], failures: list[str]
+) -> None:
+    """Gather each design as it finishes, recording failures instead of stopping."""
+    for future in as_completed(futures):
+        spec = futures[future]
+        name = entry_id(spec["family"], spec["seed"])
+        try:
+            meta = future.result()
+        except (RuntimeError, OSError, subprocess.TimeoutExpired) as error:
+            # One failed engine run must not throw away the others still running.
+            logger.error("design %s failed: %s", name, error)
+            progress.design_failed(name, str(error).splitlines()[0])
+            failures.append(name)
+            continue
+        if meta is not None:
+            results[name] = meta
 
 
 def run_design(context: TileContext, spec: dict, progress: GenerationProgress) -> dict | None:
