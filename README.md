@@ -32,8 +32,6 @@ sdc list                          # the 38 city selection and its stratification
 sdc build savannah                # assemble the densest tile's bundle, about a minute
 sdc tile path savannah            # where that tile lives and which stages have run; reads disk only
 sdc surrogate treeshade generate savannah --jobs 4   # physics for the 17 tree designs, 4 at a time
-# --jobs shares the cores: measured on an 18-core M5 Max on 2026-10-23, 4 jobs at 4 threads each
-# took 377 s a design and 10 jobs at 1 thread each took 1,645 s, so 4 to 6 jobs is the range.
 sdc surrogate treeshade train savannah      # fit the tree shade surrogate on that tile
 sdc surrogate treeshade assess savannah     # judge the newest model against the engine
 ```
