@@ -18,9 +18,11 @@ from typing import Annotated
 
 import typer
 
-from . import cities
-from .build import build_city
+from . import cities, tile_cli
 from .console import add_build_row, build_table, console, corpus_table, error_console, result_table
+from .corpus import tile_paths
+from .corpus.tile import Tile
+from .corpus.tile_paths import TilePaths
 from .corpus_cli import app as corpus_app
 from .dash_cli import app as dash_app
 from .experiments_cli import app as experiments_app
@@ -28,11 +30,10 @@ from .logging_setup import configure
 from .pipeline import evaluate
 from .sim.runner import run as run_engine
 from .surrogate_cli import app as surrogate_app
+from .tile_build import build_tile
 from .tile_cli import app as tile_app
 
 logger = logging.getLogger("shadecast")
-
-DEFAULT_OUT = Path("data/cities")
 
 app = typer.Typer(
     name="shadecast",
@@ -83,48 +84,67 @@ def list_cities(
 
 @app.command()
 def build(
-    city: Annotated[str | None, typer.Argument(help="Corpus key, for example ahmedabad.")] = None,
-    build_all: Annotated[bool, typer.Option("--all", help="Build the whole corpus.")] = False,
-    out: Annotated[Path | None, typer.Option("--out", help="Output root.")] = None,
-    side: Annotated[int, typer.Option("--side", help="Study area side in metres.")] = 1000,
-    res: Annotated[float, typer.Option("--res", help="Grid resolution in metres.")] = 1.0,
+    city: Annotated[
+        str | None, typer.Argument(help="Selection key, for example ahmedabad.")
+    ] = None,
+    build_all: Annotated[bool, typer.Option("--all", help="Build every selected city.")] = False,
+    tile: Annotated[
+        str | None,
+        typer.Option("--tile", help="A tile id such as t43N_249_2547. Default: the densest."),
+    ] = None,
 ) -> None:
-    """Assemble city bundles from open sources. No account, key or quota needed."""
+    """Assemble a tile's bundle from open sources into the tile layout. No credentials needed."""
     if not build_all and city is None:
         raise typer.BadParameter("give a city key or use --all")
-
+    if tile and build_all:
+        raise typer.BadParameter("--tile applies to one city")
     corpus = cities.corpus()
     keys = list(corpus) if build_all else [str(city)]
     unknown = [key for key in keys if key not in corpus]
     if unknown:
         raise typer.BadParameter(f"unknown city keys {unknown}, try 'shadecast list'")
+    chosen = _parse_tile(tile) if tile else None
 
-    root = out if out else DEFAULT_OUT
+    centres = tile_cli.load_centres()
     table = build_table()
     failed: list[str] = []
-
     with console.status("[cyan]assembling bundles[/]") as status:
         for key in keys:
-            status.update(f"[cyan]{key}[/]: pulling open layers")
-            started = time.time()
             selected = corpus.get(key)
             if selected is None:
                 continue
+            centre = centres.by_id(selected.ucdb_id)
+            target = chosen or tile_cli.densest_tile(centre)
+            status.update(f"[cyan]{key} {target.id}[/]: pulling open layers")
+            started = time.time()
             try:
-                provenance = build_city(selected, root / key, side_m=side, res_m=res)
+                provenance = build_tile(
+                    selected, target, TilePaths(tile_paths.TILES_ROOT, centre.id, target)
+                )
             # One unreachable source must not abandon the remaining cities. The
             # failure is logged with its type and never swallowed, and the command
             # exits non-zero.
             except Exception:
-                logger.exception("build failed for %s after %.1fs", key, time.time() - started)
+                logger.exception(
+                    "build failed for %s %s after %.1fs", key, target.id, time.time() - started
+                )
                 failed.append(key)
                 continue
-            add_build_row(table, key, time.time() - started, provenance)
+            add_build_row(table, f"{key} {target.id}", time.time() - started, provenance)
+            if chosen is None:
+                console.print(f"[dim]{key}: built the densest tile, {target.id}.[/]")
 
     console.print(table)
     if failed:
         error_console.print(f"[red]{len(failed)} failed:[/] {', '.join(failed)}")
         raise typer.Exit(code=1)
+
+
+def _parse_tile(text: str) -> Tile:
+    try:
+        return Tile.from_id(text)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
 
 @app.command()
