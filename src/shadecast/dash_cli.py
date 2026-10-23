@@ -54,7 +54,7 @@ def discover() -> list[tuple[str, Path, Path]]:
 
 ASSETS = ("app.html", "app.js")
 # Self-contained pages published beside the walkthrough, copied as they are.
-PAGES = ("model_pipeline.html",)
+PAGES = ("model_pipeline.html", "result.html", "proposal.html")
 
 
 def publish_pages(destination: Path) -> list[Path]:
@@ -66,6 +66,25 @@ def publish_pages(destination: Path) -> list[Path]:
         target.write_text((here / name).read_text())
         written.append(target)
     return written
+
+
+def write_walkthrough(destination: Path) -> None:
+    """Write app.js and the stamped index.html, the page that reads the city data."""
+    here = Path(__file__).parent / "dash"
+    # The page ships beside its data so the bundle stays a self-contained pile of files.
+    script = (here / "app.js").read_text()
+    (destination / "app.js").write_text(script)
+
+    # Stamp the script reference with a hash of its contents. GitHub Pages serves assets
+    # with max-age=600, so without this a returning visitor keeps running the previous
+    # app.js for up to ten minutes after a republish and sees a page that no longer exists.
+    digest = hashlib.sha256(script.encode()).hexdigest()[:10]
+    page = (
+        (here / "app.html")
+        .read_text()
+        .replace('<script src="app.js"></script>', f'<script src="app.js?v={digest}"></script>')
+    )
+    (destination / "index.html").write_text(page)
 
 
 def build_bundle(destination: Path, data_root: Path = Path("data")) -> int:
@@ -82,21 +101,7 @@ def build_bundle(destination: Path, data_root: Path = Path("data")) -> int:
     with console.status("[cyan]building bundle[/]"):
         payload = build_index(cities, destination, data_root)
 
-    here = Path(__file__).parent / "dash"
-    # The page ships beside its data so the bundle stays a self-contained pile of files.
-    script = (here / "app.js").read_text()
-    (destination / "app.js").write_text(script)
-
-    # Stamp the script reference with a hash of its contents. GitHub Pages serves assets
-    # with max-age=600, so without this a returning visitor keeps running the previous
-    # app.js for up to ten minutes after a republish and sees a page that no longer exists.
-    digest = hashlib.sha256(script.encode()).hexdigest()[:10]
-    page = (
-        (here / "app.html")
-        .read_text()
-        .replace('<script src="app.js"></script>', f'<script src="app.js?v={digest}"></script>')
-    )
-    (destination / "index.html").write_text(page)
+    write_walkthrough(destination)
     publish_pages(destination)
 
     size = sum(f.stat().st_size for f in destination.iterdir() if f.is_file())
@@ -105,6 +110,21 @@ def build_bundle(destination: Path, data_root: Path = Path("data")) -> int:
         f"{len(list(destination.iterdir()))} files, {size / 1e6:.1f} MB"
     )
     return len(payload["cities"])
+
+
+@app.command("pages")
+def pages(
+    out: Annotated[Path, typer.Option("--out", help="Bundle directory.")] = DEFAULT_OUT,
+) -> None:
+    """Republish the pages and the walkthrough shell without rebuilding the city data.
+
+    For a change to a page or to the walkthrough's markup, when the data files in the
+    bundle are already current and rebuilding them would only take time.
+    """
+    out.mkdir(parents=True, exist_ok=True)
+    write_walkthrough(out)
+    written = publish_pages(out)
+    console.print(f"[green]index.html and {len(written)} pages[/] written into {out}")
 
 
 @app.command("build")
