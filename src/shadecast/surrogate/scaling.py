@@ -18,8 +18,10 @@ import json
 import logging
 from pathlib import Path
 
+from .patch_set import PatchSet
 from .patches import crop_cities
 from .training import train
+from .training_settings import TrainingSettings
 
 logger = logging.getLogger(__name__)
 
@@ -54,15 +56,8 @@ def transfer_curve(
         inputs, targets, origins = crop_cities(
             [*subset, *held], size=patch, per_entry=per_entry, seed=seed
         )
-        report = train(
-            inputs,
-            targets,
-            origins,
-            epochs=epochs,
-            holdout_city=holdout_city,
-            seed=seed,
-            out_path=None,
-        )
+        settings = TrainingSettings(epochs=epochs, holdout_city=holdout_city, seed=seed)
+        report = train(PatchSet(inputs, targets, origins), settings, out_path=None)
         points.append(
             {
                 "n_train_cities": count,

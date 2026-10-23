@@ -18,8 +18,10 @@ import typer
 from .console import console
 from .surrogate.assessment import assess
 from .surrogate.dataset import default_plan, generate
+from .surrogate.patch_set import PatchSet
 from .surrogate.patches import crop_batch, crop_cities
 from .surrogate.training import save_report, train
+from .surrogate.training_settings import TrainingSettings
 
 logger = logging.getLogger(__name__)
 
@@ -110,14 +112,8 @@ def train_model(
     destination = pairs[0][0] if len(pairs) == 1 else Path("data/surrogate/multi")
     destination.mkdir(parents=True, exist_ok=True)
 
-    report = train(
-        inputs,
-        targets,
-        origins,
-        epochs=epochs,
-        holdout_city=holdout_city,
-        out_path=destination / "model.pt",
-    )
+    settings = TrainingSettings(epochs=epochs, holdout_city=holdout_city)
+    report = train(PatchSet(inputs, targets, origins), settings, out_path=destination / "model.pt")
     report["patch_px"] = patch
     report["cities"] = [str(b) for _, b in pairs]
     report["target_stats"] = {
