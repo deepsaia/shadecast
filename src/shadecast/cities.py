@@ -5,18 +5,26 @@ over-sampling of tropical and Global South cities. The 2026 review that found
 tropical cities to be only 9% of urban-heat mitigation studies is the reason
 this is a design constraint rather than an afterthought.
 
+The cities live in ``corpus.json`` beside this module, one object per city, so that
+adding a city is a data change rather than a code change. This module loads and
+validates that file.
+
 `in_wri` marks cities that also appear in WRI's Cool Cities Lab. Those are the
 cross-validation set: our independently built bundles should agree with their
 published UTCI where the two overlap, and any disagreement is informative.
 
 Coordinates are a search *seed*, not the study area. The actual AOI is chosen by
-`aoi.select` from population density, so nobody has to hand-tune a box and the
-choice is reproducible.
+`aoi_selector.select` from population density, so nobody has to hand-tune a box and
+the choice is reproducible.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+from dataclasses import dataclass, fields
+from pathlib import Path
+
+CORPUS_PATH = Path(__file__).with_name("corpus.json")
 
 
 @dataclass(frozen=True)
@@ -37,86 +45,33 @@ class City:
         return self.income in ("L", "LM", "UM")
 
 
-_C = [
-    # ---- South Asia ----
-    City(
-        "ahmedabad",
-        "Ahmedabad",
-        "IND",
-        23.0225,
-        72.5850,
-        "BSh",
-        "LM",
-        "South Asia",
-        note="First Heat Action Plan in South Asia, 2013. Plan-rediscovery validation case.",
-    ),
-    City("delhi", "Delhi", "IND", 28.6519, 77.2315, "BSh", "LM", "South Asia"),
-    City("karachi", "Karachi", "PAK", 24.8607, 67.0011, "BWh", "LM", "South Asia"),
-    City("dhaka", "Dhaka", "BGD", 23.7509, 90.3934, "Aw", "LM", "South Asia"),
-    City("chennai", "Chennai", "IND", 13.0827, 80.2707, "Aw", "LM", "South Asia"),
-    # ---- Southeast Asia ----
-    City("jakarta", "Jakarta", "IDN", -6.1751, 106.8272, "Af", "UM", "SE Asia", in_wri=True),
-    City("bangkok", "Bangkok", "THA", 13.7563, 100.5018, "Aw", "UM", "SE Asia"),
-    City("hochiminh", "Ho Chi Minh City", "VNM", 10.7769, 106.7009, "Aw", "LM", "SE Asia"),
-    City("manila", "Manila", "PHL", 14.5995, 120.9842, "Aw", "LM", "SE Asia"),
-    # ---- Africa ----
-    City("lagos", "Lagos", "NGA", 6.4550, 3.3841, "Aw", "LM", "Africa"),
-    City("nairobi", "Nairobi", "KEN", -1.2864, 36.8172, "Cwb", "LM", "Africa", in_wri=True),
-    City("accra", "Accra", "GHA", 5.6037, -0.1870, "Aw", "LM", "Africa"),
-    City("cairo", "Cairo", "EGY", 30.0444, 31.2357, "BWh", "LM", "Africa"),
-    City("daressalaam", "Dar es Salaam", "TZA", -6.7924, 39.2083, "Aw", "LM", "Africa"),
-    City("khartoum", "Khartoum", "SDN", 15.5007, 32.5599, "BWh", "L", "Africa"),
-    City("johannesburg", "Johannesburg", "ZAF", -26.2041, 28.0473, "Cwb", "UM", "Africa"),
-    # ---- Latin America ----
-    City("rio", "Rio de Janeiro", "BRA", -22.9068, -43.1729, "Aw", "UM", "LatAm", in_wri=True),
-    City("mexicocity", "Mexico City", "MEX", 19.4326, -99.1332, "Cwb", "UM", "LatAm", in_wri=True),
-    City("lima", "Lima", "PER", -12.0464, -77.0428, "BWh", "UM", "LatAm"),
-    City("saopaulo", "Sao Paulo", "BRA", -23.5505, -46.6333, "Cfa", "UM", "LatAm"),
-    City("monterrey", "Monterrey", "MEX", 25.6866, -100.3161, "BSh", "UM", "LatAm"),
-    City(
-        "oaxaca",
-        "Oaxaca de Juarez",
-        "MEX",
-        17.0732,
-        -96.7266,
-        "Aw",
-        "UM",
-        "LatAm",
-        note="Aw at the seed, bordering Cwa at 1,550 m altitude.",
-    ),
-    City("recife", "Recife", "BRA", -8.0476, -34.8770, "Am", "UM", "LatAm"),
-    # ---- Middle East ----
-    City("dubai", "Dubai", "ARE", 25.2048, 55.2708, "BWh", "H", "Middle East"),
-    City("baghdad", "Baghdad", "IRQ", 33.3152, 44.3661, "BWh", "UM", "Middle East"),
-    # ---- Europe ----
-    City("athens", "Athens", "GRC", 37.9838, 23.7275, "Csa", "H", "Europe"),
-    City(
-        "seville",
-        "Seville",
-        "ESP",
-        37.3891,
-        -5.9845,
-        "Csa",
-        "H",
-        "Europe",
-        note="Named and ranked its heatwaves from 2022. Second rediscovery case.",
-    ),
-    City("milan", "Milan", "ITA", 45.4642, 9.1900, "Cfa", "H", "Europe"),
-    City("london", "London", "GBR", 51.5074, -0.1278, "Cfb", "H", "Europe", in_wri=True),
-    City("lyon", "Lyon", "FRA", 45.7640, 4.8357, "Cfb", "H", "Europe"),
-    City("bristol", "Bristol", "GBR", 51.4545, -2.5879, "Cfb", "H", "Europe"),
-    City("barcelona", "Barcelona", "ESP", 41.3874, 2.1686, "Csa", "H", "Europe"),
-    City("hamburg", "Hamburg", "DEU", 53.5488, 9.9872, "Cfb", "H", "Europe"),
-    # ---- North America ----
-    City("phoenix", "Phoenix", "USA", 33.4484, -112.0740, "BWh", "H", "N America"),
-    City("boston", "Boston", "USA", 42.3601, -71.0589, "Dfa", "H", "N America", in_wri=True),
-    City("houston", "Houston", "USA", 29.7604, -95.3698, "Cfa", "H", "N America"),
-    City("savannah", "Savannah", "USA", 32.0809, -81.0912, "Cfa", "H", "N America"),
-    # ---- Oceania ----
-    City("sydney", "Sydney", "AUS", -33.8688, 151.2093, "Cfa", "H", "Oceania"),
-]
+def _city_from(entry: dict, path: Path) -> City:
+    """Build one City from a JSON object, naming the file and the key on any defect."""
+    known = {field.name for field in fields(City)}
+    unknown = sorted(set(entry) - known)
+    key = entry.get("key", "?")
+    if unknown:
+        raise ValueError(f"{path.name}: city {key!r} has unknown fields {unknown}")
+    try:
+        return City(**entry)
+    except TypeError as exc:
+        raise ValueError(f"{path.name}: city {key!r} is missing a required field") from exc
 
-CORPUS: dict[str, City] = {c.key: c for c in _C}
+
+def load_corpus(path: Path = CORPUS_PATH) -> dict[str, City]:
+    """Read the corpus file and return its cities keyed by short key, in file order."""
+    path = Path(path)
+    entries: list[dict] = json.loads(path.read_text())
+    corpus: dict[str, City] = {}
+    for entry in entries:
+        city = _city_from(entry, path)
+        if city.key in corpus:
+            raise ValueError(f"{path.name}: duplicate city key {city.key!r}")
+        corpus[city.key] = city
+    return corpus
+
+
+CORPUS: dict[str, City] = load_corpus()
 
 
 def summary() -> dict:

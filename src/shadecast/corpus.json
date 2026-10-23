@@ -1,0 +1,391 @@
+[
+  {
+    "key": "ahmedabad",
+    "name": "Ahmedabad",
+    "country": "IND",
+    "lat": 23.0225,
+    "lon": 72.585,
+    "koppen": "BSh",
+    "income": "LM",
+    "region": "South Asia",
+    "note": "First Heat Action Plan in South Asia, 2013. Plan-rediscovery validation case."
+  },
+  {
+    "key": "delhi",
+    "name": "Delhi",
+    "country": "IND",
+    "lat": 28.6519,
+    "lon": 77.2315,
+    "koppen": "BSh",
+    "income": "LM",
+    "region": "South Asia"
+  },
+  {
+    "key": "karachi",
+    "name": "Karachi",
+    "country": "PAK",
+    "lat": 24.8607,
+    "lon": 67.0011,
+    "koppen": "BWh",
+    "income": "LM",
+    "region": "South Asia"
+  },
+  {
+    "key": "dhaka",
+    "name": "Dhaka",
+    "country": "BGD",
+    "lat": 23.7509,
+    "lon": 90.3934,
+    "koppen": "Aw",
+    "income": "LM",
+    "region": "South Asia"
+  },
+  {
+    "key": "chennai",
+    "name": "Chennai",
+    "country": "IND",
+    "lat": 13.0827,
+    "lon": 80.2707,
+    "koppen": "Aw",
+    "income": "LM",
+    "region": "South Asia"
+  },
+  {
+    "key": "jakarta",
+    "name": "Jakarta",
+    "country": "IDN",
+    "lat": -6.1751,
+    "lon": 106.8272,
+    "koppen": "Af",
+    "income": "UM",
+    "region": "SE Asia",
+    "in_wri": true
+  },
+  {
+    "key": "bangkok",
+    "name": "Bangkok",
+    "country": "THA",
+    "lat": 13.7563,
+    "lon": 100.5018,
+    "koppen": "Aw",
+    "income": "UM",
+    "region": "SE Asia"
+  },
+  {
+    "key": "hochiminh",
+    "name": "Ho Chi Minh City",
+    "country": "VNM",
+    "lat": 10.7769,
+    "lon": 106.7009,
+    "koppen": "Aw",
+    "income": "LM",
+    "region": "SE Asia"
+  },
+  {
+    "key": "manila",
+    "name": "Manila",
+    "country": "PHL",
+    "lat": 14.5995,
+    "lon": 120.9842,
+    "koppen": "Aw",
+    "income": "LM",
+    "region": "SE Asia"
+  },
+  {
+    "key": "lagos",
+    "name": "Lagos",
+    "country": "NGA",
+    "lat": 6.455,
+    "lon": 3.3841,
+    "koppen": "Aw",
+    "income": "LM",
+    "region": "Africa"
+  },
+  {
+    "key": "nairobi",
+    "name": "Nairobi",
+    "country": "KEN",
+    "lat": -1.2864,
+    "lon": 36.8172,
+    "koppen": "Cwb",
+    "income": "LM",
+    "region": "Africa",
+    "in_wri": true
+  },
+  {
+    "key": "accra",
+    "name": "Accra",
+    "country": "GHA",
+    "lat": 5.6037,
+    "lon": -0.187,
+    "koppen": "Aw",
+    "income": "LM",
+    "region": "Africa"
+  },
+  {
+    "key": "cairo",
+    "name": "Cairo",
+    "country": "EGY",
+    "lat": 30.0444,
+    "lon": 31.2357,
+    "koppen": "BWh",
+    "income": "LM",
+    "region": "Africa"
+  },
+  {
+    "key": "daressalaam",
+    "name": "Dar es Salaam",
+    "country": "TZA",
+    "lat": -6.7924,
+    "lon": 39.2083,
+    "koppen": "Aw",
+    "income": "LM",
+    "region": "Africa"
+  },
+  {
+    "key": "khartoum",
+    "name": "Khartoum",
+    "country": "SDN",
+    "lat": 15.5007,
+    "lon": 32.5599,
+    "koppen": "BWh",
+    "income": "L",
+    "region": "Africa"
+  },
+  {
+    "key": "johannesburg",
+    "name": "Johannesburg",
+    "country": "ZAF",
+    "lat": -26.2041,
+    "lon": 28.0473,
+    "koppen": "Cwb",
+    "income": "UM",
+    "region": "Africa"
+  },
+  {
+    "key": "rio",
+    "name": "Rio de Janeiro",
+    "country": "BRA",
+    "lat": -22.9068,
+    "lon": -43.1729,
+    "koppen": "Aw",
+    "income": "UM",
+    "region": "LatAm",
+    "in_wri": true
+  },
+  {
+    "key": "mexicocity",
+    "name": "Mexico City",
+    "country": "MEX",
+    "lat": 19.4326,
+    "lon": -99.1332,
+    "koppen": "Cwb",
+    "income": "UM",
+    "region": "LatAm",
+    "in_wri": true
+  },
+  {
+    "key": "lima",
+    "name": "Lima",
+    "country": "PER",
+    "lat": -12.0464,
+    "lon": -77.0428,
+    "koppen": "BWh",
+    "income": "UM",
+    "region": "LatAm"
+  },
+  {
+    "key": "saopaulo",
+    "name": "Sao Paulo",
+    "country": "BRA",
+    "lat": -23.5505,
+    "lon": -46.6333,
+    "koppen": "Cfa",
+    "income": "UM",
+    "region": "LatAm"
+  },
+  {
+    "key": "monterrey",
+    "name": "Monterrey",
+    "country": "MEX",
+    "lat": 25.6866,
+    "lon": -100.3161,
+    "koppen": "BSh",
+    "income": "UM",
+    "region": "LatAm"
+  },
+  {
+    "key": "oaxaca",
+    "name": "Oaxaca de Juarez",
+    "country": "MEX",
+    "lat": 17.0732,
+    "lon": -96.7266,
+    "koppen": "Aw",
+    "income": "UM",
+    "region": "LatAm",
+    "note": "Aw at the seed, bordering Cwa at 1,550 m altitude."
+  },
+  {
+    "key": "recife",
+    "name": "Recife",
+    "country": "BRA",
+    "lat": -8.0476,
+    "lon": -34.877,
+    "koppen": "Am",
+    "income": "UM",
+    "region": "LatAm"
+  },
+  {
+    "key": "dubai",
+    "name": "Dubai",
+    "country": "ARE",
+    "lat": 25.2048,
+    "lon": 55.2708,
+    "koppen": "BWh",
+    "income": "H",
+    "region": "Middle East"
+  },
+  {
+    "key": "baghdad",
+    "name": "Baghdad",
+    "country": "IRQ",
+    "lat": 33.3152,
+    "lon": 44.3661,
+    "koppen": "BWh",
+    "income": "UM",
+    "region": "Middle East"
+  },
+  {
+    "key": "athens",
+    "name": "Athens",
+    "country": "GRC",
+    "lat": 37.9838,
+    "lon": 23.7275,
+    "koppen": "Csa",
+    "income": "H",
+    "region": "Europe"
+  },
+  {
+    "key": "seville",
+    "name": "Seville",
+    "country": "ESP",
+    "lat": 37.3891,
+    "lon": -5.9845,
+    "koppen": "Csa",
+    "income": "H",
+    "region": "Europe",
+    "note": "Named and ranked its heatwaves from 2022. Second rediscovery case."
+  },
+  {
+    "key": "milan",
+    "name": "Milan",
+    "country": "ITA",
+    "lat": 45.4642,
+    "lon": 9.19,
+    "koppen": "Cfa",
+    "income": "H",
+    "region": "Europe"
+  },
+  {
+    "key": "london",
+    "name": "London",
+    "country": "GBR",
+    "lat": 51.5074,
+    "lon": -0.1278,
+    "koppen": "Cfb",
+    "income": "H",
+    "region": "Europe",
+    "in_wri": true
+  },
+  {
+    "key": "lyon",
+    "name": "Lyon",
+    "country": "FRA",
+    "lat": 45.764,
+    "lon": 4.8357,
+    "koppen": "Cfb",
+    "income": "H",
+    "region": "Europe"
+  },
+  {
+    "key": "bristol",
+    "name": "Bristol",
+    "country": "GBR",
+    "lat": 51.4545,
+    "lon": -2.5879,
+    "koppen": "Cfb",
+    "income": "H",
+    "region": "Europe"
+  },
+  {
+    "key": "barcelona",
+    "name": "Barcelona",
+    "country": "ESP",
+    "lat": 41.3874,
+    "lon": 2.1686,
+    "koppen": "Csa",
+    "income": "H",
+    "region": "Europe"
+  },
+  {
+    "key": "hamburg",
+    "name": "Hamburg",
+    "country": "DEU",
+    "lat": 53.5488,
+    "lon": 9.9872,
+    "koppen": "Cfb",
+    "income": "H",
+    "region": "Europe"
+  },
+  {
+    "key": "phoenix",
+    "name": "Phoenix",
+    "country": "USA",
+    "lat": 33.4484,
+    "lon": -112.074,
+    "koppen": "BWh",
+    "income": "H",
+    "region": "N America"
+  },
+  {
+    "key": "boston",
+    "name": "Boston",
+    "country": "USA",
+    "lat": 42.3601,
+    "lon": -71.0589,
+    "koppen": "Dfa",
+    "income": "H",
+    "region": "N America",
+    "in_wri": true
+  },
+  {
+    "key": "houston",
+    "name": "Houston",
+    "country": "USA",
+    "lat": 29.7604,
+    "lon": -95.3698,
+    "koppen": "Cfa",
+    "income": "H",
+    "region": "N America"
+  },
+  {
+    "key": "savannah",
+    "name": "Savannah",
+    "country": "USA",
+    "lat": 32.0809,
+    "lon": -81.0912,
+    "koppen": "Cfa",
+    "income": "H",
+    "region": "N America"
+  },
+  {
+    "key": "sydney",
+    "name": "Sydney",
+    "country": "AUS",
+    "lat": -33.8688,
+    "lon": 151.2093,
+    "koppen": "Cfa",
+    "income": "H",
+    "region": "Oceania"
+  }
+]
