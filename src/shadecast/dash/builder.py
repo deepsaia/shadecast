@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -24,7 +25,7 @@ from ..experiments.factorial import verdict as factorial_verdict
 from ..exposure import outdoor_mask, outdoor_weights
 from ..interventions import cost
 from ..objectives import benefit, score
-from . import encode, findings
+from . import encode, findings, results
 
 logger = logging.getLogger(__name__)
 
@@ -201,4 +202,9 @@ def build_index(cities: list[tuple[str, Path, Path]], out_dir: Path, data_root: 
     }
     (out_dir / "index.json").write_text(json.dumps(payload, separators=(",", ":")))
     logger.info("index.json written with %d cities", len(payload["cities"]))
+
+    measured = results.collect(payload["cities"], cities, Path(data_root))
+    measured["as_of"] = datetime.now(UTC).strftime("%Y-%m-%d")
+    (out_dir / "results.json").write_text(json.dumps(measured, separators=(",", ":")))
+    logger.info("results.json written with %d plans", measured["totals"]["plans"])
     return payload
