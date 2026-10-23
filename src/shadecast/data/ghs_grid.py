@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from pyproj import Transformer
 
+from .ghs_types import TileRC
+
 CRS = "ESRI:54009"
 X0 = -18_041_000.0
 Y0 = 9_000_000.0
@@ -35,10 +37,11 @@ def to_wgs84(x: float, y: float) -> tuple[float, float]:
     return float(lon), float(lat)
 
 
-def tile_rc(x: float, y: float) -> tuple[int, int]:
+def tile_rc(x: float, y: float) -> TileRC:
     """Row and column of the 1,000 km tile holding a Mollweide point."""
     return int((Y0 - y) // TILE_M) + 1, int((x - X0) // TILE_M) + 1
 
 
-def tile_name(row: int, col: int) -> str:
+def tile_name(rc: TileRC) -> str:
+    row, col = rc
     return f"R{row}_C{col}"

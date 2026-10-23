@@ -3,17 +3,13 @@
 GHS-BUILT-S gives the built-up surface in square metres inside every 100 m cell, so a 1 km
 tile's built fraction is its sum over one million square metres. GHS-BUILT-H gives the average
 net building height per cell. Both share the GHS-POP grid, so per-tile attributes come straight
-from windowed reads with no reprojection. They are used to describe tiles before any is built,
-which is what lets a selection be stratified by morphology rather than by density alone.
+from windowed reads with no reprojection. They describe tiles before any is built, which is
+what lets a selection be stratified by morphology rather than by density alone.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-
-import numpy as np
-
-from .ghs_product import CACHE_ROOT, Bounds, GhsProduct, read_window
+from .ghs_product import GhsProduct
 
 SURFACE_SOURCE = "ghs_built_s"  # keys in cited_sources.json
 HEIGHT_SOURCE = "ghs_built_h"
@@ -34,17 +30,3 @@ GHS_BUILT_H = GhsProduct(
     cache_name="ghsbuilt",
     nodata=255.0,
 )
-
-
-def built_surface(
-    bounds: Bounds, cache_root: Path = CACHE_ROOT
-) -> tuple[np.ndarray, tuple[float, float]]:
-    """Built-up square metres per 100 m cell over the bounds, and the array's top-left corner."""
-    return read_window(GHS_BUILT_S, bounds, cache_root)
-
-
-def building_height(
-    bounds: Bounds, cache_root: Path = CACHE_ROOT
-) -> tuple[np.ndarray, tuple[float, float]]:
-    """Average net building height in metres per 100 m cell over the bounds."""
-    return read_window(GHS_BUILT_H, bounds, cache_root)
