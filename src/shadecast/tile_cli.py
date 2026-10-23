@@ -243,17 +243,24 @@ def path(
         if not listed:
             console.print(f"[dim]no tile on disk for {centre}; run 'sdc build {centre}' first.[/]")
             return
-        rows = [
-            {
-                "tile": item["tile"],
-                "bundle": item["bundle"],
-                "surrogate": item["surrogate"],
-                "models": item["models"],
-                "stages run": ", ".join(k for k, v in item["stages"].items() if v),
-            }
-            for item in listed
-        ]
-        console.print(records_table(f"{centre}: tiles on disk", rows))
+        # One two-column table per tile: paths are long, so they read down, not across.
+        for item in listed:
+            stages = ", ".join(k for k, v in item["stages"].items() if v) or "none"
+            console.print(
+                pairs_table(
+                    f"{centre} {item['tile']}",
+                    {
+                        "bundle": item["bundle"],
+                        "surrogate": item["surrogate"],
+                        "models": item["models"],
+                        "results": item["results"],
+                        "stages run": stages,
+                    },
+                )
+            )
+        console.print(
+            f"[dim]{len(listed)} tile{'s' if len(listed) != 1 else ''} on disk for {centre}.[/]"
+        )
         return
     paths = TilePaths(tile_paths.TILES_ROOT, centre_id, _tile(tile))
     listed_one = {**paths.as_dict(), "stages": paths.stages()}
