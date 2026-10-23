@@ -12,6 +12,8 @@ from pathlib import Path
 
 from .. import cities
 from .tile_paths import TilePaths
+from .tile_selection import TileSelection
+from .tiling import select_densest, select_stratified
 from .urban_centres import UrbanCentres
 
 ALL = "all"
@@ -69,12 +71,16 @@ def _ranked_ids(tiles_json: Path) -> list[str]:
     return [str(row.get("id")) for row in rows]
 
 
-def generated_tiles(text: str, tiles: str | None, tiles_root: Path) -> list[TilePaths]:
-    """Tiles of the city with generated physics: all of them by default, or the named ones.
+def generated_tiles(
+    text: str, tiles: str | None, tiles_root: Path, selection: TileSelection | None = None
+) -> list[TilePaths]:
+    """Tiles of the city with generated physics: all by default, named ones, or a K selection.
 
     A city plans across every kind of area, so its model learns from every tile that has
-    physics, which is exactly what generate produced. Names only narrow that set, and a named
-    tile without physics is refused rather than silently dropped.
+    physics, which is exactly what generate produced. Names narrow that set, and a named tile
+    without physics is refused rather than silently dropped. A selection picks the K densest,
+    or K spread over built-fraction terciles, among the tiles with physics, ranked by the
+    centre's tiles file.
     """
     with_physics = [
         paths
@@ -85,6 +91,8 @@ def generated_tiles(text: str, tiles: str | None, tiles_root: Path) -> list[Tile
         raise ValueError(
             f"{text} has no generated physics yet; run 'sdc surrogate generate {text}' first"
         )
+    if selection is not None and selection.wants():
+        return _selected(text, with_physics, selection)
     if tiles is None or tiles.strip().lower() in ("", ALL):
         return with_physics
     chosen = []
@@ -116,3 +124,21 @@ def _densest_of(text: str, found: list[TilePaths], option: str) -> TilePaths:
 def densest_generated_tile(text: str, tiles_root: Path) -> TilePaths:
     """The tile with physics and most residents, to assess a city's model against."""
     return _densest_of(text, generated_tiles(text, None, tiles_root), "--tile")
+
+
+def _selected(text: str, found: list[TilePaths], selection: TileSelection) -> list[TilePaths]:
+    """The K densest or K stratified tiles among ``found``, using the centre's tiles file."""
+    tiles_json = found[0].tiles_json
+    if not tiles_json.exists():
+        raise ValueError(
+            f"{text} has no tiles.json to rank tiles; run 'sdc tile list {text}' first"
+        )
+    by_id = {paths.tile.id: paths for paths in found}
+    rows = [
+        row for row in json.loads(tiles_json.read_text()).get("tiles", []) if row.get("id") in by_id
+    ]
+    if selection.densest:
+        picked = select_densest(rows, selection.densest)
+    else:
+        picked = select_stratified(rows, selection.stratified or 0)
+    return [by_id[str(row.get("id"))] for row in picked]

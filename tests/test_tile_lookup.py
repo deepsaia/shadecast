@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 from shadecast import surrogate_cli
 from shadecast.cli import app
 from shadecast.corpus import tile_lookup, tile_paths
+from shadecast.corpus.tile_selection import TileSelection
 
 runner = CliRunner()
 
@@ -214,3 +215,30 @@ def test_model_created_sorts_named_and_manifested_models_together(tmp_path):
     odd = tmp_path / "custom"
     odd.mkdir()
     assert surrogate_cli.model_created(odd) == "custom"
+
+
+def test_training_can_pick_the_densest_or_stratified_tiles_with_physics(tmp_path, monkeypatch):
+    monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
+    tiles = {"t43N_249_2547": (100, 0.1), "t43N_250_2547": (900, 0.6), "t43N_251_2547": (500, 0.3)}
+    bundles = {tile: _physics(_bundle(tmp_path, 6143, tile)).parent / "bundle" for tile in tiles}
+    _bundle(tmp_path, 6143, "t43N_252_2547")  # built, no physics: never chosen
+    rows = [
+        {"id": tile, "population_2020": pop, "density_2020_per_km2": pop, "built_fraction": built}
+        for tile, (pop, built) in tiles.items()
+    ] + [
+        {
+            "id": "t43N_252_2547",
+            "population_2020": 5000,
+            "density_2020_per_km2": 5000,
+            "built_fraction": 0.9,
+        }
+    ]
+    (tmp_path / "6143" / "tiles.json").write_text(json.dumps({"tiles": rows}))
+    densest = surrogate_cli.training_pairs("ahmedabad", None, None, None, TileSelection(densest=2))
+    assert [b.parent.name for _, b in densest] == ["t43N_250_2547", "t43N_251_2547"]
+    spread = surrogate_cli.training_pairs(
+        "ahmedabad", None, None, None, TileSelection(stratified=3)
+    )
+    assert sorted(b.parent.name for _, b in spread) == sorted(bundles)
+    with pytest.raises(ValueError, match="not both"):
+        TileSelection(densest=1, stratified=1)

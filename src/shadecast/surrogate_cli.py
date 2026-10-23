@@ -17,6 +17,7 @@ import typer
 
 from .console import console, error_console, pairs_table
 from .corpus import tile_lookup, tile_paths
+from .corpus.tile_selection import TileSelection
 from .surrogate import manifest
 from .surrogate.assessment import assess
 from .surrogate.assessment_inputs import AssessmentInputs
@@ -283,7 +284,11 @@ def generate_data(
 
 
 def training_pairs(
-    target: str | None, bundle: Path | None, pair: list[str] | None, tiles: str | None = None
+    target: str | None,
+    bundle: Path | None,
+    pair: list[str] | None,
+    tiles: str | None = None,
+    selection: TileSelection | None = None,
 ) -> list[tuple[Path, Path]]:
     """(surrogate dir, bundle) pairs: a city's densest tile with physics, named or all tiles pooled,
     a path pair, or --pair values."""
@@ -298,7 +303,7 @@ def training_pairs(
     if target is not None and bundle is not None:
         pairs.append((Path(target), bundle))
     elif target is not None:
-        found_tiles = tile_lookup.generated_tiles(target, tiles, tile_paths.TILES_ROOT)
+        found_tiles = tile_lookup.generated_tiles(target, tiles, tile_paths.TILES_ROOT, selection)
         pairs.extend((paths.surrogate, paths.bundle) for paths in found_tiles)
     if not pairs:
         raise ValueError("give a city key, SURROGATE_DIR and BUNDLE, or one or more --pair")
@@ -381,6 +386,16 @@ def train_model(
             "--channels", help="Channel set: engine (all eleven) or base (the first seven)."
         ),
     ] = "engine",
+    densest: Annotated[
+        int | None,
+        typer.Option(
+            "--densest", help="Train on the K tiles with physics that have most residents."
+        ),
+    ] = None,
+    stratified: Annotated[
+        int | None,
+        typer.Option("--stratified", help="Train on K tiles with physics spread over terciles."),
+    ] = None,
     resume: Annotated[
         bool,
         typer.Option("--resume", help="Continue the newest unfinished run from its checkpoint."),
@@ -393,7 +408,7 @@ def train_model(
     measures transfer to unseen geometry. Those are different questions.
     """
     try:
-        pairs = training_pairs(target, bundle, pair, tiles)
+        pairs = training_pairs(target, bundle, pair, tiles, TileSelection(densest, stratified))
     except ValueError as exc:
         error_console.print(str(exc), style="red", markup=False)
         raise typer.Exit(code=1) from exc
