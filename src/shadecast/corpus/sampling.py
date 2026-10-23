@@ -9,12 +9,15 @@ Centres missing either stratum are left out, because an unknown stratum cannot b
 from __future__ import annotations
 
 from collections.abc import Iterable
+from operator import attrgetter
 
 import numpy as np
 
+from .draw import Draw
 from .urban_centre import UrbanCentre
 
 Stratum = tuple[str, str]
+BY_POPULATION = attrgetter("population_2025")
 
 
 def stratum(centre: UrbanCentre) -> Stratum | None:
@@ -33,22 +36,23 @@ def strata(centres: Iterable[UrbanCentre]) -> dict[Stratum, int]:
     return dict(sorted(counts.items()))
 
 
-def sample(
-    centres: Iterable[UrbanCentre], *, per_stratum: int, min_population: int, seed: int
-) -> list[UrbanCentre]:
-    """Up to `per_stratum` centres from every stratum, ordered by stratum then population."""
+def _eligible(centres: Iterable[UrbanCentre], draw: Draw) -> dict[Stratum, list[UrbanCentre]]:
     groups: dict[Stratum, list[UrbanCentre]] = {}
     for centre in centres:
         key = stratum(centre)
-        if key is not None and centre.population_2025 >= min_population:
+        if key is not None and centre.population_2025 >= draw.min_population_2025:
             groups.setdefault(key, []).append(centre)
+    return groups
 
-    rng = np.random.default_rng(seed)
+
+def sample(centres: Iterable[UrbanCentre], draw: Draw) -> list[UrbanCentre]:
+    """Up to `draw.per_stratum` centres from every stratum, by stratum then population."""
+    groups = _eligible(centres, draw)
+    rng = np.random.default_rng(draw.seed)
     drawn: list[UrbanCentre] = []
     for key in sorted(groups):
         members = groups.get(key, [])
-        take = min(per_stratum, len(members))
-        picked = rng.choice(len(members), size=take, replace=False)
+        picked = rng.choice(len(members), size=min(draw.per_stratum, len(members)), replace=False)
         chosen = [members[int(index)] for index in picked]
-        drawn.extend(sorted(chosen, key=lambda centre: -centre.population_2025))
+        drawn.extend(sorted(chosen, key=BY_POPULATION, reverse=True))
     return drawn
