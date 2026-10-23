@@ -5,11 +5,25 @@ import math
 import pytest
 
 from shadecast.aoi import AOI
-from shadecast.cities import CORPUS
 from shadecast.data.buildings import tile_name
 from shadecast.data.buildings import tiles_for as gba_tiles
 from shadecast.data.population import tile_rc
 from shadecast.data.rasters import _corners
+
+# Seeds spanning both hemispheres, the equator and the prime meridian. Fixed here rather than
+# read from the corpus so the geometry tests need neither the database nor the network.
+SEEDS = (
+    ("ahmedabad", 23.02, 72.58),
+    ("rio", -22.91, -43.17),
+    ("sydney", -33.87, 151.21),
+    ("nairobi", -1.29, 36.82),
+    ("london", 51.51, -0.13),
+    ("lima", -12.05, -77.04),
+    ("phoenix", 33.45, -112.07),
+    ("jakarta", -6.18, 106.83),
+    ("khartoum", 15.50, 32.56),
+    ("boston", 42.36, -71.06),
+)
 
 # --- UTM zone selection ---------------------------------------------------
 
@@ -29,9 +43,9 @@ def test_utm_epsg(lat, lon, epsg):
 
 
 def test_southern_hemisphere_uses_327xx():
-    for c in CORPUS.values():
-        band = AOI(c.key, c.lat, c.lon).utm_epsg // 100
-        assert band == (327 if c.lat < 0 else 326), c.key
+    for key, lat, lon in SEEDS:
+        band = AOI(key, lat, lon).utm_epsg // 100
+        assert band == (327 if lat < 0 else 326), key
 
 
 # --- grid integrity -------------------------------------------------------
@@ -58,11 +72,11 @@ def test_transform_matches_bounds():
 
 
 def test_wgs84_bounds_contain_centre():
-    for c in list(CORPUS.values())[:8]:
-        a = AOI(c.key, c.lat, c.lon)
+    for key, lat, lon in SEEDS:
+        a = AOI(key, lat, lon)
         minx, miny, maxx, maxy = a.bounds_wgs84
-        assert minx <= a.lon <= maxx, c.key
-        assert miny <= a.lat <= maxy, c.key
+        assert minx <= a.lon <= maxx, key
+        assert miny <= a.lat <= maxy, key
 
 
 # --- tile addressing ------------------------------------------------------
@@ -88,10 +102,10 @@ def test_gba_tiles_cover_aoi_corners():
 
 
 def test_ghspop_tile_is_in_range():
-    for c in CORPUS.values():
-        r, col = tile_rc(c.lat, c.lon)
-        assert 1 <= r <= 18, c.key
-        assert 1 <= col <= 36, c.key
+    for key, lat, lon in SEEDS:
+        r, col = tile_rc(lat, lon)
+        assert 1 <= r <= 18, key
+        assert 1 <= col <= 36, key
 
 
 @pytest.mark.parametrize("step", [1, 3])
