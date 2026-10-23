@@ -136,8 +136,18 @@ def pooled_models(centre: int) -> list[Path]:
 
 
 def model_created(model_dir: Path) -> str:
-    """The manifest's creation time, else the directory name, which ends in a timestamp."""
-    return str(read_manifest(model_dir).get("created") or model_dir.name)
+    """When a model was made, as ``YYYY-MM-DDTHH:MM:SS`` so models from any directory sort together.
+
+    From the manifest when there is one, else from the directory name, which ends in a
+    compact timestamp such as ``20261023T121739``.
+    """
+    created = read_manifest(model_dir).get("created")
+    if created:
+        return str(created)[:19]
+    stamp = model_dir.name.rsplit("-", 1)[-1]
+    if len(stamp) == 15 and stamp[8] == "T" and stamp.replace("T", "").isdigit():
+        return f"{stamp[:4]}-{stamp[4:6]}-{stamp[6:8]}T{stamp[9:11]}:{stamp[11:13]}:{stamp[13:15]}"
+    return model_dir.name
 
 
 def read_manifest(model_dir: Path) -> dict:

@@ -198,3 +198,19 @@ def test_resume_command_repeats_the_options():
     assert surrogate_cli.resume_command("x/bundle", "t1", Path("o"), "shade", 1) == (
         "sdc surrogate generate x/bundle --tiles t1 --out o --kind shade"
     )
+
+
+def test_model_created_sorts_named_and_manifested_models_together(tmp_path):
+    bare = tmp_path / "response-unet-ahmedabad-20261023T121739"
+    bare.mkdir()
+    assert surrogate_cli.model_created(bare) == "2026-10-23T12:17:39"
+    with_manifest = tmp_path / "response-unet-ahmedabad-2tiles-20261024T090000"
+    with_manifest.mkdir()
+    (with_manifest / "manifest.json").write_text(
+        json.dumps({"created": "2026-10-24T09:00:00+00:00"})
+    )
+    assert surrogate_cli.model_created(with_manifest) == "2026-10-24T09:00:00"
+    assert surrogate_cli.model_created(bare) < surrogate_cli.model_created(with_manifest)
+    odd = tmp_path / "custom"
+    odd.mkdir()
+    assert surrogate_cli.model_created(odd) == "custom"
