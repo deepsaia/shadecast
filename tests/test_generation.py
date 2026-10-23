@@ -187,3 +187,18 @@ def test_sparkline_and_clock():
     assert sparkline([]) == ""
     assert clock(65) == "1m 05s"
     assert clock(3725) == "1h 02m"
+
+
+def test_an_interrupt_cancels_the_designs_not_yet_started(bundle, tmp_path, monkeypatch):
+    engine = FakeEngine()
+    monkeypatch.setattr(dataset, "run", engine)
+
+    def interrupt(futures, progress, results, failures):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(dataset, "collect_results", interrupt)
+    with pytest.raises(KeyboardInterrupt):
+        dataset.generate(bundle, tmp_path / "surrogate", GenerationSettings(plan=PLAN, jobs=1))
+    # The baseline ran, and at most the one design that had already started.
+    assert len(engine.calls) <= 2
+    assert not (tmp_path / "surrogate" / ".generating.lock").exists()
