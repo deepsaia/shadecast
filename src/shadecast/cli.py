@@ -21,7 +21,6 @@ import typer
 from . import cities, tile_cli
 from .console import add_build_row, build_table, console, corpus_table, error_console, result_table
 from .corpus import tile_paths
-from .corpus.tile import Tile
 from .corpus.tile_paths import TilePaths
 from .corpus_cli import app as corpus_app
 from .dash_cli import app as dash_app
@@ -88,22 +87,36 @@ def build(
         str | None, typer.Argument(help="Selection key, for example ahmedabad.")
     ] = None,
     build_all: Annotated[bool, typer.Option("--all", help="Build every selected city.")] = False,
-    tile: Annotated[
+    tiles: Annotated[
         str | None,
-        typer.Option("--tile", help="A tile id such as t43N_249_2547. Default: the densest."),
+        typer.Option(
+            "--tiles",
+            help="Tile ids separated by commas, or 'all' for every tile. Default: the densest.",
+        ),
+    ] = None,
+    densest: Annotated[
+        int | None, typer.Option("--densest", help="The K tiles with most residents.")
+    ] = None,
+    stratified: Annotated[
+        int | None,
+        typer.Option("--stratified", help="K tiles spread over built-fraction terciles."),
     ] = None,
 ) -> None:
-    """Assemble a tile's bundle from open sources into the tile layout. No credentials needed."""
+    """Assemble tile bundles from open sources into the tile layout. No credentials needed.
+
+    One tile per city by default, the one with most residents. --tiles names tiles or asks
+    for all of them; --densest and --stratified pick K the way the corpus selection does.
+    """
     if not build_all and city is None:
         raise typer.BadParameter("give a city key or use --all")
-    if tile and build_all:
-        raise typer.BadParameter("--tile applies to one city")
+    named = tiles is not None and tiles.strip().lower() not in ("", tile_cli.ALL_TILES)
+    if named and build_all:
+        raise typer.BadParameter("named --tiles apply to one city")
     corpus = cities.corpus()
     keys = list(corpus) if build_all else [str(city)]
     unknown = [key for key in keys if key not in corpus]
     if unknown:
         raise typer.BadParameter(f"unknown city keys {unknown}, try 'shadecast list'")
-    chosen = _parse_tile(tile) if tile else None
 
     centres = tile_cli.load_centres()
     table = build_table()
@@ -114,40 +127,41 @@ def build(
             if selected is None:
                 continue
             centre = centres.by_id(selected.ucdb_id)
-            target = chosen or tile_cli.densest_tile(centre)
-            status.update(f"[cyan]{key} {target.id}[/]: pulling open layers")
-            started = time.time()
-            try:
-                provenance = build_tile(
-                    selected, target, TilePaths(tile_paths.TILES_ROOT, centre.id, target)
+            targets = tile_cli.chosen_tiles(centre, tiles, densest, stratified)
+            for target in targets:
+                status.update(f"[cyan]{key} {target.id}[/]: pulling open layers")
+                started = time.time()
+                try:
+                    provenance = build_tile(
+                        selected, target, TilePaths(tile_paths.TILES_ROOT, centre.id, target)
+                    )
+                # One unreachable source must not abandon the remaining tiles. The
+                # failure is logged with its type and never swallowed, and the command
+                # exits non-zero.
+                except Exception:
+                    logger.exception(
+                        "build failed for %s %s after %.1fs",
+                        key,
+                        target.id,
+                        time.time() - started,
+                    )
+                    failed.append(f"{key} {target.id}")
+                    continue
+                add_build_row(table, f"{key} {target.id}", time.time() - started, provenance)
+                built = TilePaths(tile_paths.TILES_ROOT, centre.id, target)
+                pick = "" if len(targets) == 1 else f" --tiles {target.id}"
+                console.print(
+                    f"[green]{key}[/] {target.id}: bundle at {built.bundle}\n"
+                    f"  next: sdc surrogate generate {key}{pick} --jobs 4"
                 )
-            # One unreachable source must not abandon the remaining cities. The
-            # failure is logged with its type and never swallowed, and the command
-            # exits non-zero.
-            except Exception:
-                logger.exception(
-                    "build failed for %s %s after %.1fs", key, target.id, time.time() - started
-                )
-                failed.append(key)
-                continue
-            add_build_row(table, f"{key} {target.id}", time.time() - started, provenance)
-            built = TilePaths(tile_paths.TILES_ROOT, centre.id, target)
             console.print(
-                f"[green]{key}[/] {target.id}: bundle at {built.bundle}\n"
-                f"  next: sdc surrogate generate {key} --jobs 4"
+                f"[dim]{key}: {len(targets)} of {tile_cli.tile_count(centre)} tiles chosen.[/]"
             )
 
     console.print(table)
     if failed:
         error_console.print(f"[red]{len(failed)} failed:[/] {', '.join(failed)}")
         raise typer.Exit(code=1)
-
-
-def _parse_tile(text: str) -> Tile:
-    try:
-        return Tile.from_id(text)
-    except ValueError as exc:
-        raise typer.BadParameter(str(exc)) from exc
 
 
 @app.command()

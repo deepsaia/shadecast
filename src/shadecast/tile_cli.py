@@ -280,6 +280,38 @@ def densest_tile(centre: UrbanCentre) -> Tile:
     return Tile.from_id(str(rows[0].get("id")))
 
 
+ALL_TILES = "all"
+
+
+def tile_count(centre: UrbanCentre) -> int:
+    """How many 1 km tiles the centre has, from the tiles file or by describing it."""
+    payload = cached_tiles(centre) or describe_and_write(centre)
+    return len(payload.get("tiles", []))
+
+
+def chosen_tiles(
+    centre: UrbanCentre, tiles: str | None, densest: int | None, stratified: int | None
+) -> list[Tile]:
+    """The tiles a command means.
+
+    Nothing given: the densest tile. ``--tiles`` with ids separated by commas: those tiles.
+    ``--tiles all``, or an empty value: every tile of the centre. ``--densest K`` or
+    ``--stratified K``: the corpus selections of that size, by residents or spread over
+    built-fraction terciles.
+    """
+    payload = cached_tiles(centre) or describe_and_write(centre)
+    rows = payload.get("tiles", [])
+    if tiles is not None:
+        if tiles.strip().lower() in ("", ALL_TILES):
+            return [Tile.from_id(str(row.get("id"))) for row in rows]
+        return [_tile(part.strip()) for part in tiles.split(",") if part.strip()]
+    if densest:
+        return [Tile.from_id(str(row.get("id"))) for row in select_densest(rows, densest)]
+    if stratified:
+        return [Tile.from_id(str(row.get("id"))) for row in select_stratified(rows, stratified)]
+    return [densest_tile(centre)]
+
+
 @app.command("status")
 def status(
     centre: Annotated[str, typer.Argument(help="An id, a slug such as ahmedabad, or a name.")],
