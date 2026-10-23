@@ -9,7 +9,7 @@ import torch
 from rasterio.transform import from_origin
 from scipy import ndimage
 
-from shadecast.repair import aoi_from_provenance
+from shadecast.bundles import aoi_from_provenance
 from shadecast.surrogate import designs
 from shadecast.surrogate.features import IN_CHANNELS_ORDER, sky_openness, stack
 from shadecast.surrogate.metrics import (
