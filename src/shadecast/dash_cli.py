@@ -16,6 +16,7 @@ import typer
 
 from . import cities
 from .console import console
+from .corpus.tile_paths import TILES_ROOT, TilePaths
 from .dash.builder import build_index
 from .dash.server import serve
 
@@ -42,14 +43,30 @@ def find_bundle(city: str) -> Path | None:
     return found[0] if found else None
 
 
+def tile_entries(key: str, urban_centre: int) -> list[tuple[str, Path, Path]]:
+    """Every tile of a city with a bundle and a baseline field, named by key and tile."""
+    ready = [
+        paths
+        for paths in TilePaths.existing(TILES_ROOT, urban_centre)
+        if paths.stages().get("bundle") and paths.stages().get("baseline")
+    ]
+    if len(ready) == 1:
+        return [(key, ready[0].bundle, ready[0].surrogate)]
+    return [(f"{key}-{paths.tile.id}", paths.bundle, paths.surrogate) for paths in ready]
+
+
 def discover() -> list[tuple[str, Path, Path]]:
-    """Every city that has both a bundle and generated physics."""
-    found = []
-    for city in cities.corpus():
-        surrogate_dir = Path("data/surrogate") / city
-        bundle = find_bundle(city)
+    """Every city that has both a bundle and generated physics, tile layout first."""
+    found: list[tuple[str, Path, Path]] = []
+    for key, city in cities.corpus().items():
+        entries = tile_entries(key, city.ucdb_id)
+        if entries:
+            found.extend(entries)
+            continue
+        surrogate_dir = Path("data/surrogate") / key
+        bundle = find_bundle(key)
         if bundle and (surrogate_dir / "baseline" / "tmrt_daylight.npy").exists():
-            found.append((city, bundle, surrogate_dir))
+            found.append((key, bundle, surrogate_dir))
     return found
 
 

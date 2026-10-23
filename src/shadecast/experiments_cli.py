@@ -30,12 +30,25 @@ app = typer.Typer(
 )
 
 
+def _surrogate_dir(bundle: Path, surrogate_root: Path) -> tuple[str, Path]:
+    """The city name and surrogate directory for a bundle, in either layout.
+
+    In the tile layout the bundle directory is called `bundle` and its surrogate directory sits
+    beside it; before tiles both were named after the city under separate roots.
+    """
+    if bundle.name == "bundle" and (bundle.parent / "surrogate").exists():
+        provenance = json.loads((bundle / "provenance.json").read_text())
+        return str(
+            provenance.get("city", {}).get("key", bundle.parent.name)
+        ), bundle.parent / "surrogate"
+    return bundle.name, surrogate_root / bundle.name
+
+
 def _corpus(bundles: list[Path], surrogate_root: Path) -> list[tuple[str, Path, Path]]:
     """Pair each bundle with the surrogate directory holding its baseline field."""
     corpus = []
     for bundle in bundles:
-        name = bundle.name
-        surrogate_dir = surrogate_root / name
+        name, surrogate_dir = _surrogate_dir(bundle, surrogate_root)
         if not (surrogate_dir / "baseline" / "tmrt_daylight.npy").exists():
             raise typer.BadParameter(
                 f"{name} has no baseline field at {surrogate_dir}. Run the baseline first."
