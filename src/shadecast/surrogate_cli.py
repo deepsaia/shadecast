@@ -16,7 +16,7 @@ import numpy as np
 import typer
 
 from .console import console, error_console, pairs_table
-from .corpus import tile_paths
+from .corpus import tile_lookup, tile_paths
 from .surrogate import manifest
 from .surrogate.assessment import assess
 from .surrogate.assessment_inputs import AssessmentInputs
@@ -67,9 +67,58 @@ app = typer.Typer(
 )
 
 
+def resolve_tile(target: str, tile: str | None) -> tuple[Path, Path]:
+    """A bundle path, or a city key with an optional tile id, as (bundle, surrogate dir)."""
+    if Path(target).is_dir():
+        return Path(target), default_out(Path(target))
+    try:
+        paths = tile_lookup.one_built_tile(target, tile, tile_paths.TILES_ROOT)
+    except ValueError as exc:
+        error_console.print(str(exc), style="red", markup=False)
+        raise typer.Exit(code=1) from exc
+    return paths.bundle, paths.surrogate
+
+
+def newest_model(target: str, model: str | None) -> tuple[Path, Path, Path]:
+    """For a city key: (model dir, surrogate dir, bundle), the newest model unless one is named."""
+    try:
+        paths = tile_lookup.one_built_tile(target, None, tile_paths.TILES_ROOT)
+    except ValueError as exc:
+        error_console.print(str(exc), style="red", markup=False)
+        raise typer.Exit(code=1) from exc
+    if model is not None:
+        return paths.models / model, paths.surrogate, paths.bundle
+    models = paths.model_dirs()
+    if not models:
+        error_console.print(
+            f"{target} has no trained model yet; run 'sdc surrogate train {target}'"
+        )
+        raise typer.Exit(code=1)
+    return models[-1], paths.surrogate, paths.bundle
+
+
+def resume_command(target: str, tile: str | None, out: Path | None, kind: str, jobs: int) -> str:
+    """The exact command that continues this run after a stop."""
+    parts = ["sdc surrogate generate", target]
+    if tile:
+        parts += ["--tile", tile]
+    if out:
+        parts += ["--out", str(out)]
+    if kind != "tree":
+        parts += ["--kind", kind]
+    if jobs != 1:
+        parts += ["--jobs", str(jobs)]
+    return " ".join(parts)
+
+
 @app.command("generate")
 def generate_data(
-    bundle: Annotated[Path, typer.Argument(help="A built city bundle directory.")],
+    target: Annotated[
+        str, typer.Argument(help="A city key such as savannah, or a bundle directory.")
+    ],
+    tile: Annotated[
+        str | None, typer.Option("--tile", help="Which of a city's built tiles, if several.")
+    ] = None,
     out: Annotated[Path | None, typer.Option("--out", help="Where to write responses.")] = None,
     kind: Annotated[str, typer.Option("--kind", help="Intervention type.")] = "tree",
     jobs: Annotated[
@@ -85,7 +134,8 @@ def generate_data(
     already on disk are skipped, so an interrupted run resumes where it stopped. Put -v
     before the command for debug logging.
     """
-    destination = out if out else default_out(bundle)
+    bundle, tile_surrogate = resolve_tile(target, tile)
+    destination = out if out else tile_surrogate
     provenance = json.loads((bundle / "provenance.json").read_text())
     plan = default_plan()
     console.print(
@@ -94,7 +144,13 @@ def generate_data(
     )
     settings = GenerationSettings(plan=plan, kind=kind, jobs=jobs)
     started = time.time()
-    progress = GenerationProgress(console, jobs=jobs, threads=engine_threads(settings), kind=kind)
+    progress = GenerationProgress(
+        console,
+        jobs=jobs,
+        threads=engine_threads(settings),
+        kind=kind,
+        resume_command=resume_command(target, tile, out, kind, jobs),
+    )
     try:
         with progress:
             summary = generate(bundle, destination, settings, progress)
@@ -109,17 +165,42 @@ def generate_data(
     )
 
 
+def training_pairs(
+    target: str | None, bundle: Path | None, pair: list[str] | None
+) -> list[tuple[Path, Path]]:
+    """(surrogate dir, bundle) pairs from a city key, a path pair, or repeated --pair values."""
+    pairs: list[tuple[Path, Path]] = []
+    for item in pair or []:
+        if "=" in item:
+            left, right = item.split("=", 1)
+            pairs.append((Path(left), Path(right)))
+        else:
+            found = tile_lookup.one_built_tile(item, None, tile_paths.TILES_ROOT)
+            pairs.append((found.surrogate, found.bundle))
+    if target is not None and bundle is not None:
+        pairs.append((Path(target), bundle))
+    elif target is not None:
+        found = tile_lookup.one_built_tile(target, None, tile_paths.TILES_ROOT)
+        pairs.append((found.surrogate, found.bundle))
+    if not pairs:
+        raise ValueError("give a city key, SURROGATE_DIR and BUNDLE, or one or more --pair")
+    return pairs
+
+
 @app.command("train")
 def train_model(
-    surrogate_dir: Annotated[
-        Path | None, typer.Argument(help="Directory of generated responses.")
+    target: Annotated[
+        str | None,
+        typer.Argument(help="A city key such as savannah, or a directory of generated responses."),
     ] = None,
-    bundle: Annotated[Path | None, typer.Argument(help="The matching city bundle.")] = None,
+    bundle: Annotated[
+        Path | None, typer.Argument(help="The matching city bundle, when a directory was given.")
+    ] = None,
     pair: Annotated[
         list[str] | None,
         typer.Option(
             "--pair",
-            help="Train across cities: SURROGATE_DIR=BUNDLE, repeatable.",
+            help="Train across cities: a city key or SURROGATE_DIR=BUNDLE, repeatable.",
         ),
     ] = None,
     holdout_city: Annotated[
@@ -144,17 +225,11 @@ def train_model(
     intervention pattern. With --holdout-city a whole city is held out instead, which
     measures transfer to unseen geometry. Those are different questions.
     """
-    pairs: list[tuple[Path, Path]] = []
-    if pair:
-        for item in pair:
-            if "=" not in item:
-                raise typer.BadParameter(f"--pair needs SURROGATE_DIR=BUNDLE, got {item!r}")
-            left, right = item.split("=", 1)
-            pairs.append((Path(left), Path(right)))
-    elif surrogate_dir and bundle:
-        pairs.append((surrogate_dir, bundle))
-    else:
-        raise typer.BadParameter("give SURROGATE_DIR and BUNDLE, or one or more --pair")
+    try:
+        pairs = training_pairs(target, bundle, pair)
+    except ValueError as exc:
+        error_console.print(str(exc), style="red", markup=False)
+        raise typer.Exit(code=1) from exc
 
     if holdout_city and len(pairs) < 2:
         raise typer.BadParameter("--holdout-city needs at least two cities")
@@ -212,9 +287,20 @@ def train_model(
 
 @app.command("assess")
 def assess_model(
-    model_dir: Annotated[Path, typer.Argument(help="A trained model directory under models/.")],
-    surrogate_dir: Annotated[Path, typer.Argument(help="Directory of generated responses.")],
-    bundle: Annotated[Path, typer.Argument(help="The matching city bundle.")],
+    target: Annotated[
+        str, typer.Argument(help="A city key such as savannah, or a trained model directory.")
+    ],
+    surrogate_dir: Annotated[
+        Path | None,
+        typer.Argument(help="Directory of generated responses, with a model directory."),
+    ] = None,
+    bundle: Annotated[
+        Path | None, typer.Argument(help="The matching city bundle, with a model directory.")
+    ] = None,
+    model: Annotated[
+        str | None,
+        typer.Option("--model", help="A model id under the tile's models/, else the newest."),
+    ] = None,
     design: Annotated[
         list[str] | None,
         typer.Option("--design", help="Assess these designs instead of the held-out set."),
@@ -223,8 +309,16 @@ def assess_model(
     """Compare the surrogate against engine truth on designs it never trained on.
 
     Reports skill against predicting nothing, whether the spillover tail survives,
-    error in the plan score, and how well plans are ordered.
+    error in the plan score, and how well plans are ordered. A city key assesses its
+    newest model; a model directory needs the surrogate directory and bundle after it.
     """
+    if Path(target).is_dir():
+        if surrogate_dir is None or bundle is None:
+            raise typer.BadParameter("a model directory needs SURROGATE_DIR and BUNDLE after it")
+        model_dir = Path(target)
+    else:
+        model_dir, surrogate_dir, bundle = newest_model(target, model)
+    console.print(f"[dim]assessing {model_dir}[/]")
     with console.status("[cyan]comparing surrogate against engine truth[/]"):
         report = assess(AssessmentInputs(model_dir, surrogate_dir, bundle, only=design))
 
@@ -245,12 +339,17 @@ def assess_model(
 
 @app.command("describe")
 def describe(
-    model_dir: Annotated[
-        Path, typer.Argument(help="A directory holding model.pt and manifest.json.")
+    target: Annotated[
+        str, typer.Argument(help="A city key such as savannah, or a trained model directory.")
     ],
+    model: Annotated[
+        str | None,
+        typer.Option("--model", help="A model id under the tile's models/, else the newest."),
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Emit the manifest as JSON.")] = False,
 ) -> None:
     """Say what a trained model is, from its manifest alone."""
+    model_dir = Path(target) if Path(target).is_dir() else newest_model(target, model)[0]
     try:
         found = manifest.read(model_dir)
     except (FileNotFoundError, ValueError) as exc:

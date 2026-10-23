@@ -225,14 +225,40 @@ def _tile(text: str) -> Tile:
 @app.command("path")
 def path(
     centre: Annotated[str, typer.Argument(help="An id, a slug such as ahmedabad, or a name.")],
-    tile: Annotated[str, typer.Argument(help="A tile id such as t6908_2816.")],
+    tile: Annotated[
+        str | None, typer.Argument(help="A tile id such as t43N_249_2547; else every tile on disk.")
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
-    """Where everything for one tile lives, and which stages have run."""
-    paths = TilePaths(tile_paths.TILES_ROOT, _resolve(centre).id, _tile(tile))
-    listed = {**paths.as_dict(), "stages": paths.stages()}
+    """Where everything for a tile lives, and which stages have run. Reads disk only."""
+    centre_id = _resolve(centre).id
+    if tile is None:
+        listed = [
+            {**paths.as_dict(), "stages": paths.stages()}
+            for paths in TilePaths.existing(tile_paths.TILES_ROOT, centre_id)
+        ]
+        if as_json:
+            console.print_json(json.dumps(listed))
+            return
+        if not listed:
+            console.print(f"[dim]no tile on disk for {centre}; run 'sdc build {centre}' first.[/]")
+            return
+        rows = [
+            {
+                "tile": item["tile"],
+                "bundle": item["bundle"],
+                "surrogate": item["surrogate"],
+                "models": item["models"],
+                "stages run": ", ".join(k for k, v in item["stages"].items() if v),
+            }
+            for item in listed
+        ]
+        console.print(records_table(f"{centre}: tiles on disk", rows))
+        return
+    paths = TilePaths(tile_paths.TILES_ROOT, centre_id, _tile(tile))
+    listed_one = {**paths.as_dict(), "stages": paths.stages()}
     if as_json:
-        console.print_json(json.dumps(listed))
+        console.print_json(json.dumps(listed_one))
         return
     console.print(pairs_table(f"{paths.urban_centre} {paths.tile.id}", paths.as_dict()))
     console.print(pairs_table("stages", paths.stages()))

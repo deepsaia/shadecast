@@ -131,8 +131,11 @@ def build(
                 failed.append(key)
                 continue
             add_build_row(table, f"{key} {target.id}", time.time() - started, provenance)
-            if chosen is None:
-                console.print(f"[dim]{key}: built the densest tile, {target.id}.[/]")
+            built = TilePaths(tile_paths.TILES_ROOT, centre.id, target)
+            console.print(
+                f"[green]{key}[/] {target.id}: bundle at {built.bundle}\n"
+                f"  next: sdc surrogate generate {key} --jobs 4"
+            )
 
     console.print(table)
     if failed:
