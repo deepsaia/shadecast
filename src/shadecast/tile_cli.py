@@ -17,12 +17,13 @@ from typing import Annotated
 import typer
 from shapely.geometry.base import BaseGeometry
 
-from .console import console, error_console, pairs_table, tiles_table
-from .corpus import ucdb
+from .console import console, error_console, pairs_table, records_table, tiles_table
+from .corpus import tile_paths, ucdb
 from .corpus.statistics import tile_stats
 from .corpus.tile import Tile
-from .corpus.tile_paths import TILES_ROOT, TilePaths
+from .corpus.tile_paths import TilePaths
 from .corpus.tile_rasters import TileRasters
+from .corpus.tile_status import summary_line, tile_status
 from .corpus.tiling import (
     attributes,
     select_densest,
@@ -67,7 +68,7 @@ def describe(centre: UrbanCentre) -> list[dict]:
 
 
 def tiles_path(centre: UrbanCentre) -> Path:
-    return Path(TILES_ROOT) / str(centre.id) / "tiles.json"
+    return Path(tile_paths.TILES_ROOT) / str(centre.id) / "tiles.json"
 
 
 def write_tiles(centre: UrbanCentre, rows: list[dict]) -> dict:
@@ -228,10 +229,35 @@ def path(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """Where everything for one tile lives, and which stages have run."""
-    paths = TilePaths(TILES_ROOT, _resolve(centre).id, _tile(tile))
+    paths = TilePaths(tile_paths.TILES_ROOT, _resolve(centre).id, _tile(tile))
     listed = {**paths.as_dict(), "stages": paths.stages()}
     if as_json:
         console.print_json(json.dumps(listed))
         return
     console.print(pairs_table(f"{paths.urban_centre} {paths.tile.id}", paths.as_dict()))
     console.print(pairs_table("stages", paths.stages()))
+
+
+def densest_tile(centre: UrbanCentre) -> Tile:
+    """The most populous tile of a centre, describing the centre first if needed."""
+    payload = cached_tiles(centre) or describe_and_write(centre)
+    rows = select_densest(payload.get("tiles", []), 1)
+    if not rows:
+        raise ValueError(f"{centre.slug} has no tiles to build")
+    return Tile.from_id(str(rows[0].get("id")))
+
+
+@app.command("status")
+def status(
+    centre: Annotated[str, typer.Argument(help="An id, a slug such as ahmedabad, or a name.")],
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
+) -> None:
+    """How many of an urban centre's tiles have a bundle, physics, a model and results."""
+    found = _resolve(centre)
+    report = tile_status(found, tile_paths.TILES_ROOT)
+    if as_json:
+        console.print_json(json.dumps(report))
+        return
+    if report.get("rows"):
+        console.print(records_table(found.name, report["rows"]))
+    console.print(f"[dim]{summary_line(report)}.[/]")
