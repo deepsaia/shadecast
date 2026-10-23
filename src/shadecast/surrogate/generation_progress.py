@@ -18,7 +18,7 @@ from datetime import datetime
 from rich.console import Console, Group, RenderableType
 from rich.live import Live
 from rich.logging import RichHandler
-from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, TaskID, TextColumn
 from rich.table import Table
 from rich.text import Text
 
@@ -65,7 +65,7 @@ class GenerationProgress:
     phase: str = "starting"
     live: Live | None = None
     bar: Progress | None = None
-    task: int | None = None
+    task: TaskID | None = None
     saved_handlers: list[logging.Handler] = field(default_factory=list)
     lock: threading.Lock = field(default_factory=threading.Lock)
 
