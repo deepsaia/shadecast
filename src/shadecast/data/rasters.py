@@ -26,6 +26,9 @@ from ..aoi import AOI
 
 logger = logging.getLogger(__name__)
 
+DEM_SOURCE = "copernicus_dem"  # keys in cited_sources.json
+WORLDCOVER_SOURCE = "esa_worldcover"
+
 COP_DEM = (
     "https://copernicus-dem-30m.s3.amazonaws.com/"
     "Copernicus_DSM_COG_10_{ns}{lat:02d}_00_{ew}{lon:03d}_00_DEM/"

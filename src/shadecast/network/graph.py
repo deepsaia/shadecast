@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 # already drops, and keeps service roads, which in much of the world carry most
 # of the actual walking.
 NETWORK_TYPE = "walk"
+SOURCE = "osm_overpass"  # key in cited_sources.json
 
 
 def cache_path(aoi: AOI, cache_dir: Path) -> Path:

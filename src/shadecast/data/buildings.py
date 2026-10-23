@@ -28,6 +28,7 @@ from ..aoi import AOI
 
 logger = logging.getLogger(__name__)
 
+SOURCE = "gba_lod1"  # key in cited_sources.json
 BASE = "https://data.source.coop/tge-labs/globalbuildingatlas-lod1"
 
 

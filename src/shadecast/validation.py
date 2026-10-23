@@ -31,6 +31,7 @@ from .aoi import AOI
 
 logger = logging.getLogger(__name__)
 
+SOURCE = "landsat_c2l2"  # key in cited_sources.json
 STAC = "https://planetarycomputer.microsoft.com/api/stac/v1"
 LANDSAT_OVERPASS_HOUR = 10
 # Collection 2 Level 2 surface temperature scaling, per USGS product guide.

@@ -28,6 +28,7 @@ from .result import RunResult
 
 logger = logging.getLogger(__name__)
 
+SOURCE = "solweig_gpu"  # key in cited_sources.json
 REQUIRED_INPUTS = ("Building_DSM.tif", "DEM.tif", "Trees.tif", "met.txt")
 
 # The engine lives in its own uv environment beside the project one. Keeping it
