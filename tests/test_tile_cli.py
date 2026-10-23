@@ -131,29 +131,30 @@ def test_list_reads_the_written_file_instead_of_describing_again(monkeypatch):
     assert runner.invoke(app, ["tile", "list", "ahmedabad", "--refresh"]).exit_code == 1
 
 
-def test_select_densest_stratified_ids_and_random():
-    densest = json.loads(
-        runner.invoke(app, ["tile", "select", "ahmedabad", "--densest", "2", "--json"]).stdout
-    )
-    assert [row["id"] for row in densest] == ["t6897_2808", "t6898_2808"]
-    stratified = json.loads(
-        runner.invoke(app, ["tile", "select", "ahmedabad", "--stratified", "3", "--json"]).stdout
-    )
-    assert [row["id"] for row in stratified] == ["t6897_2808", "t6897_2807", "t6899_2807"]
-    ids = json.loads(
-        runner.invoke(
-            app,
-            ["tile", "select", "ahmedabad", "--ids", "t6898_2807", "--ids", "t6897_2808", "--json"],
-        ).stdout
-    )
-    assert [row["id"] for row in ids] == ["t6898_2807", "t6897_2808"]
-    first = runner.invoke(
-        app, ["tile", "select", "ahmedabad", "--random", "2", "--seed", "1", "--json"]
-    ).stdout
-    again = runner.invoke(
-        app, ["tile", "select", "ahmedabad", "--random", "2", "--seed", "1", "--json"]
-    ).stdout
-    assert first == again and all(row["population_2020"] > 0 for row in json.loads(first))
+def _select(*args: str) -> list[dict]:
+    result = runner.invoke(app, ["tile", "select", "ahmedabad", *args, "--json"])
+    assert result.exit_code == 0, result.output
+    return json.loads(result.stdout)
+
+
+def test_select_densest_takes_the_top_k():
+    assert [row["id"] for row in _select("--densest", "2")] == ["t6897_2808", "t6898_2808"]
+
+
+def test_select_stratified_spreads_over_built_fraction_terciles():
+    chosen = _select("--stratified", "3")
+    assert [row["id"] for row in chosen] == ["t6897_2808", "t6897_2807", "t6899_2807"]
+
+
+def test_select_ids_keeps_the_asked_order():
+    chosen = _select("--ids", "t6898_2807", "--ids", "t6897_2808")
+    assert [row["id"] for row in chosen] == ["t6898_2807", "t6897_2808"]
+
+
+def test_select_random_is_reproducible_and_populated():
+    first = _select("--random", "2", "--seed", "1")
+    assert first == _select("--random", "2", "--seed", "1")
+    assert all(row["population_2020"] > 0 for row in first)
 
 
 def test_select_needs_exactly_one_strategy():
