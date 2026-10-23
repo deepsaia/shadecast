@@ -37,6 +37,7 @@ dependencies = [
 
 [project.scripts]
 shadecast = "shadecast.cli:app"
+sdc = "shadecast.cli:app"
 
 [build-system]
 requires = ["hatchling"]
