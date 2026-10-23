@@ -73,6 +73,18 @@ _C = [
     City("lima", "Lima", "PER", -12.0464, -77.0428, "BWh", "UM", "LatAm"),
     City("saopaulo", "Sao Paulo", "BRA", -23.5505, -46.6333, "Cfa", "UM", "LatAm"),
     City("monterrey", "Monterrey", "MEX", 25.6866, -100.3161, "BSh", "UM", "LatAm"),
+    City(
+        "oaxaca",
+        "Oaxaca de Juarez",
+        "MEX",
+        17.0732,
+        -96.7266,
+        "Aw",
+        "UM",
+        "LatAm",
+        note="Aw at the seed, bordering Cwa at 1,550 m altitude.",
+    ),
+    City("recife", "Recife", "BRA", -8.0476, -34.8770, "Am", "UM", "LatAm"),
     # ---- Middle East ----
     City("dubai", "Dubai", "ARE", 25.2048, 55.2708, "BWh", "H", "Middle East"),
     City("baghdad", "Baghdad", "IRQ", 33.3152, 44.3661, "BWh", "UM", "Middle East"),
@@ -92,10 +104,14 @@ _C = [
     City("milan", "Milan", "ITA", 45.4642, 9.1900, "Cfa", "H", "Europe"),
     City("london", "London", "GBR", 51.5074, -0.1278, "Cfb", "H", "Europe", in_wri=True),
     City("lyon", "Lyon", "FRA", 45.7640, 4.8357, "Cfb", "H", "Europe"),
+    City("bristol", "Bristol", "GBR", 51.4545, -2.5879, "Cfb", "H", "Europe"),
+    City("barcelona", "Barcelona", "ESP", 41.3874, 2.1686, "Csa", "H", "Europe"),
+    City("hamburg", "Hamburg", "DEU", 53.5488, 9.9872, "Cfb", "H", "Europe"),
     # ---- North America ----
     City("phoenix", "Phoenix", "USA", 33.4484, -112.0740, "BWh", "H", "N America"),
     City("boston", "Boston", "USA", 42.3601, -71.0589, "Dfa", "H", "N America", in_wri=True),
     City("houston", "Houston", "USA", 29.7604, -95.3698, "Cfa", "H", "N America"),
+    City("savannah", "Savannah", "USA", 32.0809, -81.0912, "Cfa", "H", "N America"),
     # ---- Oceania ----
     City("sydney", "Sydney", "AUS", -33.8688, 151.2093, "Cfa", "H", "Oceania"),
 ]
