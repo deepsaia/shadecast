@@ -32,8 +32,12 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-b);f
 .topbar{position:sticky;top:0;z-index:30;background:var(--ground);border-bottom:1px solid var(--rule-2)}
 .topbar-inner{max-width:74rem;margin:0 auto;padding:.6rem 1.25rem;display:flex;align-items:baseline;gap:.9rem;flex-wrap:wrap}
 #citymeta{font-family:var(--f-m);font-size:.75rem;color:var(--ink-3)}
-/* margin-left:auto rather than a spacer, so it stays hard right however the bar wraps */
-.ghlink{margin-left:auto;color:var(--ink-3);display:inline-flex;align-items:center;
+/* The other pages sit hard right as one group that never breaks mid-label; on a narrow bar the
+   whole group drops to its own line instead. margin-left:auto pushes it right however the bar wraps. */
+.pages{margin-left:auto;display:flex;gap:1.1rem;white-space:nowrap;font-size:.85rem}
+.pages a{color:var(--ink-2);text-decoration:none;padding:.2rem 0;border-bottom:1px solid transparent}
+.pages a:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.ghlink{color:var(--ink-3);display:inline-flex;align-items:center;
   padding:.2rem;border-radius:5px;transition:color .12s,background .12s}
 .ghlink:hover{color:var(--ink);background:var(--card-2)}
 .ghlink svg{display:block}
@@ -182,6 +186,11 @@ a{color:var(--accent)}
     <h1>shadecast <span>walkthrough</span></h1>
     <select id="city" aria-label="Choose a city"></select>
     <span id="citymeta"></span>
+    <nav class="pages" aria-label="Other pages">
+      <a href="result.html" target="_blank" rel="noopener">Results</a>
+      <a href="model_pipeline.html" target="_blank" rel="noopener">Model pipeline</a>
+      <a href="proposal.html" target="_blank" rel="noopener">Proposal</a>
+    </nav>
     <a class="ghlink" href="https://github.com/deepsaia/shadecast" target="_blank"
        rel="noopener" aria-label="shadecast source on GitHub" title="Source on GitHub">
       <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
@@ -236,7 +245,7 @@ take to close the gap.</p>
 <footer>
   Built by <a href="https://github.com/deepsaia/shadecast" target="_blank" rel="noopener">shadecast</a>. Physics by SOLWEIG.
   Maps are rendered in your browser from raw model output, so hovering reads the actual value.
-  The surrogate is described in <a href="model_pipeline.html">the model pipeline</a>.
+  The tree shade surrogate is described in <a href="model_pipeline.html">its pipeline page</a>.
 </footer>
 </div>
 </div>
