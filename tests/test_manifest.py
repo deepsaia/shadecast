@@ -176,3 +176,12 @@ def test_a_base_channel_report_describes_the_seven_channel_model(tmp_path):
 def test_a_report_without_a_channel_key_is_read_as_base():
     assert manifest.channel_set_of({"settings": {}}) == "base"
     assert manifest.channel_set_of({"settings": {"channels": "engine"}}) == "engine"
+
+
+def test_new_model_id_names_each_city_once_and_counts_pooled_tiles(tmp_path):
+    first = _pair(tmp_path, "ahmedabad", "t43N_249_2547")
+    second = _pair(tmp_path, "ahmedabad", "t43N_250_2547")
+    created = datetime(2026, 10, 23, 12, 0, 0, tzinfo=UTC)
+    assert manifest.new_model_id([first, second], created) == (
+        "response-unet-ahmedabad-2tiles-20261023T120000"
+    )

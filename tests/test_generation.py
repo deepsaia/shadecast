@@ -12,8 +12,10 @@ from rasterio.transform import from_origin
 from shadecast.sim.result import RunResult
 from shadecast.sim.runner import thread_environment
 from shadecast.surrogate import dataset
+from shadecast.surrogate.assessment import designs_for_tile
 from shadecast.surrogate.generation_progress import GenerationProgress, clock, sparkline
 from shadecast.surrogate.generation_settings import GenerationSettings
+from shadecast.surrogate.patches import tile_key
 
 SIDE = 24
 PLAN = [
@@ -214,3 +216,16 @@ def test_tile_label_says_one_tile_of_the_centre():
         dataset.tile_label(Path("x"), provenance) == "savannah, tile t17N_488_3550, one of 64 tiles"
     )
     assert dataset.tile_label(Path("plain"), {}) == "plain"
+
+
+def test_tile_key_names_city_and_tile_or_the_directory(bundle, tmp_path):
+    assert tile_key(bundle) == "testville:t43N_249_2547"
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    assert tile_key(plain) == "plain"
+
+
+def test_designs_for_tile_keeps_this_tiles_held_out_designs():
+    held = ["clustered_0105", "savannah:t1/corridor_0302", "savannah:t2/corridor_0305"]
+    assert designs_for_tile(held, "savannah:t1") == ["clustered_0105", "corridor_0302"]
+    assert designs_for_tile(held, "other") == ["clustered_0105"]

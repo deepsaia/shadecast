@@ -30,7 +30,7 @@ def _offline(monkeypatch, tmp_path):
 
 
 def test_build_a_named_tile_goes_into_the_tile_layout(tmp_path):
-    result = runner.invoke(app, ["build", "ahmedabad", "--tile", "t43N_250_2546"])
+    result = runner.invoke(app, ["build", "ahmedabad", "--tiles", "t43N_250_2546"])
     assert result.exit_code == 0, result.output
     assert [
         ("ahmedabad", "t43N_250_2546", str(tmp_path / "6143" / "t43N_250_2546" / "bundle"))
@@ -44,6 +44,26 @@ def test_build_without_a_tile_takes_the_densest_and_says_so():
     assert [call[1] for call in CALLS] == ["t43N_249_2547"]
     assert "bundle at" in result.stdout and "6143/t43N_249_2547/bundle" in result.stdout
     assert "next: sdc surrogate generate ahmedabad --jobs 4" in result.stdout
+    assert "1 of 6 tiles chosen" in result.stdout
+
+
+def test_build_a_list_of_tiles_all_tiles_or_the_k_densest():
+    result = runner.invoke(app, ["build", "ahmedabad", "--tiles", "t43N_249_2547,t43N_250_2546"])
+    assert result.exit_code == 0, result.output
+    assert [call[1] for call in CALLS] == ["t43N_249_2547", "t43N_250_2546"]
+    assert "--tiles t43N_250_2546 --jobs 4" in result.stdout
+    CALLS.clear()
+    assert runner.invoke(app, ["build", "ahmedabad", "--tiles", "all"]).exit_code == 0
+    assert len(CALLS) == 6
+    CALLS.clear()
+    assert runner.invoke(app, ["build", "ahmedabad", "--tiles="]).exit_code == 0
+    assert len(CALLS) == 6
+    CALLS.clear()
+    assert runner.invoke(app, ["build", "ahmedabad", "--densest", "2"]).exit_code == 0
+    assert [call[1] for call in CALLS] == ["t43N_249_2547", "t43N_250_2547"]
+    CALLS.clear()
+    assert runner.invoke(app, ["build", "ahmedabad", "--stratified", "3"]).exit_code == 0
+    assert len(CALLS) == 3
 
 
 def test_build_all_takes_the_densest_tile_of_every_selected_city():
@@ -53,8 +73,8 @@ def test_build_all_takes_the_densest_tile_of_every_selected_city():
 
 
 def test_build_refuses_a_tile_with_all_or_a_malformed_tile():
-    assert runner.invoke(app, ["build", "--all", "--tile", "t43N_250_2546"]).exit_code != 0
-    assert runner.invoke(app, ["build", "ahmedabad", "--tile", "6908"]).exit_code != 0
+    assert runner.invoke(app, ["build", "--all", "--tiles", "t43N_250_2546"]).exit_code != 0
+    assert runner.invoke(app, ["build", "ahmedabad", "--tiles", "6908"]).exit_code != 0
     assert CALLS == []
 
 
