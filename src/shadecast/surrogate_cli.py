@@ -16,6 +16,7 @@ import numpy as np
 import typer
 
 from .console import console, error_console, pairs_table
+from .corpus import tile_paths
 from .surrogate import manifest
 from .surrogate.assessment import assess
 from .surrogate.assessment_inputs import AssessmentInputs
@@ -41,6 +42,22 @@ def models_root(pairs: list[tuple[Path, Path]]) -> Path:
     return MODELS_ROOT
 
 
+def default_out(bundle: Path) -> Path:
+    """Where generated physics goes: the tile's surrogate directory, else data/surrogate/<name>.
+
+    Every bundle in the tile layout is a directory named ``bundle`` three levels under the
+    tiles root, so the old default of data/surrogate/<name> would send every tile to the same
+    place. A bundle anywhere else keeps the old default.
+    """
+    bundle = Path(bundle)
+    in_tile = bundle.name == "bundle" and bundle.resolve().parent.parent.parent == (
+        tile_paths.TILES_ROOT.resolve()
+    )
+    if in_tile:
+        return bundle.parent / "surrogate"
+    return Path("data/surrogate") / bundle.name
+
+
 app = typer.Typer(
     name="surrogate",
     help="Fit and evaluate the learned response model that makes search affordable.",
@@ -59,7 +76,7 @@ def generate_data(
     Sparse probe designs make one engine call yield roughly a hundred independent
     single intervention responses, which is what keeps the physics budget affordable.
     """
-    destination = out if out else Path("data/surrogate") / bundle.name
+    destination = out if out else default_out(bundle)
     plan = default_plan()
     console.print(
         f"[cyan]{bundle.name}[/]: {len(plan)} designs, "
