@@ -27,6 +27,9 @@ class UrbanCentre:
     koppen: str | None
     lon: float
     lat: float
+    continent: str | None = None  # from Natural Earth, by the centroid
+    subregion: str | None = None
+    iso3: str | None = None
 
     @property
     def tiles(self) -> int:
