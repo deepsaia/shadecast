@@ -11,7 +11,14 @@ from scipy import ndimage
 
 from shadecast.bundles import aoi_from_provenance
 from shadecast.surrogate import designs
-from shadecast.surrogate.features import IN_CHANNELS_ORDER, sky_openness, stack
+from shadecast.surrogate.features import (
+    CHANNEL_SETS,
+    IN_CHANNELS_ORDER,
+    channel_set_for,
+    select,
+    sky_openness,
+    stack,
+)
 from shadecast.surrogate.metrics import (
     aggregate_error,
     distance_bands,
@@ -21,6 +28,8 @@ from shadecast.surrogate.metrics import (
     zero_baseline,
 )
 from shadecast.surrogate.model import ResponseUNet
+from shadecast.surrogate.scene import Scene
+from shadecast.surrogate.sun import SunNoon
 from shadecast.surrogate.training import split_by_design
 
 
@@ -78,17 +87,45 @@ def test_coverage_is_respected():
 # --- features -------------------------------------------------------------
 
 
-def test_stack_has_the_declared_channels():
-    n = 32
-    out = stack(
-        np.zeros((n, n), dtype=bool),
-        np.full((n, n), 55.0),
+def _scene(n: int = 32) -> Scene:
+    return Scene(
+        baseline_tmrt=np.full((n, n), 55.0),
         building_height=np.zeros((n, n)),
         canopy_height=np.zeros((n, n)),
         land_cover=np.full((n, n), 50, dtype="uint8"),
+        population=np.zeros((n, n)),
+        sky_view_factor=np.full((n, n), 0.7, dtype="float32"),
+        sunlit_fraction=np.full((n, n), 0.6, dtype="float32"),
+        sun=SunNoon.for_day(23.0, "2024-05-23"),
     )
+
+
+def test_stack_has_the_declared_channels():
+    n = 32
+    out = stack(np.zeros((n, n), dtype=bool), _scene(n))
     assert out.shape == (len(IN_CHANNELS_ORDER), n, n)
     assert np.isfinite(out).all()
+
+
+def test_engine_and_sun_channels_carry_their_values():
+    out = stack(np.zeros((8, 8), dtype=bool), _scene(8))
+    by_name = dict(zip(IN_CHANNELS_ORDER, out, strict=True))
+    assert by_name["sky_view_factor"].mean() == pytest.approx(0.7)
+    assert by_name["sunlit_fraction"].mean() == pytest.approx(0.6)
+    assert by_name["sun_noon_elevation"].std() == 0.0
+    assert by_name["sun_noon_elevation"].mean() == pytest.approx(87.6 / 90.0, abs=0.01)
+    assert set(np.unique(by_name["sun_noon_side"])) == {1.0}
+
+
+def test_the_base_set_is_the_first_seven_channels():
+    out = stack(np.zeros((8, 8), dtype=bool), _scene(8))
+    base = select(out, CHANNEL_SETS["base"])
+    assert base.shape[0] == 7
+    assert np.array_equal(base, out[:7])
+    assert channel_set_for(7) == "base"
+    assert channel_set_for(11) == "engine"
+    with pytest.raises(ValueError, match="no channel set"):
+        channel_set_for(9)
 
 
 def test_sky_openness_falls_where_obstruction_rises():
