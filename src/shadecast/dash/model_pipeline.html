@@ -100,20 +100,20 @@ svg .grid{stroke:var(--rule);stroke-width:1}
   <figure>
     <svg viewBox="0 0 720 176" role="img" aria-labelledby="f1t f1d">
       <title id="f1t">The pipeline from bundle to prediction</title>
-      <desc id="f1d">Six steps in a row: bundle, engine, response fields, patches, training, model with manifest, then use. The model with manifest is highlighted.</desc>
+      <desc id="f1d">Six boxes in a row: bundle, engine, response fields, patches, model with manifest, then use. The model with manifest is highlighted.</desc>
       <defs><marker id="tip" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--ink)"/></marker></defs>
-      <rect class="box" x="8" y="40" width="96" height="48" rx="8"/><text class="label" x="56" y="60" text-anchor="middle">Bundle</text><text class="sub" x="56" y="76" text-anchor="middle">1 km, 1 m, 5 layers</text>
-      <path class="arrow" d="M104 64 H124"/>
-      <rect class="box" x="128" y="40" width="96" height="48" rx="8"/><text class="label" x="176" y="60" text-anchor="middle">Engine</text><text class="sub" x="176" y="76" text-anchor="middle">17 runs, 255 to 358 s</text>
-      <path class="arrow" d="M224 64 H244"/>
+      <rect class="box" x="8" y="40" width="88" height="48" rx="8"/><text class="label" x="52" y="60" text-anchor="middle">Bundle</text><text class="sub" x="52" y="76" text-anchor="middle">1 km at 1 m</text>
+      <path class="arrow" d="M96 64 H108"/>
+      <rect class="box" x="112" y="40" width="120" height="48" rx="8"/><text class="label" x="172" y="60" text-anchor="middle">Engine</text><text class="sub" x="172" y="76" text-anchor="middle">17 runs, 4 to 6 min</text>
+      <path class="arrow" d="M232 64 H244"/>
       <rect class="box" x="248" y="40" width="96" height="48" rx="8"/><text class="label" x="296" y="60" text-anchor="middle">Responses</text><text class="sub" x="296" y="76" text-anchor="middle">cooling fields</text>
-      <path class="arrow" d="M344 64 H364"/>
-      <rect class="box" x="368" y="40" width="96" height="48" rx="8"/><text class="label" x="416" y="60" text-anchor="middle">Patches</text><text class="sub" x="416" y="76" text-anchor="middle">256 px, 24 per run</text>
-      <path class="arrow" d="M464 64 H484"/>
-      <rect class="focal" x="488" y="40" width="112" height="48" rx="8"/><text class="label" x="544" y="60" text-anchor="middle">Model</text><text class="sub" x="544" y="76" text-anchor="middle">weights + manifest</text>
-      <path class="arrow" d="M600 64 H620"/>
-      <rect class="box" x="624" y="40" width="88" height="48" rx="8"/><text class="label" x="668" y="60" text-anchor="middle">Use</text><text class="sub" x="668" y="76" text-anchor="middle">0.58 s per plan</text>
-      <path class="leader" d="M544 92 C544 124 420 124 300 132"/>
+      <path class="arrow" d="M344 64 H356"/>
+      <rect class="box" x="360" y="40" width="108" height="48" rx="8"/><text class="label" x="414" y="60" text-anchor="middle">Patches</text><text class="sub" x="414" y="76" text-anchor="middle">256 px, 24 a run</text>
+      <path class="arrow" d="M468 64 H480"/>
+      <rect class="focal" x="484" y="40" width="112" height="48" rx="8"/><text class="label" x="540" y="60" text-anchor="middle">Model</text><text class="sub" x="540" y="76" text-anchor="middle">weights + manifest</text>
+      <path class="arrow" d="M596 64 H608"/>
+      <rect class="box" x="612" y="40" width="88" height="48" rx="8"/><text class="label" x="656" y="60" text-anchor="middle">Use</text><text class="sub" x="656" y="76" text-anchor="middle">0.58 s a plan</text>
+      <path class="leader" d="M540 92 C540 124 420 124 300 132"/>
       <text class="aside" x="300" y="152" text-anchor="middle">Assessment compares the model with the engine on designs it never saw.</text>
     </svg>
     <figcaption>One engine run per design, 17 designs per tile, one model per tile. The model is the only thing a search touches.</figcaption>
@@ -207,7 +207,7 @@ svg .grid{stroke:var(--rule);stroke-width:1}
       </g>
       <path class="leader" d="M72 96 H168"/>
       <text class="sub" x="120" y="112" text-anchor="middle">100 m spacing</text>
-      <text class="sub" x="648" y="196" text-anchor="middle">reach 71 m, under 0.1 C beyond</text>
+      <text class="sub" x="696" y="196" text-anchor="end">reach 71 m, under 0.1 C beyond</text>
     </svg>
     <figcaption>Trees spaced beyond their measured reach give responses that do not overlap. One run returns one observation per tree, not one per run.</figcaption>
   </figure>
