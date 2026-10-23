@@ -32,7 +32,7 @@ def test_a_point_just_south_of_a_row_boundary_stays_in_the_row_below():
 
 
 def test_tile_name_matches_the_published_file_names():
-    assert ghs_grid.tile_name(6, 26) == "R6_C26"
+    assert ghs_grid.tile_name((6, 26)) == "R6_C26"
 
 
 def test_wgs84_round_trip():

@@ -327,7 +327,7 @@
       "endpoint": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_THEME_GLOBE_R2024A/GHS_UCDB_THEME_{theme}_GLOBE_R2024A/V1-2/GHS_UCDB_THEME_{theme}_GLOBE_R2024A_V1_2.zip",
       "access": "anonymous",
       "short": "GHS-UCDB R2024A, JRC",
-      "used_for": "The corpus: 11,422 urban centres with name, country, population, area, World Bank income group and Koppen-Geiger class, and the polygons whose 1 km cells are the benchmark's tiles."
+      "used_for": "The corpus: 11,422 urban centres with name, country, population, area, World Bank income group and Koppen-Geiger class, and the polygons whose 1 km cells are the benchmark's tiles. Its population is the zonal sum of GHS-POP R2023A inside the boundary for the 2025 epoch, a modelled projection rather than a count; summing that epoch over Ahmedabad's 365 cells reproduces the database figure to the person."
     },
     {
       "key": "koppen_beck_2018",

@@ -9,6 +9,7 @@ wrong city.
 
 from __future__ import annotations
 
+from operator import attrgetter
 from pathlib import Path
 
 import pandas as pd
@@ -20,6 +21,7 @@ from .urban_centre import UrbanCentre
 
 NAME_SEPARATOR = ";"
 CANDIDATES_SHOWN = 8
+BY_POPULATION = attrgetter("population_2025")
 
 
 def _names(main: object, listed: object) -> tuple[str, ...]:
@@ -88,7 +90,10 @@ class UrbanCentres:
     def search(
         self, text: str, *, country: str | None = None, min_population: int = 0
     ) -> list[UrbanCentre]:
-        """Centres whose names contain the text, most populous first."""
+        """Centres whose names contain the text, most populous first.
+
+        Three arguments because a search has three independent filters a caller may combine.
+        """
         key = slugify(text)
         country_key = slugify(country) if country else None
         found = [
@@ -98,7 +103,7 @@ class UrbanCentres:
             and (country_key is None or slugify(centre.country) == country_key)
             and centre.population_2025 >= min_population
         ]
-        return sorted(found, key=lambda centre: -centre.population_2025)
+        return sorted(found, key=BY_POPULATION, reverse=True)
 
     def resolve(self, text: str) -> UrbanCentre:
         """One centre from an id, a slug or a name; refuse anything ambiguous."""

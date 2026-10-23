@@ -19,6 +19,7 @@ ACCESS_KINDS = ("anonymous", "token broker", "account")
 
 
 def _check_entry(entry: dict, group_keys: set[str], path: Path) -> None:
+    """Three arguments: the entry, the groups it may name, and the file to blame."""
     key = entry.get("key", "?")
     for field in REQUIRED_FIELDS:
         if not entry.get(field):

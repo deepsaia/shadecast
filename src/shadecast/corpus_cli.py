@@ -14,6 +14,7 @@ from typing import Annotated
 import typer
 
 from .console import centre_details, centres_table, console, error_console
+from .corpus.draw import Draw
 from .corpus.sampling import sample as draw_sample
 from .corpus.sampling import strata
 from .corpus.urban_centre import UrbanCentre
@@ -101,9 +102,8 @@ def sample(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """Draw a stratified set of urban centres, k per Koppen class and income group."""
-    drawn = draw_sample(
-        load_centres().all(), per_stratum=per_stratum, min_population=min_population, seed=seed
-    )
+    draw = Draw(per_stratum=per_stratum, min_population_2025=min_population, seed=seed)
+    drawn = draw_sample(load_centres().all(), draw)
     if as_json:
         console.print_json(json.dumps([as_record(centre) for centre in drawn]))
         return

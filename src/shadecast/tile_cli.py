@@ -19,6 +19,7 @@ from shapely.geometry.base import BaseGeometry
 
 from .console import console, error_console, tiles_table
 from .corpus import ucdb
+from .corpus.tile_rasters import TileRasters
 from .corpus.tiling import (
     attributes,
     select_densest,
@@ -29,9 +30,6 @@ from .corpus.tiling import (
 )
 from .corpus.urban_centre import UrbanCentre
 from .corpus.urban_centres import UrbanCentres
-from .data.built import building_height, built_surface
-from .data.ghs_product import read_window
-from .data.population import GHS_POP
 
 logger = logging.getLogger(__name__)
 
@@ -61,11 +59,9 @@ def describe(centre: UrbanCentre) -> list[dict]:
     """Every tile of the centre with population, density, built fraction and height."""
     polygon = boundary(centre)
     tiles = tiles_of(polygon)
-    population, origin = read_window(GHS_POP, polygon.bounds)
-    built, _ = built_surface(polygon.bounds)
-    height, _ = building_height(polygon.bounds)
+    rows = attributes(tiles, TileRasters.read(polygon.bounds))
     logger.info("%s: %d tiles described", centre.slug, len(tiles))
-    return attributes(tiles, population, built, height, origin)
+    return rows
 
 
 def tiles_path(centre: UrbanCentre) -> Path:
@@ -91,10 +87,13 @@ def write_tiles(centre: UrbanCentre, rows: list[dict]) -> dict:
     return payload
 
 
-def load_or_describe(centre: UrbanCentre, refresh: bool) -> dict:
+def cached_tiles(centre: UrbanCentre) -> dict | None:
+    """The tiles written earlier for this centre, or None when there are none yet."""
     path = tiles_path(centre)
-    if path.exists() and not refresh:
-        return json.loads(path.read_text())
+    return json.loads(path.read_text()) if path.exists() else None
+
+
+def describe_and_write(centre: UrbanCentre) -> dict:
     return write_tiles(centre, describe(centre))
 
 
@@ -106,8 +105,12 @@ def _resolve(text: str) -> UrbanCentre:
         raise typer.Exit(code=1) from exc
 
 
-def _by_density(rows: list[dict]) -> list[dict]:
-    return sorted(rows, key=lambda row: -float(row.get("density_2020_per_km2", 0.0)))
+def _named(rows: list[dict], ids: list[str]) -> list[dict]:
+    try:
+        return select_ids(rows, ids)
+    except KeyError as exc:
+        error_console.print(str(exc), style="red", markup=False)
+        raise typer.Exit(code=1) from exc
 
 
 @app.command("list")
@@ -121,8 +124,10 @@ def list_tiles(
 ) -> None:
     """List every tile of an urban centre, densest first, and write tiles.json beside it."""
     found = _resolve(centre)
-    payload = load_or_describe(found, refresh)
-    rows = _by_density(payload.get("tiles", []))
+    payload = None if refresh else cached_tiles(found)
+    if payload is None:
+        payload = describe_and_write(found)
+    rows = select_densest(payload.get("tiles", []), len(payload.get("tiles", [])))
     if as_json:
         console.print_json(json.dumps({**payload, "tiles": rows}))
         return
@@ -154,19 +159,16 @@ def select(
     if len(strategies) != 1:
         raise typer.BadParameter("choose exactly one of --densest, --stratified, --ids or --random")
     found = _resolve(centre)
-    rows = load_or_describe(found, refresh=False).get("tiles", [])
-    try:
-        if densest:
-            chosen = select_densest(rows, densest)
-        elif stratified:
-            chosen = select_stratified(rows, stratified)
-        elif ids:
-            chosen = select_ids(rows, ids)
-        else:
-            chosen = select_random(rows, int(random or 0), seed=seed)
-    except KeyError as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
+    payload = cached_tiles(found) or describe_and_write(found)
+    rows = payload.get("tiles", [])
+    if densest:
+        chosen = select_densest(rows, densest)
+    elif stratified:
+        chosen = select_stratified(rows, stratified)
+    elif ids:
+        chosen = _named(rows, ids)
+    else:
+        chosen = select_random(rows, int(random or 0), seed)
     if as_json:
         console.print_json(json.dumps(chosen))
         return

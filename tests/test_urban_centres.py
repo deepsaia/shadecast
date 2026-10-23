@@ -108,10 +108,16 @@ def test_koppen_legend_has_thirty_classes_in_beck_order():
     assert KOPPEN[30] == "EF"
 
 
-def test_koppen_symbol_reads_codes_and_reports_missing_as_none():
+def test_koppen_symbol_reads_codes_as_strings_or_numbers():
     assert koppen_symbol("6") == "BSh"
     assert koppen_symbol(15) == "Cfb"
+
+
+def test_koppen_symbol_reports_missing_as_none():
     assert koppen_symbol("-") is None
+
+
+def test_koppen_symbol_refuses_a_code_outside_the_legend():
     with pytest.raises(ValueError, match="31"):
         koppen_symbol("31")
 

@@ -57,13 +57,13 @@ def tiles_for(aoi: AOI) -> list[tuple[int, int]]:
 def coarse(aoi: AOI) -> np.ndarray:
     """GHS-POP counts resampled onto the AOI grid, still 100 m in character."""
     out = np.full(aoi.shape, np.nan, dtype="float32")
-    for row, col in tiles_for(aoi):
+    for rc in tiles_for(aoi):
         try:
-            tif = local_tile(GHS_POP, row, col)
+            tif = local_tile(GHS_POP, rc)
         except (requests.HTTPError, zipfile.BadZipFile, StopIteration) as exc:
             # Ocean-only tiles are absent from the JRC listing, which is normal
             # for coastal cities rather than a failure.
-            logger.debug("GHS-POP tile R%d_C%d unavailable: %s", row, col, exc)
+            logger.debug("GHS-POP tile %s unavailable: %s", ghs_grid.tile_name(rc), exc)
             continue
         with rasterio.open(tif) as src:
             buf = np.full(aoi.shape, np.nan, dtype="float32")
