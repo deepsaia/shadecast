@@ -14,50 +14,37 @@ gives us complete heights.
 
 from __future__ import annotations
 
-import io
 import logging
 import zipfile
-from pathlib import Path
 
 import numpy as np
 import rasterio
 import requests
-from pyproj import Transformer
 from rasterio.enums import Resampling
 from rasterio.warp import reproject
 
 from ..aoi import AOI
+from . import ghs_grid
+from .ghs_product import GhsProduct, local_tile
 
 logger = logging.getLogger(__name__)
 
 SOURCE = "ghs_pop"  # key in cited_sources.json
-BASE = (
-    "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/"
-    "GHS_POP_E2020_GLOBE_R2023A_54009_100/V1-0/tiles"
-)
-STEM = "GHS_POP_E2020_GLOBE_R2023A_54009_100_V1_0"
-CACHE = Path.home() / ".cache" / "shadecast" / "ghspop"
 
-# GHSL Mollweide tiling: 1,000,000 m tiles from the top-left of the world extent.
-X0, Y0, TILE = -18041000.0, 9020048.0, 1_000_000.0
+GHS_POP = GhsProduct(
+    key=SOURCE,
+    stem="GHS_POP_E2020_GLOBE_R2023A_54009_100_V1_0",
+    base_url=(
+        "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/"
+        "GHS_POP_E2020_GLOBE_R2023A_54009_100/V1-0/tiles"
+    ),
+    cache_name="ghspop",
+)
 
 
 def tile_rc(lat: float, lon: float) -> tuple[int, int]:
-    x, y = Transformer.from_crs("EPSG:4326", "ESRI:54009", always_xy=True).transform(lon, lat)
-    return int((Y0 - y) // TILE) + 1, int((x - X0) // TILE) + 1
-
-
-def _local_tile(row: int, col: int) -> Path:
-    CACHE.mkdir(parents=True, exist_ok=True)
-    tif = CACHE / f"{STEM}_R{row}_C{col}.tif"
-    if tif.exists():
-        return tif
-    r = requests.get(f"{BASE}/{STEM}_R{row}_C{col}.zip", timeout=600)
-    r.raise_for_status()
-    with zipfile.ZipFile(io.BytesIO(r.content)) as z:
-        inner = next(n for n in z.namelist() if n.endswith(".tif"))
-        tif.write_bytes(z.read(inner))
-    return tif
+    """Row and column of the GHS tile holding a point given in degrees."""
+    return ghs_grid.tile_rc(*ghs_grid.to_mollweide(lon, lat))
 
 
 def tiles_for(aoi: AOI) -> list[tuple[int, int]]:
@@ -72,7 +59,7 @@ def coarse(aoi: AOI) -> np.ndarray:
     out = np.full(aoi.shape, np.nan, dtype="float32")
     for row, col in tiles_for(aoi):
         try:
-            tif = _local_tile(row, col)
+            tif = local_tile(GHS_POP, row, col)
         except (requests.HTTPError, zipfile.BadZipFile, StopIteration) as exc:
             # Ocean-only tiles are absent from the JRC listing, which is normal
             # for coastal cities rather than a failure.
