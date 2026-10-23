@@ -108,6 +108,37 @@ def tiles_table(rows: list[dict]) -> Table:
     return table
 
 
+def _cell(value: object) -> str:
+    if isinstance(value, bool) or value is None:
+        return str(value)
+    if isinstance(value, int):
+        return f"{value:,}"
+    if isinstance(value, float):
+        return f"{value:,.2f}"
+    return str(value)
+
+
+def pairs_table(title: str, pairs: dict) -> Table:
+    """Render a name to value mapping as two columns."""
+    table = Table(title=title, title_style="bold", show_header=False)
+    table.add_column("name", style="dim")
+    table.add_column("value", justify="right")
+    for name, value in pairs.items():
+        table.add_row(str(name), _cell(value))
+    return table
+
+
+def records_table(title: str, rows: list[dict]) -> Table:
+    """Render a list of like records, one row each, columns from the first record."""
+    table = Table(title=title, title_style="bold", header_style="dim")
+    columns = list(rows[0]) if rows else []
+    for column in columns:
+        table.add_column(column, justify="left" if column == columns[0] else "right")
+    for row in rows:
+        table.add_row(*(_cell(row.get(column)) for column in columns))
+    return table
+
+
 def build_table() -> Table:
     """An empty table ready to accept one row per built bundle."""
     table = Table(header_style="dim")
