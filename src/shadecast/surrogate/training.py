@@ -206,12 +206,7 @@ def train(patches: PatchSet, settings: TrainingSettings, out_path: Path | None =
         "epochs": settings.epochs,
     }
     trainables = Trainables(model, optimiser, schedule, generator)
-    state = TrainingState.fresh(model)
-    if checkpoint is not None:
-        checkpoint.parent.mkdir(parents=True, exist_ok=True)
-    if checkpoint is not None and checkpoint.exists():
-        state = TrainingState.load(checkpoint, trainables, fingerprint)
-        logger.info("resuming after epoch %d from %s", state.epoch, checkpoint)
+    state = _fresh_or_resumed(checkpoint, trainables, fingerprint)
 
     started = time.time()
     interrupted = False
@@ -226,14 +221,7 @@ def train(patches: PatchSet, settings: TrainingSettings, out_path: Path | None =
             schedule.step()
             mae, skill = _skill(_predict(model, x_test, settings.batch_size), y_test)
             state.record(epoch, loss, mae, skill, model)
-            if epoch % 5 == 0 or epoch == 1:
-                logger.info(
-                    "epoch %2d: train loss %.4f, held-out MAE %.4f C, skill %+.3f",
-                    epoch,
-                    loss,
-                    mae,
-                    skill,
-                )
+            _log_epoch(epoch, loss, mae, skill)
             if checkpoint is not None:
                 state.save(checkpoint, trainables, fingerprint, time.time() - started)
             if epoch - state.best_epoch >= settings.patience:
@@ -251,10 +239,7 @@ def train(patches: PatchSet, settings: TrainingSettings, out_path: Path | None =
 
     elapsed = state.elapsed_before + (time.time() - started)
     last = state.history[-1]
-    if out_path is not None:
-        out_path = Path(out_path)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save({"state_dict": state.best_state, "in_channels": patches.channels}, out_path)
+    _save_best(out_path, state, patches.channels)
     if checkpoint is not None and not interrupted:
         checkpoint.unlink(missing_ok=True)
 
@@ -283,6 +268,36 @@ def train(patches: PatchSet, settings: TrainingSettings, out_path: Path | None =
         "history": state.history,
         "checkpoint": str(out_path) if out_path else None,
     }
+
+
+def _fresh_or_resumed(
+    checkpoint: Path | None, trainables: Trainables, fingerprint: dict
+) -> TrainingState:
+    """A fresh state, or the one a checkpoint holds when there is one to continue from."""
+    if checkpoint is None:
+        return TrainingState.fresh(trainables.model)
+    checkpoint.parent.mkdir(parents=True, exist_ok=True)
+    if not checkpoint.exists():
+        return TrainingState.fresh(trainables.model)
+    state = TrainingState.load(checkpoint, trainables, fingerprint)
+    logger.info("resuming after epoch %d from %s", state.epoch, checkpoint)
+    return state
+
+
+def _log_epoch(epoch: int, loss: float, mae: float, skill: float) -> None:
+    if epoch % 5 == 0 or epoch == 1:
+        logger.info(
+            "epoch %2d: train loss %.4f, held-out MAE %.4f C, skill %+.3f", epoch, loss, mae, skill
+        )
+
+
+def _save_best(out_path: Path | None, state: TrainingState, channels: int) -> None:
+    """Write the best epoch's weights, the only weights a model directory keeps."""
+    if out_path is None:
+        return
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save({"state_dict": state.best_state, "in_channels": channels}, out_path)
 
 
 def save_report(report: dict, path: Path) -> None:

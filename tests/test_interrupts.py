@@ -88,12 +88,12 @@ def test_unfinished_model_is_the_newest_with_a_checkpoint(tmp_path):
 
 
 def test_train_resume_command_repeats_the_options():
-    assert surrogate_cli.train_resume_command("savannah", None, None, None, None, "engine") == (
-        "sdc surrogate train savannah --resume"
+    plain = surrogate_cli.train_resume_command("savannah", None, None, None, None, "engine")
+    assert plain == "sdc surrogate train savannah --resume"
+    pooled = surrogate_cli.train_resume_command(
+        None, None, ["ahmedabad", "x/s=x/b"], None, "rio", "base"
     )
-    assert (
-        surrogate_cli.train_resume_command(
-            None, None, ["ahmedabad", "x/s=x/b"], None, "rio", "base"
-        )
-        == "sdc surrogate train --pair ahmedabad --pair x/s=x/b --holdout-city rio --channels base --resume"
+    assert pooled == (
+        "sdc surrogate train --pair ahmedabad --pair x/s=x/b "
+        "--holdout-city rio --channels base --resume"
     )
