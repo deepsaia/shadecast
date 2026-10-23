@@ -64,9 +64,18 @@ def default_out(bundle: Path) -> Path:
 
 app = typer.Typer(
     name="surrogate",
-    help="Fit and evaluate the learned response model that makes search affordable.",
+    help="The learned response models that make search affordable, one per physical channel.",
     no_args_is_help=True,
 )
+treeshade = typer.Typer(
+    name="treeshade",
+    help="The tree shade surrogate: trees added to the canopy model. Generate, train, assess.",
+    no_args_is_help=True,
+)
+app.add_typer(treeshade, name="treeshade")
+
+KIND = "tree"  # the engine's intervention kind this surrogate learns
+LABEL = "tree shade"  # how the dashboard and the pages name it
 
 
 ALL_TILES = "all"
@@ -175,7 +184,7 @@ def newest_model(
         return named[0], surrogate_dir, bundle
     if not candidates:
         error_console.print(
-            f"{target} has no trained model yet; run 'sdc surrogate train {target}'"
+            f"{target} has no trained model yet; run 'sdc surrogate treeshade train {target}'"
         )
         raise typer.Exit(code=1)
     return candidates[-1], surrogate_dir, bundle
@@ -189,21 +198,19 @@ def assessment_name(model_dir: Path, bundle: Path) -> str:
     return f"assessment-{tile_key(bundle).replace(':', '-')}.json"
 
 
-def resume_command(target: str, tile: str | None, out: Path | None, kind: str, jobs: int) -> str:
+def resume_command(target: str, tile: str | None, out: Path | None, jobs: int) -> str:
     """The exact command that continues this run after a stop."""
-    parts = ["sdc surrogate generate", target]
+    parts = ["sdc surrogate treeshade generate", target]
     if tile:
         parts += ["--tiles", tile]
     if out:
         parts += ["--out", str(out)]
-    if kind != "tree":
-        parts += ["--kind", kind]
     if jobs != 1:
         parts += ["--jobs", str(jobs)]
     return " ".join(parts)
 
 
-@app.command("generate")
+@treeshade.command("generate")
 def generate_data(
     target: Annotated[
         str, typer.Argument(help="A city key such as savannah, or a bundle directory.")
@@ -218,7 +225,6 @@ def generate_data(
     out: Annotated[
         Path | None, typer.Option("--out", help="Where to write responses, for one tile.")
     ] = None,
-    kind: Annotated[str, typer.Option("--kind", help="Intervention type.")] = "tree",
     jobs: Annotated[
         int,
         typer.Option(
@@ -248,14 +254,14 @@ def generate_data(
             f"[cyan]{tile_label(bundle, provenance)}[/]: {len(plan)} designs, {jobs} at a time, "
             f"into {destination}"
         )
-        settings = GenerationSettings(plan=plan, kind=kind, jobs=jobs)
+        settings = GenerationSettings(plan=plan, kind=KIND, jobs=jobs)
         started = time.time()
         progress = GenerationProgress(
             console,
             jobs=jobs,
             threads=engine_threads(settings),
-            kind=kind,
-            resume_command=resume_command(target, picked, out, kind, jobs),
+            kind=LABEL,
+            resume_command=resume_command(target, picked, out, jobs),
         )
         try:
             with progress:
@@ -331,7 +337,7 @@ def train_resume_command(
     channels: str,
 ) -> str:
     """The exact command that continues an interrupted training run. Six inputs, one string."""
-    parts = ["sdc surrogate train"]
+    parts = ["sdc surrogate treeshade train"]
     if target:
         parts.append(target)
     if bundle:
@@ -348,7 +354,7 @@ def train_resume_command(
     return " ".join(parts)
 
 
-@app.command("train")
+@treeshade.command("train")
 def train_model(
     target: Annotated[
         str | None,
@@ -488,7 +494,7 @@ def train_model(
     console.print(f"[dim]model and report written to {destination}[/]")
 
 
-@app.command("assess")
+@treeshade.command("assess")
 def assess_model(
     target: Annotated[
         str, typer.Argument(help="A city key such as savannah, or a trained model directory.")
@@ -544,7 +550,7 @@ def assess_model(
     console.print(f"[dim]full report written to {report_path}[/]")
 
 
-@app.command("describe")
+@treeshade.command("describe")
 def describe(
     target: Annotated[
         str, typer.Argument(help="A city key such as savannah, or a trained model directory.")

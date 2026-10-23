@@ -135,16 +135,18 @@ def test_write_and_read_round_trip(tmp_path):
 def test_describe_command_prints_the_manifest(tmp_path):
     built = manifest.build(_inputs(tmp_path))
     manifest.write(tmp_path / "model", built)
-    result = runner.invoke(app, ["surrogate", "describe", str(tmp_path / "model"), "--json"])
+    result = runner.invoke(
+        app, ["surrogate", "treeshade", "describe", str(tmp_path / "model"), "--json"]
+    )
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout)["model_id"] == built["model_id"]
-    table = runner.invoke(app, ["surrogate", "describe", str(tmp_path / "model")])
+    table = runner.invoke(app, ["surrogate", "treeshade", "describe", str(tmp_path / "model")])
     assert "ResponseUNet" in table.stdout
 
 
 def test_describe_refuses_a_model_without_a_manifest(tmp_path):
     (tmp_path / "old").mkdir()
-    result = runner.invoke(app, ["surrogate", "describe", str(tmp_path / "old")])
+    result = runner.invoke(app, ["surrogate", "treeshade", "describe", str(tmp_path / "old")])
     assert result.exit_code == 1
     assert "manifest" in result.output
 

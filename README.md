@@ -31,9 +31,9 @@ uv sync
 sdc list                          # the 38 city selection and its stratification; sdc is short for shadecast
 sdc build savannah                # assemble the densest tile's bundle, about a minute
 sdc tile path savannah            # where that tile lives and which stages have run; reads disk only
-sdc surrogate generate savannah --jobs 4   # physics for the 17 designs, 4 engine runs at a time
-sdc surrogate train savannah      # fit the surrogate on that tile
-sdc surrogate assess savannah     # judge the newest model against the engine
+sdc surrogate treeshade generate savannah --jobs 4   # physics for the 17 tree designs, 4 at a time
+sdc surrogate treeshade train savannah      # fit the tree shade surrogate on that tile
+sdc surrogate treeshade assess savannah     # judge the newest model against the engine
 ```
 
 Every command takes the city name and means its densest tile unless told otherwise. One
@@ -45,8 +45,8 @@ sdc tile list savannah                          # every tile of the centre, dens
 sdc build savannah --tiles t17N_488_3550,t17N_489_3550   # named tiles
 sdc build savannah --stratified 3               # three tiles spread over built-fraction terciles
 sdc build savannah --tiles all                  # every tile; about a minute each to build
-sdc surrogate generate savannah --tiles all --jobs 4     # physics for every built tile, in turn
-sdc surrogate train savannah --tiles all        # one model pooled over every tile with physics
+sdc surrogate treeshade generate savannah --tiles all --jobs 4   # physics for every built tile
+sdc surrogate treeshade train savannah --tiles all      # one model over every tile with physics
 ```
 
 A tile's directory is `data/tiles/<urban centre id>/<tile id>/`, and `sdc tile path <city>`
@@ -84,7 +84,7 @@ window found 154,245.
 - **Phase 2 in progress.** The learned surrogate, which is what makes search
   affordable at all. How it is built, trained and judged is documented, with every
   number taken from a model manifest or a recorded run, in
-  [the model pipeline page](https://deepsaia.github.io/shadecast/model_pipeline.html).
+  [the tree shade surrogate pipeline page](https://deepsaia.github.io/shadecast/model_pipeline.html).
 
 Full proposal in [PROPOSAL.md](PROPOSAL.md).
 

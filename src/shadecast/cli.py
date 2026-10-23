@@ -172,7 +172,7 @@ def build(
                 pick = "" if len(targets) == 1 else f" --tiles {target.id}"
                 console.print(
                     f"[green]{key}[/] {target.id}: bundle at {built.bundle}\n"
-                    f"  next: sdc surrogate generate {key}{pick} --jobs 4"
+                    f"  next: sdc surrogate treeshade generate {key}{pick} --jobs 4"
                 )
             console.print(
                 f"[dim]{key}: {len(targets)} of {tile_cli.tile_count(centre)} tiles chosen.[/]"

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Surrogate model pipeline</title>
+<title>Tree shade surrogate pipeline</title>
 <meta name="description" content="How shadecast learns a fast stand-in for the physics: the grid, the network, the data, training, judgment, use, what is missing and what to do about it, and the manifest each model carries.">
 <style>
 :root{
@@ -133,8 +133,8 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
 </aside>
 <div class="wrap">
 <header>
-  <h1>The surrogate model pipeline</h1>
-  <p class="sub">How shadecast learns a fast stand-in for the physics, what the stand-in knows, how well it does, and where it stops.</p>
+  <h1>The tree shade surrogate pipeline</h1>
+  <p class="sub">How shadecast learns a fast stand-in for the physics of trees, what the stand-in knows, how well it does, and where it stops. It is the first of several surrogates: shade structures, de-paving and albedo will each get their own.</p>
   <p class="meta">Numbers from the model manifests and recorded runs of 2026-08-26, from the model definition, and from a receptive field measurement of 2026-10-23. Model <span class="mono">response-unet-ahmedabad-20260826T143800</span>.</p>
 </header>
 
@@ -566,7 +566,7 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
     </tbody>
   </table></div>
   <p>Read a manifest with one command.</p>
-  <pre>sdc surrogate describe data/tiles/6143/t43N_249_2547/models/response-unet-ahmedabad-20260826T143800</pre>
+  <pre>sdc surrogate treeshade describe ahmedabad --model response-unet-ahmedabad-20260826T143800</pre>
   <pre>{
   "model_id": "response-unet-ahmedabad-20260826T143800",
   "architecture": {"class": "ResponseUNet", "depth": 4, "widths": [32, 64, 128, 256],

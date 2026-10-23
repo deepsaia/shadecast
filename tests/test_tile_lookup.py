@@ -62,7 +62,7 @@ def test_generate_takes_a_city_name_and_writes_beside_its_bundle(tmp_path, monke
         return {"entries": 1, "manifest": []}
 
     monkeypatch.setattr(surrogate_cli, "generate", fake_generate)
-    result = runner.invoke(app, ["surrogate", "generate", "ahmedabad", "--jobs", "3"])
+    result = runner.invoke(app, ["surrogate", "treeshade", "generate", "ahmedabad", "--jobs", "3"])
     assert result.exit_code == 0, result.output
     assert seen["bundle"] == bundle
     assert seen["destination"] == bundle.parent / "surrogate"
@@ -81,11 +81,15 @@ def test_generate_runs_each_listed_tile_or_all_of_them(tmp_path, monkeypatch):
         return {"entries": 1, "manifest": []}
 
     monkeypatch.setattr(surrogate_cli, "generate", fake_generate)
-    result = runner.invoke(app, ["surrogate", "generate", "ahmedabad", "--tiles", "t43N_250_2547"])
+    result = runner.invoke(
+        app, ["surrogate", "treeshade", "generate", "ahmedabad", "--tiles", "t43N_250_2547"]
+    )
     assert result.exit_code == 0, result.output
     assert seen == [second]
     seen.clear()
-    result = runner.invoke(app, ["surrogate", "generate", "ahmedabad", "--tiles", "all"])
+    result = runner.invoke(
+        app, ["surrogate", "treeshade", "generate", "ahmedabad", "--tiles", "all"]
+    )
     assert result.exit_code == 0, result.output
     assert seen == [first, second]
     assert "tile 1 of 2" in result.stdout and "tile 2 of 2" in result.stdout
@@ -112,7 +116,7 @@ def test_generate_without_tiles_takes_the_densest_built_one(tmp_path, monkeypatc
 
 def test_generate_refuses_a_city_without_a_bundle(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
-    result = runner.invoke(app, ["surrogate", "generate", "ahmedabad"])
+    result = runner.invoke(app, ["surrogate", "treeshade", "generate", "ahmedabad"])
     assert result.exit_code == 1
     assert "sdc build ahmedabad" in result.output
 
@@ -193,11 +197,11 @@ def test_newest_model_is_picked_for_a_city(tmp_path, monkeypatch):
 
 
 def test_resume_command_repeats_the_options():
-    assert surrogate_cli.resume_command("savannah", None, None, "tree", 4) == (
-        "sdc surrogate generate savannah --jobs 4"
+    assert surrogate_cli.resume_command("savannah", None, None, 4) == (
+        "sdc surrogate treeshade generate savannah --jobs 4"
     )
-    assert surrogate_cli.resume_command("x/bundle", "t1", Path("o"), "shade", 1) == (
-        "sdc surrogate generate x/bundle --tiles t1 --out o --kind shade"
+    assert surrogate_cli.resume_command("x/bundle", "t1", Path("o"), 1) == (
+        "sdc surrogate treeshade generate x/bundle --tiles t1 --out o"
     )
 
 
