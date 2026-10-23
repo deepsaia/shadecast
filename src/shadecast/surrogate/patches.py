@@ -13,37 +13,20 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
-import rasterio
 from scipy import ndimage
 
-from .features import stack
+from .features import select, stack
+from .patch_settings import PatchSettings
+from .scene import Scene
 
 logger = logging.getLogger(__name__)
 
 NEAR_INTERVENTION_M = 80.0
-
-
-def load_city(bundle: Path, surrogate_dir: Path) -> dict:
-    """Read the static layers and the baseline response for one city."""
-    bundle, surrogate_dir = Path(bundle), Path(surrogate_dir)
-    with rasterio.open(bundle / "Building_DSM.tif") as src:
-        building_dsm = src.read(1)
-    with rasterio.open(bundle / "DEM.tif") as src:
-        terrain = src.read(1)
-    with rasterio.open(bundle / "Trees.tif") as src:
-        canopy = src.read(1)
-    with rasterio.open(bundle / "landcover.tif") as src:
-        land_cover = src.read(1)
-    baseline = np.load(surrogate_dir / "baseline" / "tmrt_daylight.npy")
-    return {
-        "building_height": np.maximum(building_dsm - terrain, 0),
-        "canopy": canopy,
-        "land_cover": land_cover,
-        "baseline_tmrt": baseline,
-    }
+FAR_FIELD_FLOOR = 0.05
 
 
 def entries(surrogate_dir: Path) -> list[dict]:
@@ -64,15 +47,12 @@ def sampling_weights(placement: np.ndarray, res_m: float = 1.0) -> np.ndarray:
     near = (distance <= NEAR_INTERVENTION_M).astype("float64")
     # Keep a floor so far-field behaviour is still represented, since predicting a
     # true zero far away is part of the job.
-    weights = near + 0.05
+    weights = near + FAR_FIELD_FLOOR
     return weights / weights.sum()
 
 
 def crop_cities(
-    pairs: list[tuple[Path, Path]],
-    size: int = 256,
-    per_entry: int = 24,
-    seed: int = 0,
+    pairs: list[tuple[Path, Path]], settings: PatchSettings
 ) -> tuple[np.ndarray, np.ndarray, list[str]]:
     """Crop patches from several cities into one training set.
 
@@ -86,7 +66,7 @@ def crop_cities(
     all_origins: list[str] = []
     for index, (surrogate_dir, bundle) in enumerate(pairs):
         inputs, targets, origins = crop_batch(
-            surrogate_dir, bundle, size=size, per_entry=per_entry, seed=seed + index
+            surrogate_dir, bundle, replace(settings, seed=settings.seed + index)
         )
         city = Path(bundle).name
         all_inputs.append(inputs)
@@ -101,11 +81,12 @@ def crop_cities(
 
 
 def crop_batch(
-    surrogate_dir: Path, bundle: Path, size: int = 256, per_entry: int = 24, seed: int = 0
+    surrogate_dir: Path, bundle: Path, settings: PatchSettings
 ) -> tuple[np.ndarray, np.ndarray, list[str]]:
-    """Build an (N, 7, size, size) input array and its (N, 1, size, size) targets."""
-    city = load_city(bundle, surrogate_dir)
-    rng = np.random.default_rng(seed)
+    """Build an (N, channels, size, size) input array and its (N, 1, size, size) targets."""
+    scene = Scene.load(bundle, surrogate_dir)
+    rng = np.random.default_rng(settings.seed)
+    size = settings.size
     inputs: list[np.ndarray] = []
     targets: list[np.ndarray] = []
     origins: list[str] = []
@@ -113,17 +94,11 @@ def crop_batch(
     for meta in entries(surrogate_dir):
         payload = np.load(Path(surrogate_dir) / meta["id"] / "response.npz")
         placement, response = payload["placement"], payload["response"]
-        features = stack(
-            placement,
-            city["baseline_tmrt"],
-            building_height=city["building_height"],
-            canopy_height=city["canopy"],
-            land_cover=city["land_cover"],
-        )
+        features = select(stack(placement, scene), settings.names)
         weights = sampling_weights(placement)
         rows, cols = response.shape
 
-        flat = rng.choice(weights.size, size=per_entry, p=weights.ravel())
+        flat = rng.choice(weights.size, size=settings.per_entry, p=weights.ravel())
         for index in flat:
             row, col = divmod(int(index), cols)
             row = int(np.clip(row - size // 2, 0, rows - size))

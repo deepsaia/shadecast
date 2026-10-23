@@ -22,41 +22,29 @@ import time
 from pathlib import Path
 
 import numpy as np
-import rasterio
 import torch
 
 from ..exposure import outdoor_mask, outdoor_weights
+from . import manifest
 from .assessment_inputs import AssessmentInputs
-from .features import stack
+from .features import CHANNEL_SETS, channel_set_for, select, stack
 from .metrics import aggregate_error, distance_bands, ranking, skill, speedup
 from .patches import entries
 from .predict import load, predict_field
+from .scene import Scene
 
 logger = logging.getLogger(__name__)
 
 ENGINE_SECONDS_REFERENCE = 162.0
 
 
-def _city_layers(bundle: Path) -> dict:
-    with rasterio.open(bundle / "Building_DSM.tif") as src:
-        building_dsm = src.read(1)
-    with rasterio.open(bundle / "DEM.tif") as src:
-        terrain = src.read(1)
-    with rasterio.open(bundle / "Trees.tif") as src:
-        canopy = src.read(1)
-    with rasterio.open(bundle / "landcover.tif") as src:
-        land_cover = src.read(1)
-    with rasterio.open(bundle / "population.tif") as src:
-        population = src.read(1)
-    height = np.maximum(building_dsm - terrain, 0)
-    return {
-        "building_height": height,
-        "canopy": canopy,
-        "land_cover": land_cover,
-        "population": population,
-        "outdoor": outdoor_mask(height),
-        "weights": outdoor_weights(population, height),
-    }
+def channel_names(model_dir: Path, in_channels: int) -> tuple[str, ...]:
+    """The channels the model was trained on: from its manifest, else from its channel count."""
+    recorded = manifest.read(model_dir) if (Path(model_dir) / "manifest.json").exists() else {}
+    names = [c["name"] for c in recorded.get("inputs", {}).get("channels", [])]
+    if names:
+        return tuple(names)
+    return CHANNEL_SETS[channel_set_for(in_channels)]
 
 
 def assess(inputs: AssessmentInputs, device: torch.device | None = None) -> dict:
@@ -74,9 +62,11 @@ def assess(inputs: AssessmentInputs, device: torch.device | None = None) -> dict
     if not wanted:
         raise RuntimeError("no held-out designs recorded; train first")
 
-    layers = _city_layers(bundle)
-    baseline_tmrt = np.load(surrogate_dir / "baseline" / "tmrt_daylight.npy")
+    scene = Scene.load(bundle, surrogate_dir)
+    outdoor = outdoor_mask(scene.building_height)
+    weights = outdoor_weights(scene.population, scene.building_height)
     model = load(checkpoint, device)
+    names = channel_names(Path(inputs.model_dir), model.in_channels)
     target_device = device or next(model.parameters()).device
 
     per_design: list[dict] = []
@@ -92,25 +82,18 @@ def assess(inputs: AssessmentInputs, device: torch.device | None = None) -> dict
         payload = np.load(surrogate_dir / design_id / "response.npz")
         placement, truth = payload["placement"], payload["response"]
 
-        features = stack(
-            placement,
-            baseline_tmrt,
-            building_height=layers["building_height"],
-            canopy_height=layers["canopy"],
-            land_cover=layers["land_cover"],
-        )
+        features = select(stack(placement, scene), names)
         started = time.perf_counter()
         predicted = predict_field(model, features, target_device)
         elapsed = time.perf_counter() - started
         total_seconds += elapsed
 
-        outdoor = layers["outdoor"]
         per_design.append(
             {
                 "design": design_id,
                 "coverage": round(float(placement.mean()), 5),
                 "skill": skill(truth[outdoor], predicted[outdoor]),
-                "aggregate": aggregate_error(truth, predicted, layers["weights"]),
+                "aggregate": aggregate_error(truth, predicted, weights),
                 "bands": distance_bands(truth, predicted, placement),
                 "surrogate_seconds": round(elapsed, 4),
             }

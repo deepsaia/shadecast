@@ -16,12 +16,12 @@ import time
 from pathlib import Path
 
 import numpy as np
-import rasterio
 import torch
 
 from ..data.landcover import to_umep  # noqa: F401  (kept so callers can featurise)
-from .features import stack
+from .features import CHANNEL_SETS, channel_set_for, select, stack
 from .model import ResponseUNet
+from .scene import Scene
 
 logger = logging.getLogger(__name__)
 
@@ -96,33 +96,19 @@ def predict_field(
 def predict_for_bundle(
     checkpoint: Path,
     bundle: Path,
+    surrogate_dir: Path,
     placement: np.ndarray,
-    baseline_tmrt: np.ndarray,
     device: torch.device | None = None,
 ) -> tuple[np.ndarray, float]:
-    """Predict the cooling field for one placement over a built bundle.
+    """Predict the cooling field for one placement over a built bundle and its baseline run.
 
     Returns the field and the wall clock seconds it took, which is the number that
     matters when comparing against a 162 second engine call.
     """
-    bundle = Path(bundle)
-    with rasterio.open(bundle / "Building_DSM.tif") as src:
-        building_dsm = src.read(1)
-    with rasterio.open(bundle / "DEM.tif") as src:
-        terrain = src.read(1)
-    with rasterio.open(bundle / "Trees.tif") as src:
-        canopy = src.read(1)
-    with rasterio.open(bundle / "landcover.tif") as src:
-        land_cover = src.read(1)
-
     model = load(checkpoint, device)
-    features = stack(
-        placement,
-        baseline_tmrt,
-        building_height=np.maximum(building_dsm - terrain, 0),
-        canopy_height=canopy,
-        land_cover=land_cover,
-    )
+    scene = Scene.load(bundle, surrogate_dir)
+    names = CHANNEL_SETS[channel_set_for(model.in_channels)]
+    features = select(stack(placement, scene), names)
     started = time.perf_counter()
     field = predict_field(model, features, device)
     return field, time.perf_counter() - started
