@@ -20,8 +20,10 @@ from .surrogate import manifest
 from .surrogate.assessment import assess
 from .surrogate.assessment_inputs import AssessmentInputs
 from .surrogate.dataset import default_plan, generate
+from .surrogate.features import CHANNEL_SETS
 from .surrogate.manifest_inputs import ManifestInputs
 from .surrogate.patch_set import PatchSet
+from .surrogate.patch_settings import PatchSettings
 from .surrogate.patches import crop_batch, crop_cities
 from .surrogate.training import save_report, train
 from .surrogate.training_settings import TrainingSettings
@@ -87,6 +89,12 @@ def train_model(
     epochs: Annotated[int, typer.Option("--epochs")] = 30,
     patch: Annotated[int, typer.Option("--patch", help="Patch side in pixels.")] = 256,
     per_entry: Annotated[int, typer.Option("--per-entry", help="Patches per design.")] = 24,
+    channels: Annotated[
+        str,
+        typer.Option(
+            "--channels", help="Channel set: engine (all eleven) or base (the first seven)."
+        ),
+    ] = "engine",
 ) -> None:
     """Fit the response model.
 
@@ -109,14 +117,15 @@ def train_model(
     if holdout_city and len(pairs) < 2:
         raise typer.BadParameter("--holdout-city needs at least two cities")
 
+    if channels not in CHANNEL_SETS:
+        raise typer.BadParameter(f"--channels must be one of {sorted(CHANNEL_SETS)}")
+    patch_settings = PatchSettings(size=patch, per_entry=per_entry, channels=channels)
     started = time.time()
     with console.status("[cyan]cropping patches[/]"):
         if len(pairs) == 1:
-            inputs, targets, origins = crop_batch(
-                pairs[0][0], pairs[0][1], size=patch, per_entry=per_entry
-            )
+            inputs, targets, origins = crop_batch(pairs[0][0], pairs[0][1], patch_settings)
         else:
-            inputs, targets, origins = crop_cities(pairs, size=patch, per_entry=per_entry)
+            inputs, targets, origins = crop_cities(pairs, patch_settings)
 
     console.print(
         f"{len(inputs):,} patches of {patch}px from {len(set(origins))} designs "
@@ -128,7 +137,7 @@ def train_model(
     destination = models_root(pairs) / model_id
     destination.mkdir(parents=True, exist_ok=True)
 
-    settings = TrainingSettings(epochs=epochs, holdout_city=holdout_city)
+    settings = TrainingSettings(epochs=epochs, holdout_city=holdout_city, channels=channels)
     report = train(PatchSet(inputs, targets, origins), settings, out_path=destination / "model.pt")
     report["patch_px"] = patch
     report["cities"] = [str(b) for _, b in pairs]
