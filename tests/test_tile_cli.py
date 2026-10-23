@@ -7,7 +7,8 @@ import pandas as pd
 import pytest
 from typer.testing import CliRunner
 
-from shadecast import tile_cli
+from shadecast import cities, tile_cli
+from shadecast.cities import City
 from shadecast.cli import app
 from shadecast.corpus.urban_centre import UrbanCentre
 from shadecast.corpus.urban_centres import UrbanCentres
@@ -107,7 +108,7 @@ def _offline(monkeypatch, tmp_path):
 def test_help_lists_the_tile_commands():
     result = runner.invoke(app, ["tile", "--help"])
     assert result.exit_code == 0
-    for command in ("list", "select", "stats"):
+    for command in ("list", "select", "stats", "path", "migrate"):
         assert command in result.stdout
 
 
@@ -185,3 +186,81 @@ def test_stats_summarise_the_described_tiles():
     assert stats["population_2020"] == 25000.0
     assert stats["urban_centre"]["population_2025"] == 7898650
     assert "built_fraction" in runner.invoke(app, ["tile", "stats", "ahmedabad"]).stdout
+
+
+def test_path_prints_where_a_tile_lives_and_its_stages(tmp_path):
+    result = runner.invoke(app, ["tile", "path", "ahmedabad", "t6908_2816", "--json"])
+    assert result.exit_code == 0, result.output
+    listed = json.loads(result.stdout)
+    assert listed["tile"] == "t6908_2816"
+    assert listed["bundle"] == str(tmp_path / "6143" / "t6908_2816" / "bundle")
+    assert listed["stages"]["bundle"] is False
+
+
+def test_path_refuses_a_malformed_tile_id():
+    result = runner.invoke(app, ["tile", "path", "ahmedabad", "6908"])
+    assert result.exit_code == 1
+
+
+def _legacy_city(root: Path) -> Path:
+    bundle = root / "out" / "corpus" / "ahmedabad"
+    bundle.mkdir(parents=True)
+    (bundle / "provenance.json").write_text(
+        json.dumps({"aoi": {"lat": 23.013954, "lon": 72.558362, "side_m": 1000, "res_m": 1.0}})
+    )
+    surrogate = root / "data" / "surrogate" / "ahmedabad" / "baseline"
+    surrogate.mkdir(parents=True)
+    (surrogate / "tmrt_daylight.npy").write_bytes(b"field")
+    return bundle
+
+
+def _fixture_corpus(entries=None, centres=None):
+    centre = _fixture_centres().by_id(6143)
+    return {
+        "ahmedabad": City(
+            "ahmedabad",
+            6143,
+            centre.name,
+            centre.country,
+            centre.lat,
+            centre.lon,
+            centre.koppen,
+            centre.income,
+            "South Asia",
+            centre.population_2025,
+            centre.tiles,
+        )
+    }
+
+
+@pytest.fixture
+def _legacy_layout(monkeypatch, tmp_path):
+    monkeypatch.setattr(cities, "corpus", _fixture_corpus)
+    monkeypatch.setattr(tile_cli, "LEGACY_BUNDLE_ROOTS", (tmp_path / "out" / "corpus",))
+    monkeypatch.setattr(tile_cli, "LEGACY_SURROGATE_ROOT", tmp_path / "data" / "surrogate")
+    return _legacy_city(tmp_path)
+
+
+def test_migrate_shows_the_plan_and_moves_nothing_by_default(_legacy_layout):
+    result = runner.invoke(app, ["tile", "migrate"])
+    assert result.exit_code == 0, result.output
+    assert "bundle" in result.stdout and "Plan only" in result.stdout
+    assert _legacy_layout.exists()
+
+
+def test_migrate_apply_moves_into_the_tile_layout(_legacy_layout, tmp_path):
+    result = runner.invoke(app, ["tile", "migrate", "--apply"])
+    assert result.exit_code == 0, result.output
+    assert not _legacy_layout.exists()
+    assert (tmp_path / "6143" / "t6908_2816" / "bundle" / "provenance.json").exists()
+    assert (
+        tmp_path / "6143" / "t6908_2816" / "surrogate" / "baseline" / "tmrt_daylight.npy"
+    ).exists()
+
+
+def test_migrate_apply_refuses_while_a_generator_runs(_legacy_layout, tmp_path):
+    (tmp_path / "data" / "surrogate" / "ahmedabad" / ".generating.lock").write_text("1")
+    result = runner.invoke(app, ["tile", "migrate", "--apply"])
+    assert result.exit_code == 1
+    assert "generating.lock" in result.output
+    assert _legacy_layout.exists()
