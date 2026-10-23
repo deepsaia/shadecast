@@ -54,7 +54,7 @@ def urban_centre_record(city: City) -> dict:
         "release": f"{ucdb.RELEASE} {ucdb.VERSION}",
         "name": city.name,
         "country": city.country,
-        "population": city.population,
+        "population_2025": city.population_2025,
         "area_km2": city.tiles,
         "tiles": city.tiles,
         "koppen": city.koppen,
@@ -179,6 +179,7 @@ def build_city(
         **source_record(LAYER_SOURCES.get("population", "")),
         "tiles": [list(t) for t in P.tiles_for(aoi)],
         "total": round(float(pop.sum()), 1),
+        "epoch": 2020,
         "method": "dasymetric by building volume",
     }
 

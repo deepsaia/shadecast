@@ -40,7 +40,7 @@ def _centre_from(record: dict, slug: str) -> UrbanCentre:
         names=_names(record.get(ucdb.NAME, ""), record.get(ucdb.NAMES)),
         slug=slug,
         country=str(record.get(ucdb.COUNTRY, "")),
-        population=round(float(record.get(ucdb.POPULATION, 0.0))),
+        population_2025=round(float(record.get(ucdb.POPULATION, 0.0))),
         area_km2=int(record.get(ucdb.AREA, 0)),
         income=income_code(record.get(ucdb.INCOME_GROUP)),
         koppen_code=koppen_code(record.get(ucdb.KOPPEN_CODE)),
@@ -51,7 +51,7 @@ def _centre_from(record: dict, slug: str) -> UrbanCentre:
 
 
 def _describe(centre: UrbanCentre) -> str:
-    return f"{centre.slug} ({centre.country}, {centre.population:,} people)"
+    return f"{centre.slug} ({centre.country}, {centre.population_2025:,} people)"
 
 
 class UrbanCentres:
@@ -96,9 +96,9 @@ class UrbanCentres:
             for centre in self._by_id.values()
             if (not key or any(key in slugify(name) for name in centre.names))
             and (country_key is None or slugify(centre.country) == country_key)
-            and centre.population >= min_population
+            and centre.population_2025 >= min_population
         ]
-        return sorted(found, key=lambda centre: -centre.population)
+        return sorted(found, key=lambda centre: -centre.population_2025)
 
     def resolve(self, text: str) -> UrbanCentre:
         """One centre from an id, a slug or a name; refuse anything ambiguous."""

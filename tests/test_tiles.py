@@ -76,22 +76,22 @@ def test_attributes_report_population_density_built_fraction_and_height():
     rows = attributes([Tile(6897, 2807), Tile(6899, 2807)], population, built, height, origin)
     first = rows[0]
     assert first["id"] == "t6897_2807"
-    assert first["population"] == pytest.approx(1250.0)
-    assert first["density_per_km2"] == pytest.approx(1250.0)
+    assert first["population_2020"] == pytest.approx(1250.0)
+    assert first["density_2020_per_km2"] == pytest.approx(1250.0)
     assert first["built_fraction"] == pytest.approx(0.25)
     assert first["mean_height_m"] == pytest.approx(8.0)
     assert first["bounds_mollweide"] == [6_897_000, 2_807_000, 6_898_000, 2_808_000]
     assert len(first["bounds_wgs84"]) == 4
-    assert rows[1]["population"] == 0.0 and rows[1]["mean_height_m"] == 0.0
+    assert rows[1]["population_2020"] == 0.0 and rows[1]["mean_height_m"] == 0.0
 
 
 ROWS = [
-    {"id": "a", "population": 9000.0, "density_per_km2": 9000.0, "built_fraction": 0.9},
-    {"id": "b", "population": 7000.0, "density_per_km2": 7000.0, "built_fraction": 0.8},
-    {"id": "c", "population": 5000.0, "density_per_km2": 5000.0, "built_fraction": 0.5},
-    {"id": "d", "population": 3000.0, "density_per_km2": 3000.0, "built_fraction": 0.4},
-    {"id": "e", "population": 1000.0, "density_per_km2": 1000.0, "built_fraction": 0.1},
-    {"id": "f", "population": 500.0, "density_per_km2": 500.0, "built_fraction": 0.05},
+    {"id": "a", "population_2020": 9000.0, "density_2020_per_km2": 9000.0, "built_fraction": 0.9},
+    {"id": "b", "population_2020": 7000.0, "density_2020_per_km2": 7000.0, "built_fraction": 0.8},
+    {"id": "c", "population_2020": 5000.0, "density_2020_per_km2": 5000.0, "built_fraction": 0.5},
+    {"id": "d", "population_2020": 3000.0, "density_2020_per_km2": 3000.0, "built_fraction": 0.4},
+    {"id": "e", "population_2020": 1000.0, "density_2020_per_km2": 1000.0, "built_fraction": 0.1},
+    {"id": "f", "population_2020": 500.0, "density_2020_per_km2": 500.0, "built_fraction": 0.05},
 ]
 
 
@@ -116,4 +116,4 @@ def test_select_random_is_reproducible_and_populated():
     first = [r["id"] for r in select_random(ROWS, 3, seed=1)]
     assert first == [r["id"] for r in select_random(ROWS, 3, seed=1)]
     assert len(first) == 3
-    assert all(r["population"] > 0 for r in select_random(ROWS, 6, seed=2))
+    assert all(r["population_2020"] > 0 for r in select_random(ROWS, 6, seed=2))

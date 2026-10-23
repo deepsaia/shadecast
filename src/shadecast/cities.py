@@ -3,7 +3,7 @@
 The database is the corpus; the benchmark reports on a selection. ``corpus.json`` beside this
 module lists the selected urban centres by database id with the only fields the database
 cannot know: our short key, our regional grouping, whether WRI's Cool Cities Lab also covers
-the city, and a note. Every stratum (Koppen class, income group, country, population, and the
+the city, and a note. Every stratum (Koppen class, income group, country, 2025 population, and the
 centroid that seeds the tile search) is read from the database, so nothing here is typed from
 memory.
 
@@ -46,7 +46,7 @@ class City:
     koppen: str | None  # Koppen-Geiger class of the majority of the urban centre, or None
     income: str | None  # World Bank group: L, LM, UM, H, or None
     region: str
-    population: int
+    population_2025: int
     tiles: int  # 1 km GHS cells inside the urban centre, which is its area in km2
     in_wri: bool = False
     note: str = ""
@@ -111,7 +111,7 @@ def _city(entry: dict, centres: UrbanCentres) -> City:
         koppen=centre.koppen,
         income=centre.income,
         region=str(entry.get("region")),
-        population=centre.population,
+        population_2025=centre.population_2025,
         tiles=centre.tiles,
         in_wri=bool(entry.get("in_wri", False)),
         note=str(entry.get("note", "")),

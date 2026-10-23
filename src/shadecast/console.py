@@ -49,7 +49,7 @@ def centres_table(centres: list[UrbanCentre]) -> Table:
     table.add_column("slug", style="cyan", no_wrap=True)
     table.add_column("name")
     table.add_column("country", style="dim")
-    table.add_column("population", justify="right", no_wrap=True)
+    table.add_column("population 2025", justify="right", no_wrap=True)
     table.add_column("income", no_wrap=True)
     table.add_column("koppen", no_wrap=True)
     table.add_column("tiles", justify="right", no_wrap=True)
@@ -59,7 +59,7 @@ def centres_table(centres: list[UrbanCentre]) -> Table:
             centre.slug,
             centre.name,
             centre.country,
-            f"{centre.population:,}",
+            f"{centre.population_2025:,}",
             centre.income or "?",
             centre.koppen or "?",
             f"{centre.tiles:,}",
@@ -77,7 +77,7 @@ def centre_details(centre: UrbanCentre) -> Table:
         ("slug", centre.slug),
         ("names", ", ".join(centre.names)),
         ("country", centre.country),
-        ("population", f"{centre.population:,}"),
+        ("population 2025", f"{centre.population_2025:,}"),
         ("area", f"{centre.area_km2:,} km2, {centre.tiles:,} tiles of 1 km"),
         ("income group", centre.income or "unknown"),
         ("Koppen", f"{centre.koppen} ({centre.koppen_code})" if centre.koppen else "unknown"),
@@ -92,7 +92,7 @@ def tiles_table(rows: list[dict]) -> Table:
     """Render described tiles, one row each."""
     table = Table(header_style="dim")
     table.add_column("tile", style="cyan", no_wrap=True)
-    table.add_column("people", justify="right", no_wrap=True)
+    table.add_column("people 2020", justify="right", no_wrap=True)
     table.add_column("built", justify="right", no_wrap=True)
     table.add_column("height", justify="right", no_wrap=True)
     table.add_column("centre", style="dim", no_wrap=True)
@@ -100,7 +100,7 @@ def tiles_table(rows: list[dict]) -> Table:
         centre = row.get("centre") or [float("nan"), float("nan")]
         table.add_row(
             str(row.get("id")),
-            f"{float(row.get('population', 0.0)):,.0f}",
+            f"{float(row.get('population_2020', 0.0)):,.0f}",
             f"{float(row.get('built_fraction', 0.0)):.0%}",
             f"{float(row.get('mean_height_m', 0.0)):.1f} m",
             f"{centre[0]:.4f}, {centre[1]:.4f}",

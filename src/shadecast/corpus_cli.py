@@ -39,7 +39,7 @@ def as_record(centre: UrbanCentre) -> dict:
         "slug": centre.slug,
         "name": centre.name,
         "country": centre.country,
-        "population": centre.population,
+        "population_2025": centre.population_2025,
         "area_km2": centre.area_km2,
         "tiles": centre.tiles,
         "income": centre.income,
@@ -55,7 +55,7 @@ def search(
     text: Annotated[str, typer.Argument(help="Part of a name; empty matches everything.")] = "",
     country: Annotated[str | None, typer.Option("--country", help="Country name.")] = None,
     min_population: Annotated[
-        int, typer.Option("--min-population", help="Smallest population to list.")
+        int, typer.Option("--min-population", help="Smallest 2025 population to list.")
     ] = 0,
     limit: Annotated[int, typer.Option("--limit", help="Rows to show.")] = 30,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
@@ -93,7 +93,7 @@ def sample(
         int, typer.Option("--per-stratum", help="Centres per Koppen and income stratum.")
     ] = 2,
     min_population: Annotated[
-        int, typer.Option("--min-population", help="Smallest population to draw from.")
+        int, typer.Option("--min-population", help="Smallest 2025 population to draw from.")
     ] = 500_000,
     seed: Annotated[
         int, typer.Option("--seed", help="Random seed, so the draw is reproducible.")
@@ -110,5 +110,5 @@ def sample(
     console.print(centres_table(drawn))
     console.print(
         f"[dim]{len(drawn)} centres across {len(strata(drawn))} strata, "
-        f"population at least {min_population:,}, seed {seed}.[/]"
+        f"2025 population at least {min_population:,}, seed {seed}.[/]"
     )

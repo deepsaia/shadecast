@@ -40,7 +40,7 @@ def sample(
     groups: dict[Stratum, list[UrbanCentre]] = {}
     for centre in centres:
         key = stratum(centre)
-        if key is not None and centre.population >= min_population:
+        if key is not None and centre.population_2025 >= min_population:
             groups.setdefault(key, []).append(centre)
 
     rng = np.random.default_rng(seed)
@@ -50,5 +50,5 @@ def sample(
         take = min(per_stratum, len(members))
         picked = rng.choice(len(members), size=take, replace=False)
         chosen = [members[int(index)] for index in picked]
-        drawn.extend(sorted(chosen, key=lambda centre: -centre.population))
+        drawn.extend(sorted(chosen, key=lambda centre: -centre.population_2025))
     return drawn
