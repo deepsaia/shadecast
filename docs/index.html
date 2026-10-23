@@ -24,7 +24,9 @@
 }}
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-b);font-size:15px;line-height:1.55}
-.wrap{max-width:74rem;margin:0 auto;padding:1.5rem 1.25rem 5rem}
+/* A grid item with auto margins is sized to its content, so a wide table would push the
+   whole column past a phone screen. A definite width keeps it to the track. */
+.wrap{max-width:74rem;width:100%;min-width:0;justify-self:center;margin:0;padding:1.5rem 1.25rem 5rem}
 /* The city selector has to stay reachable at any scroll position, so this bar is sticky
    and sits outside .wrap: inside it, content would show through the side padding. */
 .topbar{position:sticky;top:0;z-index:30;background:var(--ground);border-bottom:1px solid var(--rule-2)}

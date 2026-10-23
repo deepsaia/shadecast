@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Surrogate model pipeline</title>
-<meta name="description" content="How shadecast learns a fast stand-in for the physics: inputs, output, data, training, judgment, use, limits, and the manifest each model carries.">
+<meta name="description" content="How shadecast learns a fast stand-in for the physics: the grid, the network, the data, training, judgment, use, what is missing and what to do about it, and the manifest each model carries.">
 <style>
 :root{
   --ground:#F1F4F6; --card:#FCFCFB; --card-2:#E7ECEF; --ink:#0B0B0B; --ink-2:#52514E;
@@ -26,7 +26,9 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-b);font-size:15px;line-height:1.55}
-.wrap{max-width:880px;margin:0 auto;padding:32px 16px 64px}
+/* A grid item with auto margins is sized to its content, so a wide table would push the
+   whole column past a phone screen. A definite width keeps it to the track. */
+.wrap{max-width:880px;width:100%;min-width:0;justify-self:center;margin:0;padding:32px 16px 64px}
 header h1{font-family:var(--f-s);font-weight:400;font-size:2rem;margin:0 0 4px;letter-spacing:-.01em}
 header p.sub{color:var(--ink-2);margin:0 0 8px}
 header p.meta{font-family:var(--f-m);font-size:.75rem;color:var(--ink-3);margin:0}
@@ -60,19 +62,34 @@ h3{font-size:1rem;margin:20px 0 8px}
 p{margin:0 0 12px;max-width:72ch}
 ul,ol{margin:0 0 12px;padding-left:20px;max-width:72ch}
 li{margin:4px 0}
+dl{margin:0 0 12px;max-width:72ch}
+dt{font-weight:600;margin-top:8px}
+dd{margin:2px 0 0 0;color:var(--ink-2)}
 .card{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:16px;margin:12px 0}
 figure{margin:16px 0}
 figure svg{display:block;width:100%;height:auto;max-width:720px}
 figcaption{font-family:var(--f-s);font-style:italic;color:var(--ink-2);font-size:.95rem;margin-top:8px;max-width:72ch}
-table{border-collapse:collapse;width:100%;margin:8px 0 16px;font-size:.92rem}
+/* A table cannot shrink below its longest word, so on a phone it scrolls inside its box
+   instead of pushing the whole page wide. */
+.scroll{overflow-x:auto;margin:8px 0 16px}
+table{border-collapse:collapse;width:100%;margin:0;font-size:.92rem}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule);vertical-align:top}
 th{font-weight:600;color:var(--ink-2)}
-td.n,th.n{text-align:right;font-family:var(--f-m);font-size:.85rem;white-space:nowrap}
+td.n,th.n{text-align:right;font-family:var(--f-m);font-size:.85rem;white-space:nowrap;font-variant-numeric:tabular-nums}
 code,.mono{font-family:var(--f-m);font-size:.85em;background:var(--card-2);padding:1px 4px;border-radius:4px}
 pre{font-family:var(--f-m);font-size:.8rem;line-height:1.5;background:var(--card-2);border:1px solid var(--rule);border-radius:8px;padding:12px;overflow:auto;max-width:720px}
 .note{border-left:3px solid var(--accent);padding:8px 12px;background:var(--accent-wash);border-radius:0 8px 8px 0;max-width:72ch}
 footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--rule);color:var(--ink-3);font-size:.85rem}
 a{color:var(--accent)}
+/* The stage table and the network figure point at the same stages. Hovering or focusing
+   one lights the other, so a reader can find a block's numbers without counting rows. */
+.stages{overflow-x:auto}
+.stages table{min-width:560px}
+.stages tr[data-stage]{cursor:default}
+.stages tr.hl td{background:var(--accent-wash)}
+.stages td.bar{width:120px;padding-top:11px}
+.stages td.bar span{display:block;height:4px;border-radius:2px;background:var(--accent);min-width:1px}
+.stages tr.quiet td{color:var(--ink-3)}
 /* diagram primitives: hairlines, no shadows, 4 px grid */
 svg .box{fill:var(--card);stroke:var(--ink);stroke-width:1}
 svg .focal{fill:var(--accent-wash);stroke:var(--accent);stroke-width:1}
@@ -84,6 +101,13 @@ svg .leader{stroke:var(--ink-3);stroke-width:1;fill:none;stroke-dasharray:3 3}
 svg .reach{fill:none;stroke:var(--accent);stroke-width:1}
 svg .tree{fill:var(--accent)}
 svg .grid{stroke:var(--rule);stroke-width:1}
+svg .st{outline:none}
+svg .st rect{transition:fill .12s}
+svg .st:hover rect,svg .st:focus rect,svg .st.hl rect{fill:var(--accent-wash);stroke:var(--accent)}
+svg .series{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round}
+svg .dot{fill:var(--accent);stroke:var(--card);stroke-width:2}
+svg .axis{stroke:var(--rule-2);stroke-width:1}
+svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
 </style>
 </head>
 <body>
@@ -92,14 +116,14 @@ svg .grid{stroke:var(--rule);stroke-width:1}
   <div class="toc-head">Contents</div>
   <ol>
     <li><a href="#what"><i>01</i><span>What the surrogate is</span></a></li>
-    <li><a href="#inputs"><i>02</i><span>Inputs</span></a></li>
-    <li><a href="#output"><i>03</i><span>Output</span></a></li>
-    <li><a href="#data"><i>04</i><span>How the data is made</span></a></li>
-    <li><a href="#training"><i>05</i><span>How it is trained</span></a></li>
-    <li><a href="#judging"><i>06</i><span>How it is judged</span></a></li>
-    <li><a href="#use"><i>07</i><span>How it is used</span></a></li>
-    <li><a href="#limits"><i>08</i><span>Where it falls short</span></a></li>
-    <li><a href="#better"><i>09</i><span>How to train it better</span></a></li>
+    <li><a href="#inputs"><i>02</i><span>Inputs and the grid</span></a></li>
+    <li><a href="#network"><i>03</i><span>The network</span></a></li>
+    <li><a href="#output"><i>04</i><span>Output</span></a></li>
+    <li><a href="#data"><i>05</i><span>How the data is made</span></a></li>
+    <li><a href="#training"><i>06</i><span>How it is trained</span></a></li>
+    <li><a href="#judging"><i>07</i><span>How it is judged</span></a></li>
+    <li><a href="#use"><i>08</i><span>How it is used</span></a></li>
+    <li><a href="#gaps"><i>09</i><span>Where it falls short, and what to do</span></a></li>
     <li><a href="#manifest"><i>10</i><span>The manifest</span></a></li>
     <li><a href="#storage"><i>11</i><span>Where models live</span></a></li>
   </ol>
@@ -108,14 +132,13 @@ svg .grid{stroke:var(--rule);stroke-width:1}
 <header>
   <h1>The surrogate model pipeline</h1>
   <p class="sub">How shadecast learns a fast stand-in for the physics, what the stand-in knows, how well it does, and where it stops.</p>
-  <p class="meta">Numbers from the model manifests and recorded runs of 2026-08-26, read on 2026-10-23. Model <span class="mono">response-unet-ahmedabad-20260826T143800</span>.</p>
+  <p class="meta">Numbers from the model manifests and recorded runs of 2026-08-26, from the model definition, and from a receptive field measurement of 2026-10-23. Model <span class="mono">response-unet-ahmedabad-20260826T143800</span>.</p>
 </header>
-
 
 <section id="what">
   <h2><i>01</i>What the surrogate is</h2>
   <p>The physics engine, SOLWEIG, computes mean radiant temperature for one square kilometer in 160 to 360 seconds. A plan search needs thousands of evaluations. The surrogate is a neural network that predicts the engine's answer in 0.58 seconds.</p>
-  <p>The network is a U-Net. It has 7,764,193 parameters. It reads seven input maps at 1 m and writes one output map at 1 m. Its receptive field is 152 m. Measured cooling from a tree falls below 0.1 C within 26 m in Ahmedabad and 71 m in Lagos, so the field is wide enough.</p>
+  <p>The network is a U-Net with 7,764,193 parameters. It reads seven input maps at 1 m and writes one output map at 1 m. Section 03 opens it up stage by stage.</p>
   <p>The surrogate is a forward model. It predicts the cooling a plan produces. It does not choose the plan. Planners choose plans. The surrogate tells them, quickly, what each plan does.</p>
   <figure>
     <svg viewBox="0 0 720 176" role="img" aria-labelledby="f1t f1d">
@@ -128,7 +151,7 @@ svg .grid{stroke:var(--rule);stroke-width:1}
       <path class="arrow" d="M232 64 H244"/>
       <rect class="box" x="248" y="40" width="96" height="48" rx="8"/><text class="label" x="296" y="60" text-anchor="middle">Responses</text><text class="sub" x="296" y="76" text-anchor="middle">cooling fields</text>
       <path class="arrow" d="M344 64 H356"/>
-      <rect class="box" x="360" y="40" width="108" height="48" rx="8"/><text class="label" x="414" y="60" text-anchor="middle">Patches</text><text class="sub" x="414" y="76" text-anchor="middle">256 px, 24 a run</text>
+      <rect class="box" x="360" y="40" width="108" height="48" rx="8"/><text class="label" x="414" y="60" text-anchor="middle">Patches</text><text class="sub" x="414" y="76" text-anchor="middle">256 px, 32 a run</text>
       <path class="arrow" d="M468 64 H480"/>
       <rect class="focal" x="484" y="40" width="112" height="48" rx="8"/><text class="label" x="540" y="60" text-anchor="middle">Model</text><text class="sub" x="540" y="76" text-anchor="middle">weights + manifest</text>
       <path class="arrow" d="M596 64 H608"/>
@@ -141,9 +164,41 @@ svg .grid{stroke:var(--rule);stroke-width:1}
 </section>
 
 <section id="inputs">
-  <h2><i>02</i>Inputs</h2>
-  <p>The model reads seven channels for every pixel. Each channel is divided by a fixed number, so every city uses the same scale. The numbers are not fitted. This is what lets a model trained in one city read another.</p>
-  <table>
+  <h2><i>02</i>Inputs and the grid</h2>
+  <h3>The grid</h3>
+  <p>A tile is one square kilometer of city on a grid of cells 1 m by 1 m. One cell is one pixel. A tile has 1,000 by 1,000 pixels, which is 1,000,000 pixels.</p>
+  <p>A channel is one number for each pixel. The model reads seven channels, so it reads 7,000,000 numbers for one tile and writes 1,000,000.</p>
+  <p>Training does not use whole tiles. It uses patches of 256 by 256 pixels, which is 65,536 pixels, cut from the response fields. Section 05 says how.</p>
+  <p>Prediction uses whole tiles. The network applies the same small filters at every position, so it accepts a map of any size. One tile is predicted in one pass. An area wider than 1,400 pixels is predicted in 512 pixel squares that overlap by 64 pixels and are blended with a cosine window, so no seam shows.</p>
+  <figure>
+    <svg viewBox="0 0 720 448" role="img" aria-labelledby="f2t f2d">
+      <title id="f2t">The tile, a training patch, the largest receptive field and one pixel, to scale</title>
+      <desc id="f2d">A large square for the tile. Inside it a smaller square for a 256 pixel patch, and inside that a square for the 204 pixel receptive field. One pixel at the center is too small to see and is magnified in a box on the right.</desc>
+      <rect class="box" x="24" y="24" width="400" height="400" rx="2"/>
+      <text class="label" x="36" y="44">tile</text><text class="sub" x="36" y="58">1,000 by 1,000 px, 1 km</text>
+      <rect class="box" x="200" y="160" width="102" height="102" rx="2"/>
+      <text class="label" x="200" y="152">patch</text><text class="sub" x="244" y="152">256 by 256 px</text>
+      <rect class="reach" x="210" y="170" width="82" height="82"/>
+      <text class="sub" x="251" y="274" text-anchor="middle">receptive field, up to 204 px</text>
+      <rect class="tree" x="250" y="210" width="3" height="3"/>
+      <path class="leader" d="M253 211 C330 150 420 130 500 136"/>
+      <rect class="box" x="500" y="104" width="160" height="160" rx="2"/>
+      <g class="grid">
+        <path d="M540 104 V264 M580 104 V264 M620 104 V264 M500 144 H660 M500 184 H660 M500 224 H660"/>
+      </g>
+      <rect class="tree" x="580" y="184" width="40" height="40"/>
+      <text class="label" x="500" y="292">one pixel</text><text class="sub" x="500" y="308">1 m by 1 m</text>
+      <text class="sub" x="500" y="324">7 numbers in, 1 number out</text>
+      <text class="sub" x="500" y="360">tile: 1,000,000 pixels</text>
+      <text class="sub" x="500" y="378">patch: 65,536 pixels</text>
+      <text class="sub" x="500" y="396">receptive field: up to 41,616 pixels</text>
+      <text class="sub" x="500" y="414">pixel: 1</text>
+    </svg>
+    <figcaption>Drawn to scale: the tile, one training patch and the receptive field around one output pixel. The pixel itself is a fifth of a point wide at this scale, so it is magnified on the right.</figcaption>
+  </figure>
+  <h3>The seven channels</h3>
+  <p>Each channel is divided by a fixed number, so every city uses the same scale. The numbers are not fitted. This is what lets a model trained in one city read another.</p>
+  <div class="scroll"><table>
     <thead><tr><th>Channel</th><th>Source</th><th class="n">Scale</th></tr></thead>
     <tbody>
       <tr><td>placement</td><td>the plan: 1 where a tree is added, 0 elsewhere</td><td class="n">none</td></tr>
@@ -154,65 +209,154 @@ svg .grid{stroke:var(--rule);stroke-width:1}
       <tr><td>is water</td><td>WorldCover class 80</td><td class="n">none</td></tr>
       <tr><td>is vegetated</td><td>WorldCover classes 10, 20, 30, 40, 90, 95, 100</td><td class="n">none</td></tr>
     </tbody>
-  </table>
+  </table></div>
+</section>
+
+<section id="network">
+  <h2><i>03</i>The network</h2>
+  <p>The network is a U-Net. The name comes from the shape of the data flow: down one side of a U, across the bottom, and up the other side. Going down, each stage sees a wider area of the city at a coarser scale. Going up, each stage brings the detail back.</p>
+  <p>A parameter is one learned number: a weight in a filter, or a scale in a normalization. This network has 7,764,193. Seven kinds of stage make it up.</p>
+  <dl>
+    <dt>3 by 3 convolution</dt>
+    <dd>For every pixel, a weighted sum of the 3 by 3 pixels around it, across every input channel. The weights are learned. There is one set of weights for each output channel. The same weights are used at every pixel, so the stage reads geometry the same way everywhere on the tile.</dd>
+    <dt>Batch normalization</dt>
+    <dd>Rescales each channel to a steady mean and spread, so training stays stable. It has two learned numbers per channel.</dd>
+    <dt>ReLU</dt>
+    <dd>Sets negative values to zero. Without it, a stack of convolutions would collapse into one linear filter and could not learn a curve.</dd>
+    <dt>Max pool, 2 by 2</dt>
+    <dd>Keeps the largest value in each 2 by 2 block. The map becomes half as wide and half as tall. One pixel now stands for 2 m, then 4 m, 8 m and 16 m at the bottom. This is how the network sees far.</dd>
+    <dt>Transposed convolution, 2 by 2, stride 2</dt>
+    <dd>The reverse of pooling: doubles the width and height of the map, with learned weights.</dd>
+    <dt>Join</dt>
+    <dd>Stacks the upsampled map on the encoder map of the same size, so the detail lost in pooling comes back. This is the skip connection that gives the U-Net its name.</dd>
+    <dt>1 by 1 convolution, the head</dt>
+    <dd>One weighted sum over the 32 channels at each pixel. The result is the cooling at that pixel.</dd>
+  </dl>
+  <p>An encoder, a decoder or the bottleneck is one block: two 3 by 3 convolutions, each followed by batch normalization and ReLU. There are four encoders going down, four decoders coming up, and the bottleneck at the bottom.</p>
   <figure>
-    <svg viewBox="0 0 720 208" role="img" aria-labelledby="f2t f2d">
-      <title id="f2t">Seven input channels enter the network and one output map leaves it</title>
-      <desc id="f2d">Seven stacked layers on the left, a U shaped block in the middle, and one output layer on the right labelled cooling in degrees Celsius.</desc>
-      <g>
-        <rect class="box" x="24" y="32" width="160" height="16" rx="4"/><text class="sub" x="104" y="44" text-anchor="middle">placement</text>
-        <rect class="box" x="24" y="52" width="160" height="16" rx="4"/><text class="sub" x="104" y="64" text-anchor="middle">baseline Tmrt / 80</text>
-        <rect class="box" x="24" y="72" width="160" height="16" rx="4"/><text class="sub" x="104" y="84" text-anchor="middle">building height / 30</text>
-        <rect class="box" x="24" y="92" width="160" height="16" rx="4"/><text class="sub" x="104" y="104" text-anchor="middle">canopy height / 30</text>
-        <rect class="box" x="24" y="112" width="160" height="16" rx="4"/><text class="sub" x="104" y="124" text-anchor="middle">sky openness</text>
-        <rect class="box" x="24" y="132" width="160" height="16" rx="4"/><text class="sub" x="104" y="144" text-anchor="middle">is water</text>
-        <rect class="box" x="24" y="152" width="160" height="16" rx="4"/><text class="sub" x="104" y="164" text-anchor="middle">is vegetated</text>
-        <text class="label" x="104" y="192" text-anchor="middle">7 channels, 1 m</text>
-      </g>
-      <path class="arrow" d="M184 100 H220"/>
-      <g>
-        <path class="box" d="M224 32 H336 L352 64 L368 32 H480 V168 H368 L352 136 L336 168 H224 Z"/>
-        <text class="label" x="280" y="76" text-anchor="middle">encoder</text>
-        <text class="sub" x="280" y="92" text-anchor="middle">32, 64, 128, 256</text>
-        <text class="label" x="424" y="76" text-anchor="middle">decoder</text>
-        <text class="sub" x="424" y="92" text-anchor="middle">skip connections</text>
-        <text class="sub" x="352" y="156" text-anchor="middle">bottleneck 512</text>
-        <text class="label" x="352" y="192" text-anchor="middle">ResponseUNet, 7.76 M parameters</text>
-      </g>
-      <path class="arrow" d="M480 100 H516"/>
-      <g>
-        <rect class="focal" x="520" y="56" width="176" height="88" rx="8"/>
-        <text class="label" x="608" y="96" text-anchor="middle">cooling field</text>
-        <text class="sub" x="608" y="112" text-anchor="middle">baseline minus plan, degC</text>
-        <text class="label" x="608" y="192" text-anchor="middle">1 channel, 1 m</text>
-      </g>
+    <svg viewBox="0 0 720 420" role="img" aria-labelledby="f3t f3d">
+      <title id="f3t">The U-Net, stage by stage, for a 256 pixel patch</title>
+      <desc id="f3d">Four encoder blocks go down the left side with pooling between them. The bottleneck sits at the bottom. Four decoder blocks go up the right side with transposed convolutions between them. Dashed lines join each encoder to the decoder at the same level.</desc>
+      <rect class="box" x="40" y="8" width="160" height="32" rx="6"/><text class="label" x="120" y="22" text-anchor="middle">input</text><text class="sub" x="120" y="34" text-anchor="middle">256 by 256 px, 7 ch</text>
+      <path class="arrow" d="M120 40 V52"/>
+      <g class="st" data-stage="encoder 1" tabindex="0"><title>encoder 1: 256 by 256 px, 32 channels, 11,360 parameters</title><rect class="box" x="40" y="56" width="160" height="44" rx="6"/><text class="label" x="120" y="74" text-anchor="middle">encoder 1</text><text class="sub" x="120" y="90" text-anchor="middle">256 by 256 px, 32 ch</text></g>
+      <path class="arrow" d="M120 100 V124"/><text class="sub" x="128" y="116">pool, 2 m per px</text>
+      <g class="st" data-stage="encoder 2" tabindex="0"><title>encoder 2: 128 by 128 px, 64 channels, 55,552 parameters</title><rect class="box" x="40" y="128" width="160" height="44" rx="6"/><text class="label" x="120" y="146" text-anchor="middle">encoder 2</text><text class="sub" x="120" y="162" text-anchor="middle">128 by 128 px, 64 ch</text></g>
+      <path class="arrow" d="M120 172 V196"/><text class="sub" x="128" y="188">pool, 4 m per px</text>
+      <g class="st" data-stage="encoder 3" tabindex="0"><title>encoder 3: 64 by 64 px, 128 channels, 221,696 parameters</title><rect class="box" x="40" y="200" width="160" height="44" rx="6"/><text class="label" x="120" y="218" text-anchor="middle">encoder 3</text><text class="sub" x="120" y="234" text-anchor="middle">64 by 64 px, 128 ch</text></g>
+      <path class="arrow" d="M120 244 V268"/><text class="sub" x="128" y="260">pool, 8 m per px</text>
+      <g class="st" data-stage="encoder 4" tabindex="0"><title>encoder 4: 32 by 32 px, 256 channels, 885,760 parameters</title><rect class="box" x="40" y="272" width="160" height="44" rx="6"/><text class="label" x="120" y="290" text-anchor="middle">encoder 4</text><text class="sub" x="120" y="306" text-anchor="middle">32 by 32 px, 256 ch</text></g>
+      <path class="arrow" d="M120 316 V366 H276"/><text class="sub" x="128" y="358">pool, 16 m per px</text>
+      <g class="st" data-stage="bottleneck" tabindex="0"><title>bottleneck: 16 by 16 px, 512 channels, 3,540,992 parameters</title><rect class="focal" x="280" y="344" width="160" height="44" rx="6"/><text class="label" x="360" y="362" text-anchor="middle">bottleneck</text><text class="sub" x="360" y="378" text-anchor="middle">16 by 16 px, 512 ch</text></g>
+      <path class="arrow" d="M440 366 H600 V320"/><text class="sub" x="448" y="358">up, 8 m per px</text>
+      <g class="st" data-stage="decoder 1" tabindex="0"><title>decoder 1: 32 by 32 px, 256 channels, 1,770,496 parameters</title><rect class="box" x="520" y="272" width="160" height="44" rx="6"/><text class="label" x="600" y="290" text-anchor="middle">decoder 1</text><text class="sub" x="600" y="306" text-anchor="middle">32 by 32 px, 256 ch</text></g>
+      <path class="arrow" d="M600 272 V248"/><text class="sub" x="608" y="264">up, 4 m per px</text>
+      <g class="st" data-stage="decoder 2" tabindex="0"><title>decoder 2: 64 by 64 px, 128 channels, 442,880 parameters</title><rect class="box" x="520" y="200" width="160" height="44" rx="6"/><text class="label" x="600" y="218" text-anchor="middle">decoder 2</text><text class="sub" x="600" y="234" text-anchor="middle">64 by 64 px, 128 ch</text></g>
+      <path class="arrow" d="M600 200 V176"/><text class="sub" x="608" y="192">up, 2 m per px</text>
+      <g class="st" data-stage="decoder 3" tabindex="0"><title>decoder 3: 128 by 128 px, 64 channels, 110,848 parameters</title><rect class="box" x="520" y="128" width="160" height="44" rx="6"/><text class="label" x="600" y="146" text-anchor="middle">decoder 3</text><text class="sub" x="600" y="162" text-anchor="middle">128 by 128 px, 64 ch</text></g>
+      <path class="arrow" d="M600 128 V104"/><text class="sub" x="608" y="120">up, 1 m per px</text>
+      <g class="st" data-stage="decoder 4" tabindex="0"><title>decoder 4: 256 by 256 px, 32 channels, 27,776 parameters</title><rect class="box" x="520" y="56" width="160" height="44" rx="6"/><text class="label" x="600" y="74" text-anchor="middle">decoder 4</text><text class="sub" x="600" y="90" text-anchor="middle">256 by 256 px, 32 ch</text></g>
+      <path class="arrow" d="M600 56 V44"/>
+      <g class="st" data-stage="head" tabindex="0"><title>head: 1 by 1 convolution, 256 by 256 px, 1 channel, 33 parameters</title><rect class="box" x="520" y="8" width="160" height="32" rx="6"/><text class="label" x="600" y="22" text-anchor="middle">head, output</text><text class="sub" x="600" y="34" text-anchor="middle">256 by 256 px, 1 ch</text></g>
+      <path class="leader" d="M200 78 H516"/><text class="sub" x="360" y="72" text-anchor="middle">join</text>
+      <path class="leader" d="M200 150 H516"/><text class="sub" x="360" y="144" text-anchor="middle">join</text>
+      <path class="leader" d="M200 222 H516"/><text class="sub" x="360" y="216" text-anchor="middle">join</text>
+      <path class="leader" d="M200 294 H516"/><text class="sub" x="360" y="288" text-anchor="middle">join</text>
+      <text class="aside" x="360" y="412" text-anchor="middle">Hover or focus a block to find its row in the table below.</text>
     </svg>
-    <figcaption>Width doubles at each of four levels and halves back up. The output is not clipped at zero: about 0.04 percent of pixels warm near a new tree, and the model can say so.</figcaption>
+    <figcaption>The map halves at each pool and doubles at each up. Each dashed join carries the encoder map across to the decoder at the same level. Sizes are for a 256 pixel training patch; a whole tile flows through the same way at 1,000 pixels.</figcaption>
   </figure>
+  <h3>Every stage, with its numbers</h3>
+  <p>Computed from the model definition for a 256 by 256 pixel patch. Shapes are channels, then height, then width in pixels. The share bar is the stage's part of the 7,764,193 parameters.</p>
+  <div class="stages">
+  <table id="stages">
+    <thead><tr><th>Stage</th><th>What it does</th><th class="n">Output shape</th><th class="n">Parameters</th><th>Share</th></tr></thead>
+    <tbody>
+      <tr class="quiet"><td>input</td><td>the seven channels</td><td class="n">7 x 256 x 256</td><td class="n">0</td><td class="bar"></td></tr>
+      <tr data-stage="encoder 1"><td>encoder 1</td><td>two 3 by 3 convolutions with normalization and ReLU</td><td class="n">32 x 256 x 256</td><td class="n">11,360</td><td class="bar"><span style="width:0.3%"></span></td></tr>
+      <tr class="quiet"><td>pool 1</td><td>max pool 2 by 2</td><td class="n">32 x 128 x 128</td><td class="n">0</td><td class="bar"></td></tr>
+      <tr data-stage="encoder 2"><td>encoder 2</td><td>two 3 by 3 convolutions with normalization and ReLU</td><td class="n">64 x 128 x 128</td><td class="n">55,552</td><td class="bar"><span style="width:1.6%"></span></td></tr>
+      <tr class="quiet"><td>pool 2</td><td>max pool 2 by 2</td><td class="n">64 x 64 x 64</td><td class="n">0</td><td class="bar"></td></tr>
+      <tr data-stage="encoder 3"><td>encoder 3</td><td>two 3 by 3 convolutions with normalization and ReLU</td><td class="n">128 x 64 x 64</td><td class="n">221,696</td><td class="bar"><span style="width:6.3%"></span></td></tr>
+      <tr class="quiet"><td>pool 3</td><td>max pool 2 by 2</td><td class="n">128 x 32 x 32</td><td class="n">0</td><td class="bar"></td></tr>
+      <tr data-stage="encoder 4"><td>encoder 4</td><td>two 3 by 3 convolutions with normalization and ReLU</td><td class="n">256 x 32 x 32</td><td class="n">885,760</td><td class="bar"><span style="width:25%"></span></td></tr>
+      <tr class="quiet"><td>pool 4</td><td>max pool 2 by 2</td><td class="n">256 x 16 x 16</td><td class="n">0</td><td class="bar"></td></tr>
+      <tr data-stage="bottleneck"><td>bottleneck</td><td>two 3 by 3 convolutions with normalization and ReLU</td><td class="n">512 x 16 x 16</td><td class="n">3,540,992</td><td class="bar"><span style="width:100%"></span></td></tr>
+      <tr data-stage="decoder 1"><td>up 1</td><td>transposed convolution 2 by 2, stride 2</td><td class="n">256 x 32 x 32</td><td class="n">524,544</td><td class="bar"><span style="width:14.8%"></span></td></tr>
+      <tr class="quiet" data-stage="decoder 1"><td>join 1</td><td>stack with encoder 4 output</td><td class="n">512 x 32 x 32</td><td class="n">0</td><td class="bar"></td></tr>
+      <tr data-stage="decoder 1"><td>decoder 1</td><td>two 3 by 3 convolutions with normalization and ReLU</td><td class="n">256 x 32 x 32</td><td class="n">1,770,496</td><td class="bar"><span style="width:50%"></span></td></tr>
+      <tr data-stage="decoder 2"><td>up 2</td><td>transposed convolution 2 by 2, stride 2</td><td class="n">128 x 64 x 64</td><td class="n">131,200</td><td class="bar"><span style="width:3.7%"></span></td></tr>
+      <tr class="quiet" data-stage="decoder 2"><td>join 2</td><td>stack with encoder 3 output</td><td class="n">256 x 64 x 64</td><td class="n">0</td><td class="bar"></td></tr>
+      <tr data-stage="decoder 2"><td>decoder 2</td><td>two 3 by 3 convolutions with normalization and ReLU</td><td class="n">128 x 64 x 64</td><td class="n">442,880</td><td class="bar"><span style="width:12.5%"></span></td></tr>
+      <tr data-stage="decoder 3"><td>up 3</td><td>transposed convolution 2 by 2, stride 2</td><td class="n">64 x 128 x 128</td><td class="n">32,832</td><td class="bar"><span style="width:0.9%"></span></td></tr>
+      <tr class="quiet" data-stage="decoder 3"><td>join 3</td><td>stack with encoder 2 output</td><td class="n">128 x 128 x 128</td><td class="n">0</td><td class="bar"></td></tr>
+      <tr data-stage="decoder 3"><td>decoder 3</td><td>two 3 by 3 convolutions with normalization and ReLU</td><td class="n">64 x 128 x 128</td><td class="n">110,848</td><td class="bar"><span style="width:3.1%"></span></td></tr>
+      <tr data-stage="decoder 4"><td>up 4</td><td>transposed convolution 2 by 2, stride 2</td><td class="n">32 x 256 x 256</td><td class="n">8,224</td><td class="bar"><span style="width:0.2%"></span></td></tr>
+      <tr class="quiet" data-stage="decoder 4"><td>join 4</td><td>stack with encoder 1 output</td><td class="n">64 x 256 x 256</td><td class="n">0</td><td class="bar"></td></tr>
+      <tr data-stage="decoder 4"><td>decoder 4</td><td>two 3 by 3 convolutions with normalization and ReLU</td><td class="n">32 x 256 x 256</td><td class="n">27,776</td><td class="bar"><span style="width:0.8%"></span></td></tr>
+      <tr data-stage="head"><td>head</td><td>1 by 1 convolution to one channel</td><td class="n">1 x 256 x 256</td><td class="n">33</td><td class="bar"><span style="width:0.1%"></span></td></tr>
+      <tr><td>total</td><td></td><td class="n"></td><td class="n">7,764,193</td><td class="bar"></td></tr>
+    </tbody>
+  </table></div>
+  </div>
+  <p>The bars are scaled to the bottleneck, which holds 3,540,992 parameters, 46 percent of the total, and works on a map of 16 by 16 pixels. Encoder 4, the bottleneck, up 1 and decoder 1 together hold 87 percent and never see a map finer than 8 m per pixel. The stages that touch every pixel of the output, encoder 1, decoder 4 and the head, hold half a percent. Most of what the network learns is coarse.</p>
+  <h3>The receptive field</h3>
+  <p>The receptive field is the area of the input that one output pixel can see. A change outside that area cannot change the pixel. The field grows with each 3 by 3 convolution and doubles with each pool.</p>
+  <p>Measured on 2026-10-23 by back-propagating one output pixel to the input with every path open, the field is 188 to 204 pixels across, which is 188 to 204 m. It varies because the four pools divide the map into 16 pixel cells, and a pixel at the edge of a cell sees a little further than one at the center. The manifest records 152 m, which is the rounded estimate the code makes from the depth alone. Issue 114 replaces the estimate with the measurement.</p>
+  <p>A tree changes the temperature up to 71 m away (section 05). For an output pixel to see every tree that affects it, the field must be at least 142 m across. Every figure here is above that.</p>
 </section>
 
 <section id="output">
-  <h2><i>03</i>Output</h2>
+  <h2><i>04</i>Output</h2>
   <p>The output is one map. Each pixel holds the daylight-mean change in mean radiant temperature, in degrees Celsius. Daylight is 08:00 to 18:00 local time on the design day. A positive value is cooling.</p>
-  <p>The target comes from two engine runs: the untouched bundle and the bundle with the plan. The difference is the response the model learns.</p>
+  <p>The target comes from two engine runs: the untouched bundle and the bundle with the plan. The difference is the response the model learns. It is not clipped at zero. About 0.04 percent of outdoor pixels warm when a tree is added, by up to 10 C, all within 10 m of the new tree, because warm canopy replaces cold sky. The model can say so.</p>
 </section>
 
 <section id="data">
-  <h2><i>04</i>How the data is made</h2>
-  <p>Physics time is the budget. One engine run yields one response field. The design set makes each run count. The Ahmedabad model used 17 runs.</p>
-  <table>
-    <thead><tr><th>Family</th><th class="n">Runs</th><th>Coverage of plantable ground</th><th>Why</th></tr></thead>
-    <tbody>
-      <tr><td>sparse probe</td><td class="n">4</td><td>about 100 isolated trees on a jittered 100 m lattice</td><td>each tree is an independent response, so one run gives about 100</td></tr>
-      <tr><td>clustered</td><td class="n">6</td><td>1, 2, 5, 10, 20, 30 percent in 20 m blobs</td><td>how planting happens; where responses overlap and stop adding up</td></tr>
-      <tr><td>random uniform</td><td class="n">4</td><td>1, 5, 10, 20 percent</td><td>the scattered extreme</td></tr>
-      <tr><td>corridor</td><td class="n">3</td><td>2, 5, 10 percent along the open-network skeleton</td><td>the street tree case</td></tr>
-    </tbody>
-  </table>
+  <h2><i>05</i>How the data is made</h2>
+  <p>Physics time is the budget. One engine run takes 255 to 358 s and gives one response field: the cooling at every pixel for one plan. Seventeen runs is about one and a half hours. The design set has to make each run count.</p>
+  <h3>What one tree does, measured</h3>
+  <p>The engine was run with single trees and the cooling was read by distance. At the planted pixel the cooling is about 18 C. It falls to under 0.1 C within 26 m in dense Ahmedabad and within 71 m in open, treeless Lagos. Beyond that distance a tree changes nothing a thermometer could read. That distance is the reach.</p>
   <figure>
-    <svg viewBox="0 0 720 232" role="img" aria-labelledby="f3t f3d">
-      <title id="f3t">Sparse probes: isolated trees spaced beyond their reach</title>
-      <desc id="f3d">A lattice of small accent dots 100 meters apart, each inside a circle of 71 meters radius. The circles do not overlap, so each response is independent.</desc>
+    <svg viewBox="0 0 720 240" role="img" aria-labelledby="f4t f4d">
+      <title id="f4t">Cooling by distance from the nearest tree, Ahmedabad, clustered 5 percent design, engine truth</title>
+      <desc id="f4d">A line falls from 9.2 degrees at the tree to 0.005 degrees at 41 to 80 meters on a logarithmic axis. A horizontal line marks 0.1 degrees, the reach threshold.</desc>
+      <g class="axis">
+        <path d="M72 36 H696 M72 76 H696 M72 116 H696 M72 156 H696 M72 196 H696"/>
+        <path d="M72 24 V196"/>
+      </g>
+      <text class="tick" x="64" y="40" text-anchor="end">10 C</text>
+      <text class="tick" x="64" y="80" text-anchor="end">1</text>
+      <text class="tick" x="64" y="120" text-anchor="end">0.1</text>
+      <text class="tick" x="64" y="160" text-anchor="end">0.01</text>
+      <text class="tick" x="64" y="200" text-anchor="end">0.001</text>
+      <text class="tick" x="72" y="216" text-anchor="middle">0</text>
+      <text class="tick" x="228" y="216" text-anchor="middle">20</text>
+      <text class="tick" x="384" y="216" text-anchor="middle">40</text>
+      <text class="tick" x="540" y="216" text-anchor="middle">60</text>
+      <text class="tick" x="696" y="216" text-anchor="middle">80 m</text>
+      <text class="sub" x="72" y="236">distance from the nearest tree, band midpoints; cooling on a log scale</text>
+      <text class="sub" x="696" y="112" text-anchor="end">0.1 C, the reach threshold</text>
+      <polyline class="series" points="72,37.5 83.7,40 103.2,58.8 134.4,80.6 192.9,105.1 309.9,133.2 543.9,167"/>
+      <circle class="dot" cx="72" cy="37.5" r="4"><title>at the tree: 9.20 C</title></circle>
+      <circle class="dot" cx="83.7" cy="40" r="4"><title>1 to 2 m: 7.93 C</title></circle>
+      <circle class="dot" cx="103.2" cy="58.8" r="4"><title>3 to 5 m: 2.70 C</title></circle>
+      <circle class="dot" cx="134.4" cy="80.6" r="4"><title>6 to 10 m: 0.77 C</title></circle>
+      <circle class="dot" cx="192.9" cy="105.1" r="4"><title>11 to 20 m: 0.19 C</title></circle>
+      <circle class="dot" cx="309.9" cy="133.2" r="4"><title>21 to 40 m: 0.04 C</title></circle>
+      <circle class="dot" cx="543.9" cy="167" r="4"><title>41 to 80 m: 0.005 C</title></circle>
+      <text class="sub" x="84" y="30">9.2 C at the tree</text>
+      <text class="sub" x="556" y="184">0.005 C at 41 to 80 m</text>
+    </svg>
+    <figcaption>Engine truth for the clustered 5 percent design in Ahmedabad: mean cooling by distance from the nearest tree. Each gridline down is ten times less cooling. The full numbers are in the table in section 07.</figcaption>
+  </figure>
+  <h3>Superposition, and the sparse probe</h3>
+  <p>When two trees are further apart than the reach, their cooling fields do not touch. The field of the pair is the sum of two single-tree fields. That is superposition. It means the two trees are two separate measurements, taken in one run.</p>
+  <p>The sparse probe design uses this. It puts about 100 single trees on a 100 m lattice, 10 by 10 across the kilometer, with a random shift of up to 35 m so the lattice does not line up with the street grid. Two trees 100 m apart overlap only in their tails. At the midpoint, 50 m from each, one tree adds about 0.1 C against a peak of 12 to 18 C, which is under 1 percent. One run therefore returns about 100 clean single-tree responses, each in its own geometric context, instead of one. Four such runs give about 400.</p>
+  <figure>
+    <svg viewBox="0 0 720 232" role="img" aria-labelledby="f5t f5d">
+      <title id="f5t">Sparse probes: isolated trees spaced beyond their reach</title>
+      <desc id="f5d">A lattice of small accent dots 100 meters apart, each inside a circle of 71 meters radius. The circles do not overlap, so each response is independent.</desc>
       <g class="grid">
         <path d="M24 24 H696 M24 72 H696 M24 120 H696 M24 168 H696 M24 216 H696"/>
         <path d="M24 24 V216 M120 24 V216 M216 24 V216 M312 24 V216 M408 24 V216 M504 24 V216 M600 24 V216 M696 24 V216"/>
@@ -226,35 +370,49 @@ svg .grid{stroke:var(--rule);stroke-width:1}
         <circle cx="72" cy="144" r="4"/><circle cx="168" cy="144" r="4"/><circle cx="264" cy="144" r="4"/><circle cx="360" cy="144" r="4"/><circle cx="456" cy="144" r="4"/><circle cx="552" cy="144" r="4"/><circle cx="648" cy="144" r="4"/>
       </g>
       <path class="leader" d="M72 96 H168"/>
-      <text class="sub" x="120" y="112" text-anchor="middle">100 m spacing</text>
-      <text class="sub" x="696" y="196" text-anchor="end">reach 71 m, under 0.1 C beyond</text>
+      <text class="sub" x="120" y="88" text-anchor="middle">100 m spacing</text>
+      <text class="sub" x="696" y="200" text-anchor="end">reach 71 m, under 0.1 C beyond</text>
     </svg>
-    <figcaption>Trees spaced beyond their measured reach give responses that do not overlap. One run returns one observation per tree, not one per run.</figcaption>
+    <figcaption>Trees spaced beyond their measured reach give responses that do not overlap. One run returns one observation per tree, about 100, not one per run.</figcaption>
   </figure>
-  <p>Each response field is cropped into 24 patches of 256 by 256 pixels. The sampler favors ground within 80 m of a tree and keeps a 5 percent floor elsewhere. Ahmedabad gave 416 training patches and 128 held-out patches. Ahmedabad and Lagos together gave 832 and 256.</p>
+  <h3>Why dense designs are still needed</h3>
+  <p>Superposition fails when trees are close. Two trees 5 m apart do not cool twice as much as one. They shade some of the same ground, and the canopy of one replaces the cold sky that a pixel near the other would have seen. Where the sum of single-tree fields goes wrong is exactly what a simple kernel cannot predict, and exactly what a real plan with contiguous planting produces. The clustered, random and corridor designs carry that interaction signal, at coverages from 1 to 30 percent of the plantable ground.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Family</th><th class="n">Runs</th><th>Coverage of plantable ground</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>sparse probe</td><td class="n">4</td><td>about 100 isolated trees on a shifted 100 m lattice</td><td>each tree is an independent response, so one run gives about 100</td></tr>
+      <tr><td>clustered</td><td class="n">6</td><td>1, 2, 5, 10, 20, 30 percent in 20 m blobs</td><td>how planting happens; where responses overlap and stop adding up</td></tr>
+      <tr><td>random uniform</td><td class="n">4</td><td>1, 5, 10, 20 percent</td><td>the scattered extreme</td></tr>
+      <tr><td>corridor</td><td class="n">3</td><td>2, 5, 10 percent along the open-network skeleton</td><td>the street tree case</td></tr>
+    </tbody>
+  </table></div>
+  <h3>From fields to patches</h3>
+  <p>Each response field is cropped into 32 patches of 256 by 256 pixels. The crop centers are drawn at random with weights. A pixel within 80 m of a tree has weight 1.05 and any other pixel has weight 0.05. Most patches therefore hold trees, and some hold only far field, where predicting a true zero is part of the job. Ahmedabad gave 416 training patches and 128 held-out patches. Ahmedabad and Lagos together gave 832 and 256.</p>
 </section>
 
 <section id="training">
-  <h2><i>05</i>How it is trained</h2>
-  <table>
+  <h2><i>06</i>How it is trained</h2>
+  <div class="scroll"><table>
     <thead><tr><th>Setting</th><th>Value</th><th>Why</th></tr></thead>
     <tbody>
       <tr><td>loss</td><td>Huber, delta 1.0</td><td>18 C at a tree must not drown 0.1 C at 30 m; the far field is the spillover</td></tr>
-      <tr><td>optimizer</td><td>AdamW, learning rate 0.002, cosine schedule</td><td>a standard choice; not yet compared with others</td></tr>
+      <tr><td>optimizer</td><td>AdamW, learning rate 0.002, cosine schedule</td><td>a standard choice; not yet compared with others (issue 115)</td></tr>
       <tr><td>batch</td><td>8 patches</td><td>fits one device</td></tr>
       <tr><td>epochs</td><td>40 for this model, no early stop</td><td>the default is now 30 with patience 10: training stops when held-out skill has not improved for 10 epochs</td></tr>
       <tr><td>kept weights</td><td>the epoch with the best held-out skill</td><td>the Ahmedabad curve swung between 0.57 and 0.77 after epoch 10</td></tr>
-      <tr><td>seed</td><td>0</td><td>one seed; an ensemble is planned</td></tr>
+      <tr><td>seed</td><td>0</td><td>one seed; an ensemble is planned (issue 102)</td></tr>
       <tr><td>device, time</td><td>Apple GPU, 233 s for one tile, 518 s for two</td><td>data, not compute, is the limit</td></tr>
     </tbody>
-  </table>
-  <h3>The split</h3>
-  <p>Patches from one design overlap and share context. A random split of patches would leak. The split is by design. A quarter of the designs are held out whole. The test asks whether the model predicts an intervention pattern it never saw.</p>
-  <p>A second split holds out a whole city. That asks whether the model transfers to geometry it never saw. The two questions are different. The pipeline reports both.</p>
+  </table></div>
+  <h3>The split, in plain words</h3>
+  <p>Training needs two sets of data. The model learns from one, the training set. It never sees the other, the held-out set, until the end. The held-out set is the test. If the model is right there, it has learned the physics and not memorized the examples. The question is how to cut the data in two.</p>
+  <p><strong>The wrong way: by patch.</strong> The 32 patches of one design overlap. Together they cover the field about twice over, so most pixels appear in two or more patches. If some patches of a design went into training and others into the test, the model would see the same trees on the same ground in both. The test score would be too good and would mean nothing.</p>
+  <p><strong>The way used: by design.</strong> A quarter of the designs are set aside whole, with all 32 of their patches. For Ahmedabad that is 4 of the 17 designs: clustered 5 and 10 percent, and random 5 and 10 percent. The model never sees any pixel of those plans. The test asks: given a plan it has never seen, on ground it knows, does it predict the cooling?</p>
+  <p><strong>A second cut: by city.</strong> When several cities are trained together, a whole city can be held out instead. The model then never sees that city's ground at all. The test asks: does it transfer to geometry it has never seen? The two tests answer different questions. Section 07 reports both.</p>
   <figure>
-    <svg viewBox="0 0 720 168" role="img" aria-labelledby="f4t f4d">
-      <title id="f4t">Held out by design, never by patch</title>
-      <desc id="f4d">Four groups of patch rectangles, each group one design. Three groups are plain and labelled train. One group is highlighted and labelled held out.</desc>
+    <svg viewBox="0 0 720 168" role="img" aria-labelledby="f6t f6d">
+      <title id="f6t">Held out by design, never by patch</title>
+      <desc id="f6d">Four groups of patch rectangles, each group one design. Three groups are plain and labeled train. One group is highlighted and labeled held out.</desc>
       <g>
         <text class="sub" x="100" y="24" text-anchor="middle">clustered 1 %</text>
         <rect class="box" x="24" y="32" width="48" height="32" rx="4"/><rect class="box" x="76" y="32" width="48" height="32" rx="4"/><rect class="box" x="128" y="32" width="48" height="32" rx="4"/>
@@ -281,12 +439,12 @@ svg .grid{stroke:var(--rule);stroke-width:1}
       </g>
       <text class="aside" x="360" y="156" text-anchor="middle">Every patch of a design sits on the same side of the line.</text>
     </svg>
-    <figcaption>The held-out designs for the Ahmedabad model were clustered 5 and 10 percent and random 5 and 10 percent.</figcaption>
+    <figcaption>Six of a design's 32 patches are drawn. All of them go to one side. The held-out designs for the Ahmedabad model were clustered 5 and 10 percent and random 5 and 10 percent.</figcaption>
   </figure>
 </section>
 
 <section id="judging">
-  <h2><i>06</i>How it is judged</h2>
+  <h2><i>07</i>How it is judged</h2>
   <p>Pixel error alone is the wrong measure. The response is near zero almost everywhere. A model that predicts zero everywhere has a small error and is useless. Four questions decide, in this order.</p>
   <ol>
     <li><strong>Does it beat predicting nothing?</strong> Skill is 1 minus the model error over the error of predicting no change. Zero means no better than nothing. One means perfect.</li>
@@ -294,7 +452,7 @@ svg .grid{stroke:var(--rule);stroke-width:1}
     <li><strong>Is the plan score right?</strong> Plans are scored on population-weighted exposure, which integrates the whole field. That integral must be unbiased.</li>
     <li><strong>Does it order plans correctly?</strong> A search only needs to know which of two plans is better.</li>
   </ol>
-  <table>
+  <div class="scroll"><table>
     <thead><tr><th>Measure, Ahmedabad model on 4 held-out designs</th><th class="n">Value</th></tr></thead>
     <tbody>
       <tr><td>skill against predicting nothing</td><td class="n">0.82</td></tr>
@@ -305,8 +463,8 @@ svg .grid{stroke:var(--rule);stroke-width:1}
       <tr><td>a search of 1,000 evaluations, engine</td><td class="n">45 h</td></tr>
       <tr><td>a search of 1,000 evaluations, surrogate</td><td class="n">10 min</td></tr>
     </tbody>
-  </table>
-  <table>
+  </table></div>
+  <div class="scroll"><table>
     <thead><tr><th>Distance from a tree, design clustered 5 %</th><th class="n">Engine, C</th><th class="n">Surrogate, C</th></tr></thead>
     <tbody>
       <tr><td>at the tree</td><td class="n">9.20</td><td class="n">9.52</td></tr>
@@ -315,20 +473,20 @@ svg .grid{stroke:var(--rule);stroke-width:1}
       <tr><td>6 to 10 m</td><td class="n">0.77</td><td class="n">0.75</td></tr>
       <tr><td>11 to 20 m</td><td class="n">0.19</td><td class="n">0.19</td></tr>
       <tr><td>21 to 40 m</td><td class="n">0.04</td><td class="n">0.05</td></tr>
-      <tr><td>41 to 80 m</td><td class="n">0.01</td><td class="n">0.02</td></tr>
+      <tr><td>41 to 80 m</td><td class="n">0.005</td><td class="n">0.02</td></tr>
     </tbody>
-  </table>
-  <p>A ranking over four items is a weak result. The transfer question has two points so far. Trained on Ahmedabad alone, skill on Rio is 0.46. Trained on Ahmedabad and Lagos, skill on Rio is 0.55. More cities help. More cities are in the physics queue now.</p>
+  </table></div>
+  <p>A ranking over four items is a weak result. The transfer question has two points so far. Trained on Ahmedabad alone, skill on Rio is 0.46. Trained on Ahmedabad and Lagos, skill on Rio is 0.55. More cities help. Phoenix has complete physics as well, 17 designs at 534 to 596 s each. The loop over the remaining cities was paused on 2026-10-23 so that the pipeline can be revised before they run.</p>
 </section>
 
 <section id="use">
-  <h2><i>07</i>How it is used</h2>
+  <h2><i>08</i>How it is used</h2>
   <p>Today the surrogate is used for one thing: assessment on designs it never trained on. No published number comes from it. Every number in the results comes from the engine.</p>
-  <p>The planners do not use it yet. Greedy and the orchard planner rank baseline harm and place trees. A surrogate-backed search is planned. The loop below is the plan, not the present.</p>
+  <p>The planners do not use it yet. Greedy and the orchard planner rank baseline harm and place trees. A surrogate-backed search is planned (issues 34 and 49). The loop below is the plan, not the present.</p>
   <figure>
-    <svg viewBox="0 0 720 200" role="img" aria-labelledby="f5t f5d">
-      <title id="f5t">Where the surrogate will sit in the search loop</title>
-      <desc id="f5d">A loop of three boxes: planner proposes, surrogate predicts, planner updates, repeated thousands of times. The chosen plans leave the loop to the engine, which verifies them before anything is reported.</desc>
+    <svg viewBox="0 0 720 200" role="img" aria-labelledby="f7t f7d">
+      <title id="f7t">Where the surrogate will sit in the search loop</title>
+      <desc id="f7d">A loop of three boxes: planner proposes, surrogate predicts, planner updates, repeated thousands of times. The chosen plans leave the loop to the engine, which verifies them before anything is reported.</desc>
       <rect class="box" x="24" y="56" width="128" height="56" rx="8"/><text class="label" x="88" y="80" text-anchor="middle">Planner</text><text class="sub" x="88" y="96" text-anchor="middle">proposes plans</text>
       <path class="arrow" d="M152 72 H200"/>
       <rect class="focal" x="204" y="56" width="128" height="56" rx="8"/><text class="label" x="268" y="80" text-anchor="middle">Surrogate</text><text class="sub" x="268" y="96" text-anchor="middle">0.58 s per plan</text>
@@ -345,43 +503,34 @@ svg .grid{stroke:var(--rule);stroke-width:1}
   </figure>
 </section>
 
-<section id="limits">
-  <h2><i>08</i>Where it falls short</h2>
-  <p>These are the things that physics time did not allow. They are recorded so nobody mistakes an untested case for a tested one.</p>
-  <ul>
-    <li>One design day per city. The model has seen one sun path and one season.</li>
-    <li>Trees only. Shade structures, de-paving and cool surfaces have no input channel.</li>
-    <li>17 runs per city and 4 held-out designs. A ranking over 4 items proves little.</li>
-    <li>A transfer curve with two points, from one held-out city.</li>
-    <li>No search of settings: one learning rate, one width, one seed.</li>
-    <li>No uncertainty. One network cannot say where it is guessing.</li>
-    <li>No engine verification of a search, because no search uses the surrogate yet.</li>
-    <li>The sky openness channel is a proxy. The engine computes the real sky view factor for every baseline run and nobody reads it.</li>
-    <li>No augmentation. A flip or a rotation mirrors the sun path and puts shadows on the wrong side. Augmentation needs a sun-direction channel first.</li>
-    <li>Patches favor ground near trees. The far field is under-represented despite the floor.</li>
-    <li>Batch normalization with a batch of 8 on one device.</li>
-    <li>The checkpoint is a pickle with one metadata field. The manifest now fills that gap.</li>
-  </ul>
-</section>
-
-<section id="better">
-  <h2><i>09</i>How to train it better</h2>
-  <p>In order of value per engine hour. Each item is a GitHub issue.</p>
-  <ol>
-    <li>Keep the best epoch and stop early. Done, issue 99.</li>
-    <li>Write a manifest with every model. Done, issue 98.</li>
-    <li>Read the sky view factor and the shadow fraction from the baseline run, and add a sun-path channel from the design day and latitude. Issue 100.</li>
-    <li>Give each trusted intervention kind its own placement channel. Issue 47.</li>
-    <li>Define the validation protocol: folds by design, a held-out-city curve over fifteen cities, engine verification of every chosen plan. Issue 101.</li>
-    <li>Train five seeds and report where the spread is wide. Issue 102.</li>
-    <li>Then regenerate the physics and retrain every selected tile with manifests. Issue 105.</li>
-  </ol>
+<section id="gaps">
+  <h2><i>09</i>Where it falls short, and what to do</h2>
+  <p>These are the things that physics time did not allow, each with its remedy and the issue that tracks it. They are recorded so that nobody mistakes an untested case for a tested one. Two remedies are already done: the best epoch is kept and training stops early (issue 99), and every model carries a manifest (issue 98).</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Gap</th><th>Why it matters</th><th>Remedy</th><th class="n">Issue</th></tr></thead>
+    <tbody>
+      <tr><td>One design day per city</td><td>the model has seen one sun path and one season</td><td>a sun-path channel from the date and latitude; then several days per city</td><td class="n">100, 44</td></tr>
+      <tr><td>Trees only</td><td>shade structures, de-paving and cool surfaces have no input channel</td><td>one placement channel per intervention kind, and mixed designs</td><td class="n">47</td></tr>
+      <tr><td>17 runs and 4 held-out designs per city</td><td>a ranking over 4 items proves little</td><td>a validation protocol: folds by design, more held-out designs, reported per data-quality tier</td><td class="n">101</td></tr>
+      <tr><td>A transfer curve with two points</td><td>one held-out city</td><td>a held-out-city curve over every tile with physics</td><td class="n">101</td></tr>
+      <tr><td>Sky openness is a proxy</td><td>the engine computes the real sky view factor for every baseline run and nobody reads it</td><td>read the sky view factor and the shadow fraction from the baseline run</td><td class="n">100</td></tr>
+      <tr><td>No augmentation</td><td>a flip or a rotation mirrors the sun and puts shadows on the wrong side</td><td>a sun-direction channel first, then flips that rotate the sun with the map</td><td class="n">100</td></tr>
+      <tr><td>One learning rate, one width, one seed</td><td>nothing says these settings are good</td><td>a small sweep, every run with its own manifest, ranked under the protocol</td><td class="n">115</td></tr>
+      <tr><td>Batch normalization with a batch of 8</td><td>the statistics of 8 patches are noisy</td><td>group normalization or a larger batch, inside the sweep</td><td class="n">115</td></tr>
+      <tr><td>No uncertainty</td><td>one network cannot say where it is guessing</td><td>an ensemble of five seeds; report where the spread is wide</td><td class="n">102</td></tr>
+      <tr><td>Patches favor ground near trees</td><td>the far field is under-represented despite the floor</td><td>tune the floor inside the protocol</td><td class="n">101</td></tr>
+      <tr><td>No engine verification of a search</td><td>no search uses the surrogate yet</td><td>a surrogate-backed search whose front the engine verifies</td><td class="n">34, 49</td></tr>
+      <tr><td>Receptive field is an estimate</td><td>the code says 152 m, the measurement says 188 to 204 m</td><td>compute it exactly and record the method in the manifest</td><td class="n">114</td></tr>
+      <tr><td>The checkpoint is a pickle</td><td>one metadata field, no integrity check</td><td>safetensors with the manifest, through the model store</td><td class="n">103</td></tr>
+      <tr><td>Models retrained before these fixes</td><td>the two 2026-08-26 models predate best-epoch selection</td><td>regenerate and retrain every selected tile with the revised pipeline</td><td class="n">105</td></tr>
+    </tbody>
+  </table></div>
 </section>
 
 <section id="manifest">
   <h2><i>10</i>The manifest</h2>
   <p>Every trained model lives in its own directory with a file named <code>manifest.json</code>. The manifest says what the model is. A reader with the manifest and no code can decide whether to trust it.</p>
-  <table>
+  <div class="scroll"><table>
     <thead><tr><th>Section</th><th>What it holds</th></tr></thead>
     <tbody>
       <tr><td><code>model_id</code>, <code>created</code></td><td>response-unet, the cities, the time of training</td></tr>
@@ -395,22 +544,22 @@ svg .grid{stroke:var(--rule);stroke-width:1}
       <tr><td><code>weights</code></td><td>file, format, SHA-256 digest, size</td></tr>
       <tr><td><code>licence</code>, <code>intended_use</code></td><td>Apache-2.0, and what the model is for</td></tr>
     </tbody>
-  </table>
+  </table></div>
   <p>Read a manifest with one command.</p>
-  <pre>uv run shadecast surrogate describe data/tiles/6143/t43N_249_2547/models/response-unet-ahmedabad-20260826T143800</pre>
+  <pre>sdc surrogate describe data/tiles/6143/t43N_249_2547/models/response-unet-ahmedabad-20260826T143800</pre>
   <pre>{
   "model_id": "response-unet-ahmedabad-20260826T143800",
   "architecture": {"class": "ResponseUNet", "depth": 4, "widths": [32, 64, 128, 256],
                    "bottleneck": 512, "parameters": 7764193, "receptive_field_m": 152},
   "data": {"tiles": [{"city": "ahmedabad", "tile": "t43N_249_2547", "urban_centre": 6143, "designs": 17}],
            "held_out_designs": ["clustered_0105", "clustered_0110", "random_uniform_0205", "random_uniform_0210"],
-           "patch_px": 256, "train_patches": 416, "test_patches": 128},
+           "patch_px": 256, "patches_per_design": 32, "train_patches": 416, "test_patches": 128},
   "training": {"best_epoch": 36, "last_epoch": 40, "train_seconds": 233.3, "device": "mps"},
   "metrics": {"best_skill": 0.7687, "final_test_mae_C": 0.41, "zero_baseline_mae_C": 1.78},
   "provenance": {"engine": "solweig_gpu 2.0.0"},
   "weights": {"file": "model.pt", "format": "torch state_dict, pickle"}
 }</pre>
-  <div class="note"><p>The two models trained on 2026-08-26 predate the manifest. Their manifests were rebuilt from their training reports and say so in a note. Their weights are the last epoch, not the best.</p></div>
+  <div class="note"><p>The two models trained on 2026-08-26 predate the manifest. Their manifests were rebuilt from their training reports and say so in a note. Their weights are the last epoch, not the best. Their patches-per-design figure was corrected to 32 on 2026-10-23 from the recorded patch counts.</p></div>
 </section>
 
 <section id="storage">
@@ -456,6 +605,17 @@ data/models/     models trained on several tiles</pre>
   addEventListener("scroll",onScroll,{passive:true});
   addEventListener("resize",()=>{ fitTop(); mark(); });
   fitTop(); mark();
+})();
+/* Network explorer: a block in the figure and its rows in the table light up together. */
+(function(){
+  const all=Array.from(document.querySelectorAll("[data-stage]"));
+  function light(stage,on){ all.forEach(el=>{ if(el.dataset.stage===stage) el.classList.toggle("hl",on); }); }
+  all.forEach(el=>{
+    el.addEventListener("mouseenter",()=>light(el.dataset.stage,true));
+    el.addEventListener("mouseleave",()=>light(el.dataset.stage,false));
+    el.addEventListener("focus",()=>light(el.dataset.stage,true));
+    el.addEventListener("blur",()=>light(el.dataset.stage,false));
+  });
 })();
 </script>
 </body>
