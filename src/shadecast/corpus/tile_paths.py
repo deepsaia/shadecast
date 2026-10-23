@@ -1,8 +1,9 @@
 """One layout for everything a tile produces, keyed by urban centre id and tile id.
 
-``data/tiles/<uc_id>/<tile_id>/`` holds the bundle, the surrogate directory (which carries the
-baseline physics in ``surrogate/baseline`` as it always has, so the experiments and the
-walkthrough keep reading it unchanged), the plans, and a results file. Status is read from the
+``data/tiles/<uc_id>/<tile_id>/`` holds the bundle, the surrogate directory (the generated
+responses, with the baseline physics in ``surrogate/baseline`` as it always has, so the
+experiments and the walkthrough keep reading it unchanged), one directory per trained model under
+``models/``, the plans, and a results file. Status is read from the
 files that prove a stage ran, never from a separate record: the directories are the record.
 """
 
@@ -39,6 +40,16 @@ class TilePaths:
         return self.surrogate / "baseline"
 
     @property
+    def models(self) -> Path:
+        return self.root / "models"
+
+    def model_dirs(self) -> list[Path]:
+        """Every trained model of this tile, oldest first by directory name."""
+        if not self.models.is_dir():
+            return []
+        return sorted(child for child in self.models.iterdir() if (child / "model.pt").exists())
+
+    @property
     def plans(self) -> Path:
         return self.root / "plans"
 
@@ -56,7 +67,7 @@ class TilePaths:
             "bundle": (self.bundle / "provenance.json").exists(),
             "baseline": (self.baseline / "tmrt_daylight.npy").exists(),
             "surrogate": (self.surrogate / "manifest.json").exists(),
-            "model": (self.surrogate / "model.pt").exists(),
+            "model": bool(self.model_dirs()),
             "results": self.results.exists(),
         }
 
@@ -68,6 +79,7 @@ class TilePaths:
             "bundle": str(self.bundle),
             "baseline": str(self.baseline),
             "surrogate": str(self.surrogate),
+            "models": str(self.models),
             "plans": str(self.plans),
             "results": str(self.results),
         }

@@ -15,15 +15,29 @@ from typing import Annotated
 import numpy as np
 import typer
 
-from .console import console
+from .console import console, error_console, pairs_table
+from .surrogate import manifest
 from .surrogate.assessment import assess
+from .surrogate.assessment_inputs import AssessmentInputs
 from .surrogate.dataset import default_plan, generate
+from .surrogate.manifest_inputs import ManifestInputs
 from .surrogate.patch_set import PatchSet
 from .surrogate.patches import crop_batch, crop_cities
 from .surrogate.training import save_report, train
 from .surrogate.training_settings import TrainingSettings
 
 logger = logging.getLogger(__name__)
+
+# Models trained on several tiles belong to no tile and live here.
+MODELS_ROOT = Path("data/models")
+
+
+def models_root(pairs: list[tuple[Path, Path]]) -> Path:
+    """One tile's models live beside its surrogate directory; multi-tile models at the root."""
+    if len(pairs) == 1:
+        return Path(pairs[0][0]).parent / "models"
+    return MODELS_ROOT
+
 
 app = typer.Typer(
     name="surrogate",
@@ -109,7 +123,9 @@ def train_model(
         f"across {len(pairs)} cities in {time.time() - started:.1f}s"
     )
 
-    destination = pairs[0][0] if len(pairs) == 1 else Path("data/surrogate/multi")
+    created = manifest.now()
+    model_id = manifest.new_model_id(pairs, created)
+    destination = models_root(pairs) / model_id
     destination.mkdir(parents=True, exist_ok=True)
 
     settings = TrainingSettings(epochs=epochs, holdout_city=holdout_city)
@@ -121,6 +137,18 @@ def train_model(
         "max_C": round(float(np.max(targets)), 3),
     }
     save_report(report, destination / "training_report.json")
+    built = manifest.build(
+        ManifestInputs(
+            model_id=model_id,
+            created=created.isoformat(timespec="seconds"),
+            pairs=pairs,
+            report=report,
+            patch_px=patch,
+            per_entry=per_entry,
+            model_path=destination / "model.pt",
+        )
+    )
+    manifest.write(destination, built)
     verdict = "green" if report["beats_predicting_nothing"] else "red"
     console.print(
         f"[{verdict}]skill {report['final_skill']:+.3f}[/]  "
@@ -133,6 +161,7 @@ def train_model(
 
 @app.command("assess")
 def assess_model(
+    model_dir: Annotated[Path, typer.Argument(help="A trained model directory under models/.")],
     surrogate_dir: Annotated[Path, typer.Argument(help="Directory of generated responses.")],
     bundle: Annotated[Path, typer.Argument(help="The matching city bundle.")],
     design: Annotated[
@@ -146,7 +175,7 @@ def assess_model(
     error in the plan score, and how well plans are ordered.
     """
     with console.status("[cyan]comparing surrogate against engine truth[/]"):
-        report = assess(surrogate_dir, bundle, only=design)
+        report = assess(AssessmentInputs(model_dir, surrogate_dir, bundle, only=design))
 
     headline = report["headline"]
     verdict = "green" if headline["all_beat_predicting_nothing"] else "red"
@@ -159,5 +188,25 @@ def assess_model(
         f"ranking spearman {report['ranking']['spearman']}, "
         f"speedup {report['speed']['speedup']:,.0f}x"
     )
-    (Path(surrogate_dir) / "assessment.json").write_text(json.dumps(report, indent=2))
-    console.print(f"[dim]full report written to {surrogate_dir}/assessment.json[/]")
+    (Path(model_dir) / "assessment.json").write_text(json.dumps(report, indent=2))
+    console.print(f"[dim]full report written to {model_dir}/assessment.json[/]")
+
+
+@app.command("describe")
+def describe(
+    model_dir: Annotated[
+        Path, typer.Argument(help="A directory holding model.pt and manifest.json.")
+    ],
+    as_json: Annotated[bool, typer.Option("--json", help="Emit the manifest as JSON.")] = False,
+) -> None:
+    """Say what a trained model is, from its manifest alone."""
+    try:
+        found = manifest.read(model_dir)
+    except (FileNotFoundError, ValueError) as exc:
+        error_console.print(str(exc), style="red", markup=False)
+        raise typer.Exit(code=1) from exc
+    if as_json:
+        console.print_json(json.dumps(found))
+        return
+    console.print(pairs_table(found.get("model_id", "model"), manifest.summary(found)))
+    console.print(f"[dim]{found.get('intended_use')}[/]")

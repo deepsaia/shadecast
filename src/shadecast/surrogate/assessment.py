@@ -26,6 +26,7 @@ import rasterio
 import torch
 
 from ..exposure import outdoor_mask, outdoor_weights
+from .assessment_inputs import AssessmentInputs
 from .features import stack
 from .metrics import aggregate_error, distance_bands, ranking, skill, speedup
 from .patches import entries
@@ -58,23 +59,18 @@ def _city_layers(bundle: Path) -> dict:
     }
 
 
-def assess(
-    surrogate_dir: Path,
-    bundle: Path,
-    only: list[str] | None = None,
-    device: torch.device | None = None,
-) -> dict:
+def assess(inputs: AssessmentInputs, device: torch.device | None = None) -> dict:
     """Compare surrogate predictions against engine truth on the given designs."""
-    surrogate_dir, bundle = Path(surrogate_dir), Path(bundle)
-    checkpoint = surrogate_dir / "model.pt"
+    surrogate_dir, bundle = Path(inputs.surrogate_dir), Path(inputs.bundle)
+    checkpoint = Path(inputs.model_dir) / "model.pt"
     if not checkpoint.exists():
         raise FileNotFoundError(f"no trained model at {checkpoint}")
 
-    report_path = surrogate_dir / "training_report.json"
+    report_path = Path(inputs.model_dir) / "training_report.json"
     held_out = None
     if report_path.exists():
         held_out = json.loads(report_path.read_text()).get("held_out_designs")
-    wanted = only if only else held_out
+    wanted = inputs.only if inputs.only else held_out
     if not wanted:
         raise RuntimeError("no held-out designs recorded; train first")
 
@@ -127,7 +123,8 @@ def assess(
 
     mean_seconds = total_seconds / len(per_design)
     return {
-        "city": bundle.name,
+        "model": str(inputs.model_dir),
+        "city": bundle.parent.name if bundle.name == "bundle" else bundle.name,
         "designs_assessed": [d["design"] for d in per_design],
         "device": str(target_device),
         "headline": {
