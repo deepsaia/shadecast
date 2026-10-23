@@ -47,7 +47,7 @@ def urban_centre_summary(provenance: dict) -> dict | None:
         "name": record.get("name"),
         "koppen": record.get("koppen"),
         "income": record.get("income"),
-        "population": record.get("population"),
+        "population_2025": record.get("population_2025"),
         "tiles": record.get("tiles"),
     }
 
@@ -162,7 +162,7 @@ def build_city(city: str, bundle: Path, surrogate_dir: Path, out_dir: Path) -> d
             "buildings": provenance["buildings"]["count"],
             "built_fraction": provenance["buildings"]["built_fraction"],
             "canopy": provenance["canopy"]["cover_gt2m"],
-            "population": provenance.get("population", {}).get("total"),
+            "population_2020": provenance.get("population", {}).get("total"),
             "lat": provenance["aoi"]["lat"],
             "lon": provenance["aoi"]["lon"],
             "urban_centre": urban_centre_summary(provenance),
