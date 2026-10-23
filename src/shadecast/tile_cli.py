@@ -17,9 +17,14 @@ from typing import Annotated
 import typer
 from shapely.geometry.base import BaseGeometry
 
-from .console import console, error_console, pairs_table, tiles_table
-from .corpus import ucdb
+from . import cities
+from .console import console, error_console, pairs_table, records_table, tiles_table
+from .corpus import migrate, ucdb
+from .corpus.legacy_city import LegacyCity
+from .corpus.migration import Migration
 from .corpus.statistics import tile_stats
+from .corpus.tile import Tile
+from .corpus.tile_paths import TILES_ROOT, TilePaths
 from .corpus.tile_rasters import TileRasters
 from .corpus.tiling import (
     attributes,
@@ -34,7 +39,9 @@ from .corpus.urban_centres import UrbanCentres
 
 logger = logging.getLogger(__name__)
 
-TILES_ROOT = Path("data/tiles")
+# Where bundles and physics lived before tiles, for the migration.
+LEGACY_BUNDLE_ROOTS = (Path("out/corpus"), Path("data/cities"))
+LEGACY_SURROGATE_ROOT = Path("data/surrogate")
 
 app = typer.Typer(
     name="tile",
@@ -210,3 +217,91 @@ def stats(
     )
     for field, quantiles in summary.get("quantiles", {}).items():
         console.print(pairs_table(field, quantiles))
+
+
+def _tile(text: str) -> Tile:
+    try:
+        return Tile.from_id(text)
+    except ValueError as exc:
+        error_console.print(str(exc), style="red", markup=False)
+        raise typer.Exit(code=1) from exc
+
+
+@app.command("path")
+def path(
+    centre: Annotated[str, typer.Argument(help="An id, a slug such as ahmedabad, or a name.")],
+    tile: Annotated[str, typer.Argument(help="A tile id such as t6908_2816.")],
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
+) -> None:
+    """Where everything for one tile lives, and which stages have run."""
+    paths = TilePaths(TILES_ROOT, _resolve(centre).id, _tile(tile))
+    listed = {**paths.as_dict(), "stages": paths.stages()}
+    if as_json:
+        console.print_json(json.dumps(listed))
+        return
+    console.print(pairs_table(f"{paths.urban_centre} {paths.tile.id}", paths.as_dict()))
+    console.print(pairs_table("stages", paths.stages()))
+
+
+def legacy_bundle(key: str) -> Path | None:
+    """The bundle a city has under the pre-tile roots, if any."""
+    for root in LEGACY_BUNDLE_ROOTS:
+        candidate = Path(root) / key
+        if (candidate / "provenance.json").exists():
+            return candidate
+    return None
+
+
+def migrations() -> list[Migration]:
+    """A migration for every selected city that still has a legacy bundle."""
+    planned: list[Migration] = []
+    for city in cities.corpus().values():
+        bundle = legacy_bundle(city.key)
+        if bundle is None:
+            continue
+        legacy = LegacyCity(city, bundle, Path(LEGACY_SURROGATE_ROOT) / city.key)
+        paths = TilePaths(TILES_ROOT, city.ucdb_id, migrate.tile_of_bundle(bundle))
+        planned.append(migrate.plan(legacy, paths))
+    return planned
+
+
+def _moves_table(planned: list[Migration]) -> list[dict]:
+    return [
+        {"what": move.label, "from": str(move.source), "to": str(move.target)}
+        for migration in planned
+        for move in migration
+    ]
+
+
+@app.command("migrate")
+def migrate_legacy(
+    apply: Annotated[
+        bool, typer.Option("--apply", help="Move the directories. Without it, only show the plan.")
+    ] = False,
+) -> None:
+    """Move bundles and physics built before tiles into the tile layout, without re-running any.
+
+    Shows the plan and stops unless --apply is given. Refuses while a generator holds a lock
+    on anything about to move, and never overwrites an existing tile directory.
+    """
+    planned = migrations()
+    if not planned:
+        console.print("[dim]nothing left in the legacy layout.[/]")
+        return
+    console.print(records_table("Planned moves", _moves_table(planned)))
+    if not apply:
+        console.print("[dim]Plan only. Add --apply to move.[/]")
+        return
+    locks = migrate.held_locks(planned)
+    if locks:
+        error_console.print(
+            "a generator holds "
+            + ", ".join(str(lock) for lock in locks)
+            + "; try again when it has finished",
+            style="red",
+            markup=False,
+        )
+        raise typer.Exit(code=1)
+    for migration in planned:
+        migrate.apply(migration)
+        console.print(f"[green]{migration.paths.urban_centre}[/] {migration.paths.tile.id}: moved")
