@@ -9,6 +9,7 @@ import pytest
 from shapely.geometry import Point
 
 from shadecast.corpus import ucdb
+from shadecast.data.checksum import sha256
 
 GENERAL_ROWS = [
     {
@@ -97,7 +98,7 @@ def test_theme_dir_extracts_a_verified_archive_already_in_the_cache(tmp_path, mo
     archive = tmp_path / ucdb.archive_name(ucdb.GENERAL)
     with zipfile.ZipFile(archive, "w") as bundle:
         bundle.writestr(ucdb.csv_path(ucdb.GENERAL, tmp_path).name, "ID_UC_G0\n1\n")
-    monkeypatch.setitem(ucdb.CHECKSUMS, ucdb.GENERAL, ucdb.sha256(archive))
+    monkeypatch.setitem(ucdb.CHECKSUMS, ucdb.GENERAL, sha256(archive))
     assert ucdb.theme_dir(ucdb.GENERAL, tmp_path) == tmp_path / ucdb.GENERAL
     assert ucdb.csv_path(ucdb.GENERAL, tmp_path).exists()
 

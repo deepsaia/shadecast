@@ -13,10 +13,18 @@ from typing import Annotated
 
 import typer
 
-from .console import centre_details, centres_table, console, error_console
+from .console import (
+    centre_details,
+    centres_table,
+    console,
+    error_console,
+    pairs_table,
+    records_table,
+)
 from .corpus.draw import Draw
 from .corpus.sampling import sample as draw_sample
 from .corpus.sampling import strata
+from .corpus.statistics import corpus_stats
 from .corpus.urban_centre import UrbanCentre
 from .corpus.urban_centres import UrbanCentres
 
@@ -111,4 +119,25 @@ def sample(
     console.print(
         f"[dim]{len(drawn)} centres across {len(strata(drawn))} strata, "
         f"2025 population at least {min_population:,}, seed {seed}.[/]"
+    )
+
+
+@app.command("stats")
+def stats(
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of tables.")] = False,
+) -> None:
+    """Statistics over the whole corpus: totals, continents, countries, strata and sizes."""
+    summary = corpus_stats(load_centres().all())
+    if as_json:
+        console.print_json(json.dumps(summary))
+        return
+    console.print(pairs_table("Corpus", summary.get("totals", {})))
+    console.print(records_table("By continent", summary.get("by_continent", [])))
+    console.print(
+        records_table("Countries with most urban centres", summary.get("top_countries", []))
+    )
+    console.print(pairs_table("By Koppen class", summary.get("by_koppen", {})))
+    console.print(pairs_table("By income group", summary.get("by_income", {})))
+    console.print(
+        pairs_table("Urban centres by size, in 1 km tiles", summary.get("size_bands", {}))
     )

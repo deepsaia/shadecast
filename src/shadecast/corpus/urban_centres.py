@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from ..data import regions
 from . import ucdb
 from .legend import income_code, is_missing, koppen_code, koppen_symbol
 from .slugs import assign_slugs, slugify
@@ -35,6 +36,10 @@ def _names(main: object, listed: object) -> tuple[str, ...]:
     return tuple(names)
 
 
+def _text_or_none(value: object) -> str | None:
+    return None if is_missing(value) else str(value)
+
+
 def _centre_from(record: dict, slug: str) -> UrbanCentre:
     return UrbanCentre(
         id=int(record.get(ucdb.ID, 0)),
@@ -49,6 +54,9 @@ def _centre_from(record: dict, slug: str) -> UrbanCentre:
         koppen=koppen_symbol(record.get(ucdb.KOPPEN_CODE)),
         lon=float(record.get(ucdb.LON, float("nan"))),
         lat=float(record.get(ucdb.LAT, float("nan"))),
+        continent=_text_or_none(record.get("continent")),
+        subregion=_text_or_none(record.get("subregion")),
+        iso3=_text_or_none(record.get("iso3")),
     )
 
 
@@ -70,7 +78,7 @@ class UrbanCentres:
     @classmethod
     def load(cls, cache_dir: Path = ucdb.CACHE) -> UrbanCentres:
         """Read the corpus from the cached database, fetching it on first use."""
-        return cls(ucdb.table(cache_dir))
+        return cls(regions.with_regions(ucdb.table(cache_dir), cache_dir))
 
     def __len__(self) -> int:
         return len(self._by_id)

@@ -358,6 +358,19 @@
       "used_for": "The income stratum of each urban centre, joined by country, reached through GHS-UCDB."
     },
     {
+      "key": "natural_earth_admin0",
+      "group": "data",
+      "title": "Natural Earth admin-0 countries, 1:50m",
+      "authors_or_publisher": "Natural Earth",
+      "release": "5.1.1",
+      "licence": "Public domain",
+      "url": "https://www.naturalearthdata.com/downloads/50m-cultural-vectors/",
+      "endpoint": "https://naciscdn.org/naturalearth/50m/cultural/ne_50m_admin_0_countries.zip",
+      "access": "anonymous",
+      "short": "Natural Earth countries 1:50m",
+      "used_for": "Continent, UN subregion and ISO3 code of each urban centre, by spatial join of its centroid, for corpus statistics. Names are never matched."
+    },
+    {
       "key": "landsat_c2l2",
       "group": "validation",
       "title": "Landsat Collection 2 Level 2 surface temperature",

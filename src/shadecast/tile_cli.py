@@ -17,8 +17,9 @@ from typing import Annotated
 import typer
 from shapely.geometry.base import BaseGeometry
 
-from .console import console, error_console, tiles_table
+from .console import console, error_console, pairs_table, tiles_table
 from .corpus import ucdb
+from .corpus.statistics import tile_stats
 from .corpus.tile_rasters import TileRasters
 from .corpus.tiling import (
     attributes,
@@ -174,3 +175,38 @@ def select(
         return
     console.print(tiles_table(chosen))
     console.print(f"[dim]{len(chosen)} of {len(rows)} tiles chosen.[/]")
+
+
+@app.command("stats")
+def stats(
+    centre: Annotated[str, typer.Argument(help="An id, a slug such as ahmedabad, or a name.")],
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of tables.")] = False,
+) -> None:
+    """Statistics over the tiles of one urban centre: counts, people, and spreads."""
+    found = _resolve(centre)
+    payload = cached_tiles(found) or describe_and_write(found)
+    summary = tile_stats(payload.get("tiles", []))
+    summary["urban_centre"] = {
+        "id": found.id,
+        "slug": found.slug,
+        "name": found.name,
+        "population_2025": found.population_2025,
+        "area_km2": found.area_km2,
+    }
+    if as_json:
+        console.print_json(json.dumps(summary))
+        return
+    console.print(
+        pairs_table(
+            found.name,
+            {
+                "tiles": summary.get("tiles"),
+                "populated tiles": summary.get("populated_tiles"),
+                "people, 2020 epoch": summary.get("population_2020"),
+                "people, 2025 epoch (GHS-UCDB)": found.population_2025,
+                **summary.get("tiles_over", {}),
+            },
+        )
+    )
+    for field, quantiles in summary.get("quantiles", {}).items():
+        console.print(pairs_table(field, quantiles))

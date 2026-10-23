@@ -23,6 +23,7 @@ COLUMNS = (
     "CL_KOP_CUR_2025",
     "lon",
     "lat",
+    "continent",
 )
 ROWS = [
     (
@@ -70,8 +71,22 @@ ROWS = [
 ]
 
 
+CONTINENTS = [
+    "Asia",
+    "Europe",
+    "North America",
+    "North America",
+    "North America",
+    "Africa",
+    "Africa",
+    "Africa",
+    "Africa",
+]
+
+
 def _fixture_centres() -> UrbanCentres:
-    return UrbanCentres(pd.DataFrame(ROWS, columns=COLUMNS))
+    rows = [(*row, continent) for row, continent in zip(ROWS, CONTINENTS, strict=True)]
+    return UrbanCentres(pd.DataFrame(rows, columns=COLUMNS))
 
 
 @pytest.fixture(autouse=True)
@@ -82,7 +97,7 @@ def _offline_database(monkeypatch):
 def test_help_lists_the_corpus_commands():
     result = runner.invoke(app, ["corpus", "--help"])
     assert result.exit_code == 0
-    for command in ("search", "show", "sample"):
+    for command in ("search", "show", "sample", "stats"):
         assert command in result.stdout
 
 
@@ -153,3 +168,13 @@ def test_sample_is_stratified_and_reproducible():
         ("BWh", "L"),
     }
     assert all(row["population_2025"] >= 600000 for row in first)
+
+
+def test_stats_reports_totals_and_continents():
+    result = runner.invoke(app, ["corpus", "stats", "--json"])
+    assert result.exit_code == 0, result.output
+    stats = json.loads(result.stdout)
+    assert stats["totals"]["urban_centres"] == 9
+    assert stats["totals"]["continents"] == 4
+    assert stats["by_continent"][0]["continent"] == "Africa"
+    assert "Africa" in runner.invoke(app, ["corpus", "stats"]).stdout

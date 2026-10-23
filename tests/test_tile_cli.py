@@ -107,7 +107,7 @@ def _offline(monkeypatch, tmp_path):
 def test_help_lists_the_tile_commands():
     result = runner.invoke(app, ["tile", "--help"])
     assert result.exit_code == 0
-    for command in ("list", "select"):
+    for command in ("list", "select", "stats"):
         assert command in result.stdout
 
 
@@ -174,3 +174,14 @@ def test_select_refuses_an_unknown_tile_id_by_name():
 def test_tiles_path_is_keyed_by_urban_centre_id(tmp_path):
     centre = _fixture_centres().by_id(6143)
     assert tile_cli.tiles_path(centre) == Path(tmp_path) / "6143" / "tiles.json"
+
+
+def test_stats_summarise_the_described_tiles():
+    result = runner.invoke(app, ["tile", "stats", "ahmedabad", "--json"])
+    assert result.exit_code == 0, result.output
+    stats = json.loads(result.stdout)
+    assert stats["tiles"] == 6
+    assert stats["populated_tiles"] == 5
+    assert stats["population_2020"] == 25000.0
+    assert stats["urban_centre"]["population_2025"] == 7898650
+    assert "built_fraction" in runner.invoke(app, ["tile", "stats", "ahmedabad"]).stdout
