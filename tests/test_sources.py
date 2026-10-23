@@ -6,7 +6,7 @@ import pytest
 
 from shadecast import build, sources, validation
 from shadecast.corpus import ucdb
-from shadecast.data import buildings, canopy, met, population, rasters
+from shadecast.data import buildings, built, canopy, met, population, rasters
 from shadecast.network import graph
 from shadecast.sim import runner
 
@@ -41,6 +41,8 @@ def test_every_data_source_is_anonymous_except_landsat():
         rasters.DEM_SOURCE,
         rasters.WORLDCOVER_SOURCE,
         population.SOURCE,
+        built.SURFACE_SOURCE,
+        built.HEIGHT_SOURCE,
         met.SOURCE,
         graph.SOURCE,
         validation.SOURCE,
@@ -59,6 +61,8 @@ def test_every_data_entry_is_named_by_a_module():
         rasters.DEM_SOURCE,
         rasters.WORLDCOVER_SOURCE,
         population.SOURCE,
+        built.SURFACE_SOURCE,
+        built.HEIGHT_SOURCE,
         met.SOURCE,
         graph.SOURCE,
         ucdb.SOURCE,

@@ -15,3 +15,4 @@ ignore = [
 "src/shadecast/cli.py" = ["PLR0913", "PLR0917"]
 "src/shadecast/surrogate_cli.py" = ["PLR0913", "PLR0917"]
 "src/shadecast/experiments_cli.py" = ["PLR0913", "PLR0917"]
+"src/shadecast/tile_cli.py" = ["PLR0913", "PLR0917"]
