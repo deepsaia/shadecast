@@ -2,18 +2,26 @@
 
 import json
 import os
+import time
+from io import StringIO
 from pathlib import Path
 
 import numpy as np
 import pytest
 import rasterio
 from rasterio.transform import from_origin
+from rich.console import Console
 
 from shadecast.sim.result import RunResult
 from shadecast.sim.runner import thread_environment
 from shadecast.surrogate import dataset
 from shadecast.surrogate.assessment import designs_for_tile
-from shadecast.surrogate.generation_progress import GenerationProgress, clock, sparkline
+from shadecast.surrogate.generation_progress import (
+    GenerationProgress,
+    clock,
+    running_bar,
+    sparkline,
+)
 from shadecast.surrogate.generation_settings import GenerationSettings
 from shadecast.surrogate.patches import tile_key
 
@@ -232,3 +240,18 @@ def test_designs_for_tile_keeps_this_tiles_held_out_designs():
     held = ["clustered_0105", "savannah:t1/corridor_0302", "savannah:t2/corridor_0305"]
     assert designs_for_tile(held, "savannah:t1") == ["clustered_0105", "corridor_0302"]
     assert designs_for_tile(held, "other") == ["clustered_0105"]
+
+
+def test_running_designs_get_a_bar_against_the_mean_once_one_has_finished():
+    assert running_bar(0.0).startswith("╺") and len(running_bar(0.0)) == 20
+    assert running_bar(1.0).startswith("━" * 19)
+    assert running_bar(0.5).count("━") == 19
+    console = Console(file=StringIO(), width=120, force_terminal=False, color_system=None)
+    progress = GenerationProgress(console, jobs=2)
+    progress.start("x", total=3, done=0)
+    progress.running = {"clustered_0105": time.time() - 100}
+    before = progress._running_now().plain
+    assert "no finished design to measure against yet" in before
+    progress.finished.append({"id": "a", "engine_seconds": 400.0, "mean_response_C": 5.0})
+    after = progress._running_now().plain
+    assert "━" in after and ("about 4m 59s left" in after or "about 5m 00s left" in after)
