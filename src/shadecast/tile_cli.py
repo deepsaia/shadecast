@@ -107,7 +107,7 @@ def _resolve(text: str) -> UrbanCentre:
 
 
 def _by_density(rows: list[dict]) -> list[dict]:
-    return sorted(rows, key=lambda row: -float(row.get("density_per_km2", 0.0)))
+    return sorted(rows, key=lambda row: -float(row.get("density_2020_per_km2", 0.0)))
 
 
 @app.command("list")

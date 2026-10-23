@@ -1,7 +1,7 @@
 """Enumerate the tiles of an urban centre, describe them, and choose among them.
 
 Attributes are computed for every tile before any is built, from rasters that share the GHS
-grid: population and density from GHS-POP, built fraction and mean height from GHS-BUILT. That
+grid: 2020 population and density from GHS-POP, built fraction and mean height from GHS-BUILT. That
 is what makes a selection rule explicit, whether it asks for the densest tiles, a spread across
 built-fraction terciles, named ids, or a seeded draw. Selection writes nothing; building does.
 """
@@ -86,8 +86,8 @@ def attributes(
                 "id": tile.id,
                 "x_km": tile.x_km,
                 "y_km": tile.y_km,
-                "population": round(float(people[index]), 1),
-                "density_per_km2": round(float(people[index]), 1),
+                "population_2020": round(float(people[index]), 1),
+                "density_2020_per_km2": round(float(people[index]), 1),
                 "built_fraction": round(float(built_m2[index]) / (KM * KM), 4),
                 "mean_height_m": round(float(heights[index]), 2),
                 "bounds_mollweide": list(tile.bounds),
@@ -99,7 +99,7 @@ def attributes(
 
 
 def select_densest(rows: Iterable[dict], count: int) -> list[dict]:
-    return sorted(rows, key=lambda row: -float(row.get("density_per_km2", 0.0)))[:count]
+    return sorted(rows, key=lambda row: -float(row.get("density_2020_per_km2", 0.0)))[:count]
 
 
 def select_stratified(rows: Iterable[dict], count: int) -> list[dict]:
@@ -109,7 +109,8 @@ def select_stratified(rows: Iterable[dict], count: int) -> list[dict]:
         return []
     terciles = [list(part) for part in np.array_split(np.array(by_built, dtype=object), TERCILES)]
     queues = [
-        sorted(part, key=lambda row: -float(row.get("density_per_km2", 0.0))) for part in terciles
+        sorted(part, key=lambda row: -float(row.get("density_2020_per_km2", 0.0)))
+        for part in terciles
     ]
     chosen: list[dict] = []
     turn = 0
@@ -134,7 +135,7 @@ def select_ids(rows: Iterable[dict], ids: Sequence[str]) -> list[dict]:
 
 def select_random(rows: Iterable[dict], count: int, *, seed: int) -> list[dict]:
     """A seeded draw among the tiles where anyone lives."""
-    populated = [row for row in rows if float(row.get("population", 0.0)) > 0]
+    populated = [row for row in rows if float(row.get("population_2020", 0.0)) > 0]
     rng = np.random.default_rng(seed)
     take = min(count, len(populated))
     picked = rng.choice(len(populated), size=take, replace=False)
