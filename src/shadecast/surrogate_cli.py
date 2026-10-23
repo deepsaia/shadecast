@@ -103,7 +103,9 @@ def train_model(
         str | None,
         typer.Option("--holdout-city", help="Hold out this whole city to measure transfer."),
     ] = None,
-    epochs: Annotated[int, typer.Option("--epochs")] = 30,
+    epochs: Annotated[
+        int, typer.Option("--epochs", help="Upper bound; patience stops early.")
+    ] = 60,
     patch: Annotated[int, typer.Option("--patch", help="Patch side in pixels.")] = 256,
     per_entry: Annotated[int, typer.Option("--per-entry", help="Patches per design.")] = 24,
     channels: Annotated[
