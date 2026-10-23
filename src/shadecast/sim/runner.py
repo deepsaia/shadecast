@@ -20,6 +20,7 @@ import logging
 import os
 import shutil
 import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -135,6 +136,40 @@ def build_command(
     return command
 
 
+_RUNNING: set[subprocess.Popen] = set()
+_RUNNING_LOCK = threading.Lock()
+
+
+def run_registered(
+    command: list[str], timeout: int, environment: dict[str, str]
+) -> subprocess.CompletedProcess:
+    """Run the engine as a child this process can stop; same result as subprocess.run."""
+    with subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=environment
+    ) as process:
+        with _RUNNING_LOCK:
+            _RUNNING.add(process)
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.communicate()
+            raise
+        finally:
+            with _RUNNING_LOCK:
+                _RUNNING.discard(process)
+    return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+
+
+def stop_running_engines() -> int:
+    """Terminate every engine this process started and has not finished. Returns how many."""
+    with _RUNNING_LOCK:
+        running = [process for process in _RUNNING if process.poll() is None]
+    for process in running:
+        process.terminate()
+    return len(running)
+
+
 THREAD_VARIABLES = (
     "OMP_NUM_THREADS",
     "MKL_NUM_THREADS",
@@ -189,14 +224,7 @@ def run(
     logger.info("running engine over %s for %s", base_path, date)
 
     started = time.time()
-    completed = subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        check=False,
-        env=thread_environment(threads),
-    )
+    completed = run_registered(command, timeout, thread_environment(threads))
     elapsed = time.time() - started
 
     tmrt_path = next(base_path.glob("output_folder/*/TMRT_*.tif"), None)
