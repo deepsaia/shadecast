@@ -28,10 +28,16 @@ bundle, offline, forever. A benchmark that requires three accounts is not a benc
 
 ```bash
 uv sync
-shadecast list                    # the 38 city selection and its stratification; sdc is a short alias
-shadecast build ahmedabad         # assemble one bundle, about 35 seconds
-shadecast plan data/cities/ahmedabad --kind tree --budget 10000000
+sdc list                          # the 38 city selection and its stratification; sdc is short for shadecast
+sdc build savannah                # assemble the densest tile's bundle, about a minute
+sdc tile path savannah            # where that tile lives and which stages have run; reads disk only
+sdc surrogate generate savannah --jobs 4   # physics for the 17 designs, 4 engine runs at a time
+sdc surrogate train savannah      # fit the surrogate on that tile
+sdc surrogate assess savannah     # judge the newest model against the engine
 ```
+
+Every command takes the city name. A tile's directory is `data/tiles/<urban centre id>/<tile id>/`,
+and `sdc tile path <city>` prints it, so nobody needs to know the id.
 
 The physics engine is optional and lives in its own uv environment, which is what
 keeps its GPL licence off this project:
