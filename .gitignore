@@ -26,3 +26,6 @@ docs/figures/
 
 # Local download cache for open data fetches.
 /cache/
+
+# Per-run logs some users keep beside the data.
+logs/
