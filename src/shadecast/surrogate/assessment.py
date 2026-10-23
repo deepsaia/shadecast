@@ -29,13 +29,30 @@ from . import manifest
 from .assessment_inputs import AssessmentInputs
 from .features import CHANNEL_SETS, channel_set_for, select, stack
 from .metrics import aggregate_error, distance_bands, ranking, skill, speedup
-from .patches import entries
+from .patches import entries, tile_key
 from .predict import load, predict_field
 from .scene import Scene
 
 logger = logging.getLogger(__name__)
 
 ENGINE_SECONDS_REFERENCE = 162.0
+
+
+def designs_for_tile(held_out: list[str], label: str) -> list[str]:
+    """The held-out design ids that belong to this tile, with any ``label/`` prefix removed.
+
+    A model trained on one tile records bare ids. A pooled model records ``city:tile/id``, so
+    assessing it against one tile means keeping that tile's designs only.
+    """
+    chosen = []
+    for design in held_out:
+        if "/" not in design:
+            chosen.append(design)
+            continue
+        prefix, name = design.split("/", 1)
+        if prefix == label:
+            chosen.append(name)
+    return chosen
 
 
 def channel_names(model_dir: Path, in_channels: int) -> tuple[str, ...]:
@@ -58,7 +75,7 @@ def assess(inputs: AssessmentInputs, device: torch.device | None = None) -> dict
     held_out = None
     if report_path.exists():
         held_out = json.loads(report_path.read_text()).get("held_out_designs")
-    wanted = inputs.only if inputs.only else held_out
+    wanted = inputs.only if inputs.only else designs_for_tile(held_out or [], tile_key(bundle))
     if not wanted:
         raise RuntimeError("no held-out designs recorded; train first")
 

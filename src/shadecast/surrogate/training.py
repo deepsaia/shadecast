@@ -70,10 +70,16 @@ def split_by_city(origins: list[str], holdout_city: str) -> tuple[np.ndarray, np
     the one that decides whether this is a benchmark or a single city demo.
     """
     origin_array = np.array(origins)
-    cities = {origin.split("/", 1)[0] for origin in origins}
-    if holdout_city not in cities:
-        raise ValueError(f"{holdout_city!r} not among {sorted(cities)}")
-    test = np.array([origin.startswith(f"{holdout_city}/") for origin in origin_array])
+    labels = {origin.split("/", 1)[0] for origin in origins}
+    cities = {label.split(":", 1)[0] for label in labels}
+    if holdout_city not in labels and holdout_city not in cities:
+        raise ValueError(f"{holdout_city!r} not among {sorted(labels)}")
+    test = np.array(
+        [
+            origin.startswith(f"{holdout_city}/") or origin.startswith(f"{holdout_city}:")
+            for origin in origin_array
+        ]
+    )
     return ~test, test
 
 
