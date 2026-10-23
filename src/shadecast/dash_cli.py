@@ -22,10 +22,6 @@ from .dash.server import serve
 
 logger = logging.getLogger(__name__)
 
-# out/corpus first, deliberately. The corpus is what the experiments and the surrogate
-# baselines are built from, and a stale bundle under data/cities once made the page
-# describe one city's geometry beside another one's physics.
-BUNDLE_ROOTS = (Path("out/corpus"), Path("data/cities"))
 # The same directory that gets published. Serving the walkthrough locally from one
 # bundle and publishing another is how the two quietly drift apart, which is exactly
 # what happened once: `shadecast dash` kept showing a build from hours earlier while
@@ -33,14 +29,6 @@ BUNDLE_ROOTS = (Path("out/corpus"), Path("data/cities"))
 DEFAULT_OUT = Path("docs")
 
 app = typer.Typer(name="dash", help="Interactive local walkthrough of what we do to a city.")
-
-
-def find_bundle(city: str) -> Path | None:
-    """Locate the bundle the physics was actually run on."""
-    found = [r / city for r in BUNDLE_ROOTS if (r / city / "provenance.json").exists()]
-    if len(found) > 1:
-        logger.warning("%s has %d bundles; using %s", city, len(found), found[0])
-    return found[0] if found else None
 
 
 def tile_entries(key: str, urban_centre: int) -> list[tuple[str, Path, Path]]:
@@ -56,17 +44,10 @@ def tile_entries(key: str, urban_centre: int) -> list[tuple[str, Path, Path]]:
 
 
 def discover() -> list[tuple[str, Path, Path]]:
-    """Every city that has both a bundle and generated physics, tile layout first."""
+    """Every tile with both a bundle and generated physics, in selection order."""
     found: list[tuple[str, Path, Path]] = []
     for key, city in cities.corpus().items():
-        entries = tile_entries(key, city.ucdb_id)
-        if entries:
-            found.extend(entries)
-            continue
-        surrogate_dir = Path("data/surrogate") / key
-        bundle = find_bundle(key)
-        if bundle and (surrogate_dir / "baseline" / "tmrt_daylight.npy").exists():
-            found.append((key, bundle, surrogate_dir))
+        found.extend(tile_entries(key, city.ucdb_id))
     return found
 
 

@@ -1,10 +1,11 @@
 """Enumerate the tiles of an urban centre, describe them, and choose among them.
 
-Attributes are computed for every tile before any is built, from rasters that share the GHS
-grid: 2020 population and density from GHS-POP, built fraction and mean height from GHS-BUILT.
-That is what makes a selection rule explicit, whether it asks for the densest tiles, a spread
-across built-fraction terciles, named ids, or a seeded draw. Selection writes nothing;
-building does.
+An urban centre's tiles are the UTM kilometre squares, in the zone of its centroid, whose
+centres fall inside its boundary. Each is described before any is built, from rasters on the
+GHS grid read through the tile's footprint: 2020 population and density from GHS-POP, built
+fraction and mean height from GHS-BUILT. That is what makes a selection rule explicit, whether
+it asks for the densest tiles, a spread across built-fraction terciles, named ids, or a seeded
+draw. Selection writes nothing; building does.
 """
 
 from __future__ import annotations
@@ -14,54 +15,71 @@ from collections.abc import Iterable, Sequence
 import numpy as np
 from shapely.geometry import Point
 from shapely.geometry.base import BaseGeometry
+from shapely.ops import transform as transform_geometry
 from shapely.prepared import prep
 
+from ..data import ghs_grid
 from .tile import KM, Tile
 from .tile_rasters import TileRasters
+from .utm_zone import UtmZone
 
 TERCILES = 3
 SQUARE_METRES_PER_TILE = KM * KM
 
 
+def zone_of(boundary: BaseGeometry) -> UtmZone:
+    """The UTM zone of an urban centre, from the centroid of its Mollweide boundary."""
+    centroid = boundary.centroid
+    lon, lat = ghs_grid.to_wgs84(centroid.x, centroid.y)
+    return UtmZone.from_lonlat(lon, lat)
+
+
 def _north_to_south(tile: Tile) -> tuple[int, int]:
-    return -tile.y_km, tile.x_km
+    return -tile.n_km, tile.e_km
 
 
-def tiles_of(polygon: BaseGeometry) -> list[Tile]:
-    """Every 1 km cell whose centre lies inside the boundary, north to south, west to east."""
-    minx, miny, maxx, maxy = polygon.bounds
-    prepared = prep(polygon)
+def tiles_of(boundary: BaseGeometry) -> list[Tile]:
+    """Every kilometre square whose centre lies inside the boundary, north to south, west to east.
+
+    The boundary is in the GHS Mollweide grid, as the database publishes it.
+    """
+    zone = zone_of(boundary)
+    footprint = transform_geometry(zone.transformer_from(ghs_grid.CRS).transform, boundary)
+    minx, miny, maxx, maxy = footprint.bounds
+    prepared = prep(footprint)
     found: list[Tile] = []
-    for y_km in range(int(np.floor(miny / KM)), int(np.ceil(maxy / KM))):
-        for x_km in range(int(np.floor(minx / KM)), int(np.ceil(maxx / KM))):
-            tile = Tile(x_km, y_km)
-            if prepared.contains(Point(*tile.centre_mollweide)):
+    for n_km in range(int(np.floor(miny / KM)), int(np.ceil(maxy / KM))):
+        for e_km in range(int(np.floor(minx / KM)), int(np.ceil(maxx / KM))):
+            tile = Tile(zone, e_km, n_km)
+            if prepared.contains(Point(*tile.centre_utm)):
                 found.append(tile)
     return sorted(found, key=_north_to_south)
 
 
-def _mean_height_where_built(rasters: TileRasters, tile: Tile) -> float:
+def _mean_height_where_built(rasters: TileRasters, footprint: BaseGeometry) -> float:
     """Mean height over the cells that have any, so empty cells do not dilute it."""
-    block = rasters.building_height.block(tile.bounds)
-    built = block[block > 0]
+    heights = rasters.building_height.inside(footprint)
+    built = heights[heights > 0]
     return float(built.mean()) if built.size else 0.0
 
 
 def describe_tile(tile: Tile, rasters: TileRasters) -> dict:
     """One record: people, density, built fraction, mean height, and both bounds."""
-    people = rasters.population_2020.sum_in(tile.bounds)
+    footprint = tile.polygon_in(ghs_grid.CRS)
+    people = rasters.population_2020.sum_inside(footprint)
     lat, lon = tile.centre_wgs84
     return {
         "id": tile.id,
-        "x_km": tile.x_km,
-        "y_km": tile.y_km,
+        "zone": tile.zone.id,
+        "e_km": tile.e_km,
+        "n_km": tile.n_km,
         "population_2020": round(people, 1),
         "density_2020_per_km2": round(people, 1),
         "built_fraction": round(
-            rasters.built_surface.sum_in(tile.bounds) / SQUARE_METRES_PER_TILE, 4
+            rasters.built_surface.sum_inside(footprint) / SQUARE_METRES_PER_TILE, 4
         ),
-        "mean_height_m": round(_mean_height_where_built(rasters, tile), 2),
-        "bounds_mollweide": list(tile.bounds),
+        "mean_height_m": round(_mean_height_where_built(rasters, footprint), 2),
+        "bounds_utm": list(tile.bounds),
         "bounds_wgs84": [round(value, 6) for value in tile.bounds_wgs84],
         "centre": [round(lat, 6), round(lon, 6)],
     }

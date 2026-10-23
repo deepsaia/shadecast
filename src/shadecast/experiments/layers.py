@@ -14,9 +14,9 @@ from pathlib import Path
 import numpy as np
 import rasterio
 
+from ..bundles import building_height
 from ..data.landcover import to_umep
 from ..exposure import outdoor_mask, outdoor_weights
-from ..repair import building_height
 
 logger = logging.getLogger(__name__)
 

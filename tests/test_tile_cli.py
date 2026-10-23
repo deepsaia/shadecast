@@ -7,8 +7,7 @@ import pandas as pd
 import pytest
 from typer.testing import CliRunner
 
-from shadecast import cities, tile_cli
-from shadecast.cities import City
+from shadecast import tile_cli
 from shadecast.cli import app
 from shadecast.corpus.urban_centre import UrbanCentre
 from shadecast.corpus.urban_centres import UrbanCentres
@@ -30,7 +29,7 @@ COLUMNS = (
 ROWS = [(6143, "Ahmedabad", "Ahmedabad", "India", 6, 7898649.8, "Lower Middle", "6", 72.6, 23.0)]
 TILES = [
     {
-        "id": "t6897_2808",
+        "id": "t43N_249_2547",
         "x_km": 6897,
         "y_km": 2808,
         "population_2020": 9000.0,
@@ -39,7 +38,7 @@ TILES = [
         "mean_height_m": 9.0,
     },
     {
-        "id": "t6898_2808",
+        "id": "t43N_250_2547",
         "x_km": 6898,
         "y_km": 2808,
         "population_2020": 7000.0,
@@ -48,7 +47,7 @@ TILES = [
         "mean_height_m": 8.0,
     },
     {
-        "id": "t6897_2807",
+        "id": "t43N_249_2546",
         "x_km": 6897,
         "y_km": 2807,
         "population_2020": 5000.0,
@@ -57,7 +56,7 @@ TILES = [
         "mean_height_m": 6.0,
     },
     {
-        "id": "t6898_2807",
+        "id": "t43N_250_2546",
         "x_km": 6898,
         "y_km": 2807,
         "population_2020": 3000.0,
@@ -66,7 +65,7 @@ TILES = [
         "mean_height_m": 5.0,
     },
     {
-        "id": "t6899_2807",
+        "id": "t43N_251_2546",
         "x_km": 6899,
         "y_km": 2807,
         "population_2020": 1000.0,
@@ -75,7 +74,7 @@ TILES = [
         "mean_height_m": 3.0,
     },
     {
-        "id": "t6899_2808",
+        "id": "t43N_251_2547",
         "x_km": 6899,
         "y_km": 2808,
         "population_2020": 0.0,
@@ -108,7 +107,7 @@ def _offline(monkeypatch, tmp_path):
 def test_help_lists_the_tile_commands():
     result = runner.invoke(app, ["tile", "--help"])
     assert result.exit_code == 0
-    for command in ("list", "select", "stats", "path", "migrate"):
+    for command in ("list", "select", "stats", "path"):
         assert command in result.stdout
 
 
@@ -118,11 +117,11 @@ def test_list_writes_tiles_json_and_prints_the_densest_first(tmp_path):
     payload = json.loads(result.stdout)
     assert payload["count"] == 6
     assert payload["urban_centre"]["id"] == 6143
-    assert [row["id"] for row in payload["tiles"]][:2] == ["t6897_2808", "t6898_2808"]
+    assert [row["id"] for row in payload["tiles"]][:2] == ["t43N_249_2547", "t43N_250_2547"]
     written = json.loads((tmp_path / "6143" / "tiles.json").read_text())
     assert written["count"] == 6
     table = runner.invoke(app, ["tile", "list", "6143", "--limit", "2"])
-    assert "t6897_2808" in table.stdout and "t6899_2807" not in table.stdout
+    assert "t43N_249_2547" in table.stdout and "t43N_251_2546" not in table.stdout
 
 
 def test_list_reads_the_written_file_instead_of_describing_again(monkeypatch):
@@ -139,17 +138,17 @@ def _select(*args: str) -> list[dict]:
 
 
 def test_select_densest_takes_the_top_k():
-    assert [row["id"] for row in _select("--densest", "2")] == ["t6897_2808", "t6898_2808"]
+    assert [row["id"] for row in _select("--densest", "2")] == ["t43N_249_2547", "t43N_250_2547"]
 
 
 def test_select_stratified_spreads_over_built_fraction_terciles():
     chosen = _select("--stratified", "3")
-    assert [row["id"] for row in chosen] == ["t6897_2808", "t6897_2807", "t6899_2807"]
+    assert [row["id"] for row in chosen] == ["t43N_249_2547", "t43N_249_2546", "t43N_251_2546"]
 
 
 def test_select_ids_keeps_the_asked_order():
-    chosen = _select("--ids", "t6898_2807", "--ids", "t6897_2808")
-    assert [row["id"] for row in chosen] == ["t6898_2807", "t6897_2808"]
+    chosen = _select("--ids", "t43N_250_2546", "--ids", "t43N_249_2547")
+    assert [row["id"] for row in chosen] == ["t43N_250_2546", "t43N_249_2547"]
 
 
 def test_select_random_is_reproducible_and_populated():
@@ -189,78 +188,14 @@ def test_stats_summarise_the_described_tiles():
 
 
 def test_path_prints_where_a_tile_lives_and_its_stages(tmp_path):
-    result = runner.invoke(app, ["tile", "path", "ahmedabad", "t6908_2816", "--json"])
+    result = runner.invoke(app, ["tile", "path", "ahmedabad", "t43N_249_2546", "--json"])
     assert result.exit_code == 0, result.output
     listed = json.loads(result.stdout)
-    assert listed["tile"] == "t6908_2816"
-    assert listed["bundle"] == str(tmp_path / "6143" / "t6908_2816" / "bundle")
+    assert listed["tile"] == "t43N_249_2546"
+    assert listed["bundle"] == str(tmp_path / "6143" / "t43N_249_2546" / "bundle")
     assert listed["stages"]["bundle"] is False
 
 
 def test_path_refuses_a_malformed_tile_id():
     result = runner.invoke(app, ["tile", "path", "ahmedabad", "6908"])
     assert result.exit_code == 1
-
-
-def _legacy_city(root: Path) -> Path:
-    bundle = root / "out" / "corpus" / "ahmedabad"
-    bundle.mkdir(parents=True)
-    (bundle / "provenance.json").write_text(
-        json.dumps({"aoi": {"lat": 23.013954, "lon": 72.558362, "side_m": 1000, "res_m": 1.0}})
-    )
-    surrogate = root / "data" / "surrogate" / "ahmedabad" / "baseline"
-    surrogate.mkdir(parents=True)
-    (surrogate / "tmrt_daylight.npy").write_bytes(b"field")
-    return bundle
-
-
-def _fixture_corpus(entries=None, centres=None):
-    centre = _fixture_centres().by_id(6143)
-    return {
-        "ahmedabad": City(
-            "ahmedabad",
-            6143,
-            centre.name,
-            centre.country,
-            centre.lat,
-            centre.lon,
-            centre.koppen,
-            centre.income,
-            "South Asia",
-            centre.population_2025,
-            centre.tiles,
-        )
-    }
-
-
-@pytest.fixture
-def _legacy_layout(monkeypatch, tmp_path):
-    monkeypatch.setattr(cities, "corpus", _fixture_corpus)
-    monkeypatch.setattr(tile_cli, "LEGACY_BUNDLE_ROOTS", (tmp_path / "out" / "corpus",))
-    monkeypatch.setattr(tile_cli, "LEGACY_SURROGATE_ROOT", tmp_path / "data" / "surrogate")
-    return _legacy_city(tmp_path)
-
-
-def test_migrate_shows_the_plan_and_moves_nothing_by_default(_legacy_layout):
-    result = runner.invoke(app, ["tile", "migrate"])
-    assert result.exit_code == 0, result.output
-    assert "bundle" in result.stdout and "Plan only" in result.stdout
-    assert _legacy_layout.exists()
-
-
-def test_migrate_apply_moves_into_the_tile_layout(_legacy_layout, tmp_path):
-    result = runner.invoke(app, ["tile", "migrate", "--apply"])
-    assert result.exit_code == 0, result.output
-    assert not _legacy_layout.exists()
-    assert (tmp_path / "6143" / "t6908_2816" / "bundle" / "provenance.json").exists()
-    assert (
-        tmp_path / "6143" / "t6908_2816" / "surrogate" / "baseline" / "tmrt_daylight.npy"
-    ).exists()
-
-
-def test_migrate_apply_refuses_while_a_generator_runs(_legacy_layout, tmp_path):
-    (tmp_path / "data" / "surrogate" / "ahmedabad" / ".generating.lock").write_text("1")
-    result = runner.invoke(app, ["tile", "migrate", "--apply"])
-    assert result.exit_code == 1
-    assert "generating.lock" in result.output
-    assert _legacy_layout.exists()

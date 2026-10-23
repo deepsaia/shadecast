@@ -1,8 +1,8 @@
 """A rectangular read of a 100 m GHS raster, kept in the grid's own coordinates.
 
-Per-tile statistics over an urban centre are sums and means over blocks of 100 m cells. Keeping
-the read in Mollweide metres, with its north-west corner recorded, makes every block a plain
-slice and every tile total exact, with no reprojection anywhere.
+Per-tile statistics are sums over the cells whose centres fall inside a tile's footprint. The
+footprint arrives as a polygon in the grid's coordinates, so the window rasterises it onto its
+own cells and reads through the mask, with no reprojection of the raster itself.
 """
 
 from __future__ import annotations
@@ -12,7 +12,10 @@ from pathlib import Path
 
 import numpy as np
 import rasterio
+from affine import Affine
+from rasterio.features import rasterize
 from rasterio.windows import from_bounds
+from shapely.geometry.base import BaseGeometry
 
 from . import ghs_grid
 from .ghs_types import Bounds
@@ -32,27 +35,26 @@ class RasterWindow:
         shape = (round((maxy - miny) / ghs_grid.CELL_M), round((maxx - minx) / ghs_grid.CELL_M))
         return cls(np.zeros(shape, dtype="float32"), (minx, maxy))
 
-    def _offsets(self, bounds: Bounds) -> tuple[int, int]:
-        """Row and column of the north-west cell of a box inside this window."""
-        minx, _, _, maxy = bounds
-        row = round((self.origin[1] - maxy) / ghs_grid.CELL_M)
-        col = round((minx - self.origin[0]) / ghs_grid.CELL_M)
-        return row, col
+    @property
+    def transform(self) -> Affine:
+        return Affine(ghs_grid.CELL_M, 0.0, self.origin[0], 0.0, -ghs_grid.CELL_M, self.origin[1])
 
-    def block(self, bounds: Bounds) -> np.ndarray:
-        """The cells inside a box, clipped to the window."""
-        minx, miny, maxx, maxy = bounds
-        row, col = self._offsets(bounds)
-        rows = round((maxy - miny) / ghs_grid.CELL_M)
-        cols = round((maxx - minx) / ghs_grid.CELL_M)
-        return self.values[max(row, 0) : max(row + rows, 0), max(col, 0) : max(col + cols, 0)]
+    def mask(self, footprint: BaseGeometry) -> np.ndarray:
+        """True for the cells whose centres lie inside a footprint given in grid coordinates."""
+        burned = rasterize(
+            [(footprint, 1)],
+            out_shape=self.values.shape,
+            transform=self.transform,
+            fill=0,
+            dtype="uint8",
+        )
+        return burned.astype(bool)
 
-    def sum_in(self, bounds: Bounds) -> float:
-        return float(self.block(bounds).sum())
+    def inside(self, footprint: BaseGeometry) -> np.ndarray:
+        return self.values[self.mask(footprint)]
 
-    def mean_in(self, bounds: Bounds) -> float:
-        block = self.block(bounds)
-        return float(block.mean()) if block.size else 0.0
+    def sum_inside(self, footprint: BaseGeometry) -> float:
+        return float(self.inside(footprint).sum())
 
     def paste(self, tile_path: Path, bounds: Bounds, nodata: float | None) -> int:
         """Read the part of one tile raster inside the box into this window.
@@ -76,6 +78,7 @@ class RasterWindow:
         if fill is not None:
             data[data == fill] = 0.0
         data[data < 0] = 0.0
-        row, col = self._offsets(clip)
+        row = round((self.origin[1] - clip[3]) / ghs_grid.CELL_M)
+        col = round((clip[0] - self.origin[0]) / ghs_grid.CELL_M)
         self.values[row : row + data.shape[0], col : col + data.shape[1]] = data
         return int(data.size)

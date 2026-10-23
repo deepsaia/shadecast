@@ -25,12 +25,12 @@ import rasterio
 
 from ..aoi import AOI
 from ..baselines import orchard
+from ..bundles import aoi_from_provenance
 from ..interventions import apply
 from ..network import graph as netgraph
 from ..network import heat, rasterize, routing
 from ..objectives import benefit, score
 from ..pipeline import BUNDLE_FILES, daylight_mean
-from ..repair import aoi_from_provenance
 from ..sim.runner import run
 from .layers import city_layers
 

@@ -21,8 +21,6 @@ from .experiments.targeting import run_targeting
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SURROGATE = Path("data/surrogate")
-
 app = typer.Typer(
     name="experiments",
     help="Run the pre-registered experiments and apply their fixed verdict rules.",
@@ -30,25 +28,19 @@ app = typer.Typer(
 )
 
 
-def _surrogate_dir(bundle: Path, surrogate_root: Path) -> tuple[str, Path]:
-    """The city name and surrogate directory for a bundle, in either layout.
-
-    In the tile layout the bundle directory is called `bundle` and its surrogate directory sits
-    beside it; before tiles both were named after the city under separate roots.
-    """
-    if bundle.name == "bundle" and (bundle.parent / "surrogate").exists():
-        provenance = json.loads((bundle / "provenance.json").read_text())
-        return str(
-            provenance.get("city", {}).get("key", bundle.parent.name)
-        ), bundle.parent / "surrogate"
-    return bundle.name, surrogate_root / bundle.name
+def _surrogate_dir(bundle: Path) -> tuple[str, Path]:
+    """The label and the surrogate directory of a tile, from the bundle beside it."""
+    provenance = json.loads((bundle / "provenance.json").read_text())
+    tile = provenance.get("tile", {}).get("id", bundle.parent.name)
+    key = provenance.get("city", {}).get("key", bundle.parent.name)
+    return f"{key}-{tile}", bundle.parent / "surrogate"
 
 
-def _corpus(bundles: list[Path], surrogate_root: Path) -> list[tuple[str, Path, Path]]:
+def _corpus(bundles: list[Path]) -> list[tuple[str, Path, Path]]:
     """Pair each bundle with the surrogate directory holding its baseline field."""
     corpus = []
     for bundle in bundles:
-        name, surrogate_dir = _surrogate_dir(bundle, surrogate_root)
+        name, surrogate_dir = _surrogate_dir(bundle)
         if not (surrogate_dir / "baseline" / "tmrt_daylight.npy").exists():
             raise typer.BadParameter(
                 f"{name} has no baseline field at {surrogate_dir}. Run the baseline first."
@@ -63,16 +55,13 @@ def factorial(
     out: Annotated[Path, typer.Option("--out", help="Where to write results.")] = Path(
         "data/factorial.json"
     ),
-    surrogate_root: Annotated[
-        Path, typer.Option("--surrogate-root", help="Root holding per-city baselines.")
-    ] = DEFAULT_SURROGATE,
 ) -> None:
     """Which intervention type buys the most cooling per dollar (H3, H4)?
 
     Every cell is a real engine run. The albedo arms are excluded while their sign is
     unresolved, so this covers the geometry and surface temperature channels only.
     """
-    corpus = _corpus(bundles, surrogate_root)
+    corpus = _corpus(bundles)
     rows = run_factorial(corpus, out)
     console.print(f"[green]{len(rows)} cells written to {out}[/]")
 
@@ -84,16 +73,13 @@ def targeting(
     out: Annotated[Path, typer.Option("--out", help="Where to write results.")] = Path(
         "data/targeting.json"
     ),
-    surrogate_root: Annotated[
-        Path, typer.Option("--surrogate-root", help="Root holding per-city baselines.")
-    ] = DEFAULT_SURROGATE,
 ) -> None:
     """Does targeting corridors select a different plan than targeting hot ground (H8)?
 
     Two plans per city at one budget, both simulated, each scored on both objectives.
     A high overlap falsifies H8 and is reported as a null rather than quietly dropped.
     """
-    corpus = _corpus(bundles, surrogate_root)
+    corpus = _corpus(bundles)
     result = run_targeting(corpus, out, budget=budget)
     console.print_json(json.dumps(result["verdict"]))
     console.print(f"[green]written to {out}[/]")
@@ -106,16 +92,13 @@ def channel(
     out: Annotated[Path, typer.Option("--out", help="Where to write results.")] = Path(
         "data/channel.json"
     ),
-    surrogate_root: Annotated[
-        Path, typer.Option("--surrogate-root", help="Root holding per-city baselines.")
-    ] = DEFAULT_SURROGATE,
 ) -> None:
     """Does the surface temperature channel cool, and behave like its parameter (H5, H6)?
 
     Each city pays for one extra engine run holding land cover unchanged. Without that
     matched control the result would confound de-paving with switching land cover on.
     """
-    corpus = _corpus(bundles, surrogate_root)
+    corpus = _corpus(bundles)
     result = run_channel(corpus, out, budget=budget)
     console.print_json(json.dumps(result["verdict"]))
     console.print(f"[green]written to {out}[/]")

@@ -30,35 +30,22 @@ def _tile(root: Path, urban_centre: int, tile_id: str) -> Path:
 def _offline(monkeypatch, tmp_path):
     monkeypatch.setattr(cities, "corpus", _fixture_corpus)
     monkeypatch.setattr(dash_cli, "TILES_ROOT", tmp_path / "tiles")
-    monkeypatch.setattr(dash_cli, "BUNDLE_ROOTS", (tmp_path / "out" / "corpus",))
     monkeypatch.chdir(tmp_path)
 
 
 def test_a_city_with_one_tile_keeps_its_key(tmp_path):
-    tile = _tile(tmp_path / "tiles", 6143, "t6908_2816")
+    tile = _tile(tmp_path / "tiles", 6143, "t43N_249_2546")
     assert dash_cli.discover() == [("ahmedabad", tile / "bundle", tile / "surrogate")]
 
 
 def test_a_city_with_several_tiles_is_named_by_key_and_tile(tmp_path):
-    _tile(tmp_path / "tiles", 6143, "t6908_2816")
-    _tile(tmp_path / "tiles", 6143, "t6908_2818")
+    _tile(tmp_path / "tiles", 6143, "t43N_249_2546")
+    _tile(tmp_path / "tiles", 6143, "t43N_249_2548")
     names = [entry[0] for entry in dash_cli.discover()]
-    assert names == ["ahmedabad-t6908_2816", "ahmedabad-t6908_2818"]
+    assert names == ["ahmedabad-t43N_249_2546", "ahmedabad-t43N_249_2548"]
 
 
 def test_a_tile_without_physics_is_not_shown(tmp_path):
-    tile = _tile(tmp_path / "tiles", 6143, "t6908_2816")
+    tile = _tile(tmp_path / "tiles", 6143, "t43N_249_2546")
     (tile / "surrogate" / "baseline" / "tmrt_daylight.npy").unlink()
     assert dash_cli.discover() == []
-
-
-def test_a_legacy_city_is_found_when_it_has_no_tiles(tmp_path):
-    bundle = tmp_path / "out" / "corpus" / "lagos"
-    bundle.mkdir(parents=True)
-    (bundle / "provenance.json").write_text("{}")
-    surrogate = tmp_path / "data" / "surrogate" / "lagos" / "baseline"
-    surrogate.mkdir(parents=True)
-    (surrogate / "tmrt_daylight.npy").write_bytes(b"")
-    found = dash_cli.discover()
-    assert [entry[0] for entry in found] == ["lagos"]
-    assert found[0][1] == bundle

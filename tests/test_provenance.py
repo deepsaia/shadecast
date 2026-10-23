@@ -1,9 +1,6 @@
 """A bundle carries its urban centre and the citation of every layer. No network, no engine."""
 
-import json
-from pathlib import Path
-
-from shadecast import build, repair, sources
+from shadecast import build, sources
 from shadecast.cities import City
 from shadecast.corpus import ucdb
 from shadecast.dash import builder
@@ -24,19 +21,6 @@ AHMEDABAD = City(
 )
 
 
-def _old_provenance(path: Path) -> Path:
-    payload = {
-        "schema": 1,
-        "city": {"key": "ahmedabad", "name": "Ahmedabad", "country": "IND"},
-        "aoi": {"lat": 23.0139, "lon": 72.5583, "side_m": 1000, "res_m": 1.0},
-        "dem": {"source": "Copernicus DEM GLO-30 (AWS Open Data, unsigned)"},
-        "met": {"source": "Open-Meteo ERA5 archive (no key)", "design_day": "2024-05-23"},
-    }
-    target = path / "provenance.json"
-    target.write_text(json.dumps(payload))
-    return target
-
-
 def test_urban_centre_record_carries_strata_release_and_citation():
     record = build.urban_centre_record(AHMEDABAD)
     assert record["id"] == 6143
@@ -50,23 +34,6 @@ def test_urban_centre_record_carries_strata_release_and_citation():
     assert record["income"] == "LM"
     assert record["source_key"] == ucdb.SOURCE
     assert record["citation"] == sources.citation(ucdb.SOURCE)
-
-
-def test_backfill_provenance_adds_the_urban_centre_and_layer_citations(tmp_path):
-    target = _old_provenance(tmp_path)
-    assert repair.backfill_provenance(tmp_path, AHMEDABAD) == ["urban_centre", "dem", "met"]
-    payload = json.loads(target.read_text())
-    assert payload["urban_centre"]["id"] == 6143
-    assert payload["dem"]["source_key"] == "copernicus_dem"
-    assert payload["dem"]["source"] == sources.short("copernicus_dem")
-    assert payload["met"]["citation"] == sources.citation("open_meteo_era5")
-    assert payload["met"]["design_day"] == "2024-05-23"
-
-
-def test_backfill_provenance_is_idempotent(tmp_path):
-    _old_provenance(tmp_path)
-    repair.backfill_provenance(tmp_path, AHMEDABAD)
-    assert repair.backfill_provenance(tmp_path, AHMEDABAD) == []
 
 
 def test_dash_summarises_the_urban_centre_when_present():

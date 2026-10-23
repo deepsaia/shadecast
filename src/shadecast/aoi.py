@@ -24,9 +24,14 @@ class AOI:
     lon: float
     side_m: int = 1000
     res_m: float = 1.0
+    # Set when the area must share a zone with its neighbours, as the tiles of one urban
+    # centre do; otherwise the zone follows the centre point.
+    epsg: int | None = None
 
     @property
     def utm_epsg(self) -> int:
+        if self.epsg is not None:
+            return self.epsg
         zone = int((self.lon + 180) // 6) + 1
         return (32600 if self.lat >= 0 else 32700) + zone
 
@@ -67,7 +72,7 @@ class AOI:
         return from_origin(minx, maxy, self.res_m, self.res_m)
 
     def at_res(self, res_m: float) -> AOI:
-        return AOI(self.name, self.lat, self.lon, self.side_m, res_m)
+        return AOI(self.name, self.lat, self.lon, self.side_m, res_m, self.epsg)
 
 
 # Phase 0 target. Ahmedabad ran the first Heat Action Plan in South Asia (2013),
