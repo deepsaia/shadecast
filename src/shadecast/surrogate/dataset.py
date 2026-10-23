@@ -151,11 +151,18 @@ def lock_is_stale(lock: Path) -> bool:
 
 
 def tile_label(bundle: Path, provenance: dict) -> str:
-    """``city tile`` when the bundle sits in a tile, else the bundle's directory name."""
+    """``city, tile t..., one of N tiles`` for a tile bundle, else the bundle's directory name.
+
+    One generation run covers one tile: every design is an engine run over the same square
+    kilometre. The label says how many tiles the urban centre has, so nobody mistakes the
+    designs for tiles.
+    """
     city = provenance.get("city", {}).get("key")
     tile = provenance.get("tile", {}).get("id")
+    total = provenance.get("urban_centre", {}).get("tiles")
     if city and tile:
-        return f"{city} {tile}"
+        count = f", one of {total:,} tiles" if total else ""
+        return f"{city}, tile {tile}{count}"
     return bundle.name
 
 

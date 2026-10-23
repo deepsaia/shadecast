@@ -202,3 +202,15 @@ def test_an_interrupt_cancels_the_designs_not_yet_started(bundle, tmp_path, monk
     # The baseline ran, and at most the one design that had already started.
     assert len(engine.calls) <= 2
     assert not (tmp_path / "surrogate" / ".generating.lock").exists()
+
+
+def test_tile_label_says_one_tile_of_the_centre():
+    provenance = {
+        "city": {"key": "savannah"},
+        "tile": {"id": "t17N_488_3550"},
+        "urban_centre": {"tiles": 64},
+    }
+    assert (
+        dataset.tile_label(Path("x"), provenance) == "savannah, tile t17N_488_3550, one of 64 tiles"
+    )
+    assert dataset.tile_label(Path("plain"), {}) == "plain"
