@@ -217,3 +217,14 @@ def test_load_reads_the_table_from_the_cache(tmp_path, monkeypatch):
     centres = UrbanCentres.load(tmp_path)
     assert len(centres) == 9
     assert next(c.id for c in centres.all()) == 6143
+
+
+def test_continent_subregion_and_iso3_are_none_without_the_columns():
+    centre = UrbanCentres(_frame()).by_id(6143)
+    assert centre.continent is None and centre.subregion is None and centre.iso3 is None
+
+
+def test_continent_subregion_and_iso3_are_read_when_present():
+    frame = _frame().assign(continent="Asia", subregion="Southern Asia", iso3="IND")
+    centre = UrbanCentres(frame).by_id(6143)
+    assert (centre.continent, centre.subregion, centre.iso3) == ("Asia", "Southern Asia", "IND")
