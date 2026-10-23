@@ -8,6 +8,7 @@ from typer.testing import CliRunner
 
 from shadecast import corpus_cli
 from shadecast.cli import app
+from shadecast.corpus import tile_paths
 from shadecast.corpus.urban_centres import UrbanCentres
 
 runner = CliRunner()
@@ -90,8 +91,10 @@ def _fixture_centres() -> UrbanCentres:
 
 
 @pytest.fixture(autouse=True)
-def _offline_database(monkeypatch):
+def _offline_database(monkeypatch, tmp_path):
+    monkeypatch.setenv("COLUMNS", "200")
     monkeypatch.setattr(corpus_cli, "load_centres", _fixture_centres)
+    monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
 
 
 def test_help_lists_the_corpus_commands():
@@ -178,3 +181,26 @@ def test_stats_reports_totals_and_continents():
     assert stats["totals"]["continents"] == 4
     assert stats["by_continent"][0]["continent"] == "Africa"
     assert "Africa" in runner.invoke(app, ["corpus", "stats"]).stdout
+
+
+def test_search_says_which_name_matched_when_it_was_an_alias():
+    rows = json.loads(runner.invoke(app, ["corpus", "search", "amdavad", "--json"]).stdout)
+    assert [row["id"] for row in rows] == [6143]
+    assert rows[0]["matched"] == "Amdavad"
+    table = runner.invoke(app, ["corpus", "search", "amdavad"]).stdout
+    assert "Amdavad" in table
+
+
+def test_show_reports_how_many_tiles_are_built(tmp_path):
+    tile = tmp_path / "6143" / "t43N_249_2547" / "bundle"
+    tile.mkdir(parents=True)
+    (tile / "provenance.json").write_text("{}")
+    centre = json.loads(runner.invoke(app, ["corpus", "show", "ahmedabad", "--json"]).stdout)
+    assert centre["status"] == {
+        "bundle": 1,
+        "baseline": 0,
+        "surrogate": 0,
+        "model": 0,
+        "results": 0,
+    }
+    assert "1 of 365 bundle" in runner.invoke(app, ["corpus", "show", "ahmedabad"]).stdout
