@@ -29,12 +29,15 @@ def test_stage_presence_is_read_from_the_files_that_prove_it(tmp_path):
         "model": False,
         "results": False,
     }
+    assert paths.models == tmp_path / "6143" / "t43N_249_2546" / "models"
     (paths.bundle).mkdir(parents=True)
     (paths.bundle / "provenance.json").write_text("{}")
     paths.baseline.mkdir(parents=True)
     (paths.baseline / "tmrt_daylight.npy").write_bytes(b"")
     (paths.surrogate / "manifest.json").write_text("{}")
-    (paths.surrogate / "model.pt").write_bytes(b"")
+    (paths.models / "response-unet-x").mkdir(parents=True)
+    (paths.models / "response-unet-x" / "model.pt").write_bytes(b"")
+    assert [path.name for path in paths.model_dirs()] == ["response-unet-x"]
     assert paths.stages() == {
         "bundle": True,
         "baseline": True,
