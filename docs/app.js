@@ -357,7 +357,7 @@ function tradeoffChart(plans,selected){
 function urbanCentreLine(u){
   if(!u) return "";
   const strata = [u.koppen ? `Köppen ${esc(u.koppen)}` : "", u.income ? `income group ${esc(u.income)}` : ""].filter(Boolean).join(", ");
-  return ` Urban centre <b>${esc(u.name)}</b> (GHS-UCDB ${u.id}), ${strata}, ${fmt(u.population)} people, ${fmt(u.tiles)} tiles of 1 km&sup2;.`;
+  return ` Urban centre <b>${esc(u.name)}</b> (GHS-UCDB ${u.id}), ${strata}, ${fmt(u.population_2025)} people, ${fmt(u.tiles)} tiles of 1 km&sup2;.`;
 }
 
 function stepAssemble(c){
@@ -370,7 +370,7 @@ function stepAssemble(c){
       <div class="kv"><div class="n">${fmt(p.buildings)}</div><div class="l">buildings with heights</div></div>
       <div class="kv"><div class="n">${(p.built_fraction*100).toFixed(0)}%</div><div class="l">of ground is built on</div></div>
       <div class="kv"><div class="n">${(p.canopy*100).toFixed(1)}%</div><div class="l">existing tree canopy over 2 m</div></div>
-      <div class="kv"><div class="n">${fmt(p.population)}</div><div class="l">residents in the square kilometre</div></div>
+      <div class="kv"><div class="n">${fmt(p.population_2020)}</div><div class="l">residents in the square kilometre</div></div>
     </div>
     <div class="chain">${Object.entries(p.sources).map(([k,v])=>`<span class="chip">${k}: ${esc(v)}</span>`).join("")}</div>
     <p class="outcome">Design day <b>${p.design_day}</b> at ${p.lat.toFixed(3)}, ${p.lon.toFixed(3)}. Input quality tier <b>${p.tier}</b>.${urbanCentreLine(p.urban_centre)}</p>
