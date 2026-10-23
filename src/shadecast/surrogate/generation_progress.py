@@ -218,7 +218,7 @@ class GenerationProgress:
         threads = f"{self.threads} threads each" if self.threads else "all threads"
         text = Text()
         text.append(self.label or "tile", style="bold")
-        text.append(f"  ·  {self.kind}  ·  {self.total} designs", style="")
+        text.append(f"  ·  surrogate for {self.kind}  ·  {self.total} designs")
         text.append(
             f"  ·  engine on {hardware.engine_device}, {self.jobs} at a time, {threads}",
             style="dim",

@@ -89,7 +89,8 @@ def generated_tiles(
     ]
     if not with_physics:
         raise ValueError(
-            f"{text} has no generated physics yet; run 'sdc surrogate generate {text}' first"
+            f"{text} has no generated physics yet; "
+            f"run 'sdc surrogate treeshade generate {text}' first"
         )
     if selection is not None and selection.wants():
         return _selected(text, with_physics, selection)
