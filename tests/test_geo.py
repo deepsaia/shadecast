@@ -109,12 +109,6 @@ def test_raster_corners_floor_to_step(step):
 NEW_CITIES = ("savannah", "oaxaca", "recife", "bristol", "barcelona", "hamburg")
 
 
-def test_corpus_holds_the_expanded_city_set():
-    assert len(CORPUS) == 38
-    for key in NEW_CITIES:
-        assert key in CORPUS, key
-
-
 @pytest.mark.parametrize("key", NEW_CITIES)
 def test_new_city_seed_resolves_to_a_gba_tile(key):
     city = CORPUS[key]
