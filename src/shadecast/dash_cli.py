@@ -54,7 +54,7 @@ def discover() -> list[tuple[str, Path, Path]]:
 
 ASSETS = ("app.html", "app.js")
 # Self-contained pages published beside the walkthrough, copied as they are.
-PAGES = ("model_pipeline.html", "result.html", "proposal.html")
+PAGES = ("model_pipeline.html", "result.html", "result.js", "proposal.html")
 
 
 def publish_pages(destination: Path) -> list[Path]:
