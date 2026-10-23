@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .cities import City
+from .corpus.urban_centre import UrbanCentre
 
 console = Console()
 error_console = Console(stderr=True)
@@ -38,6 +39,52 @@ def corpus_table(cities: list[City]) -> Table:
             city.region,
             "[green]yes[/]" if city.in_wri else "",
         )
+    return table
+
+
+def centres_table(centres: list[UrbanCentre]) -> Table:
+    """Render urban centres from the database, one row each."""
+    table = Table(header_style="dim")
+    table.add_column("id", justify="right", style="dim", no_wrap=True)
+    table.add_column("slug", style="cyan", no_wrap=True)
+    table.add_column("name")
+    table.add_column("country", style="dim")
+    table.add_column("population", justify="right", no_wrap=True)
+    table.add_column("income", no_wrap=True)
+    table.add_column("koppen", no_wrap=True)
+    table.add_column("tiles", justify="right", no_wrap=True)
+    for centre in centres:
+        table.add_row(
+            str(centre.id),
+            centre.slug,
+            centre.name,
+            centre.country,
+            f"{centre.population:,}",
+            centre.income or "?",
+            centre.koppen or "?",
+            f"{centre.tiles:,}",
+        )
+    return table
+
+
+def centre_details(centre: UrbanCentre) -> Table:
+    """Render one urban centre as a two column table."""
+    table = Table(title=centre.name, title_style="bold", header_style="dim", show_header=False)
+    table.add_column("field", style="dim")
+    table.add_column("value")
+    rows = (
+        ("id", str(centre.id)),
+        ("slug", centre.slug),
+        ("names", ", ".join(centre.names)),
+        ("country", centre.country),
+        ("population", f"{centre.population:,}"),
+        ("area", f"{centre.area_km2:,} km2, {centre.tiles:,} tiles of 1 km"),
+        ("income group", centre.income or "unknown"),
+        ("Koppen", f"{centre.koppen} ({centre.koppen_code})" if centre.koppen else "unknown"),
+        ("centroid", f"{centre.lat:.4f}, {centre.lon:.4f}"),
+    )
+    for field, value in rows:
+        table.add_row(field, value)
     return table
 
 
