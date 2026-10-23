@@ -133,61 +133,28 @@ function pageIndex(){
   ).join("")}</ol>`;
 }
 
-/* Everything this work stands on, grouped by what it was used for. A flat alphabetical
-   list would hide which sources are load-bearing and which are context. */
-const REFERENCES = [
-["The radiation model", [
- ["SOLWEIG 1.0: modelling spatial variations of 3D radiant fluxes and mean radiant temperature in complex urban settings", "Lindberg, Holmer and Thorsson, International Journal of Biometeorology 52, 2008", ""],
- ["Urban Multi-scale Environmental Predictor (UMEP): an integrated tool for city-based climate services", "Lindberg et al., Environmental Modelling and Software 99, 2018", "https://umep-docs.readthedocs.io/"],
- ["solweig-gpu, the implementation this benchmark calls", "GPL-3.0, invoked across a process boundary so this codebase stays Apache-2.0", "https://solweig-gpu.readthedocs.io/en/latest/input_data.html"],
- ["SOLWEIG model source and documentation", "UMEP development group", "https://umep-dev.github.io/solweig/"],
- ["Deriving the operational procedure for the Universal Thermal Climate Index", "Bröde et al., International Journal of Biometeorology 56, 2012", ""]]],
+function refLink(source){
+  return source.url || (source.doi ? `https://doi.org/${source.doi}` : "");
+}
 
-["Reflective surfaces, and why those arms are quarantined", [
- ["Evidence-based guidance on reflective pavement for urban heat mitigation in Arizona", "Nature Communications 14, 1467, 2023. Field measurement across 58 km of treated street in Phoenix: pedestrian mean radiant temperature rises significantly on the road, with no significant change on the sidewalk", "https://www.nature.com/articles/s41467-023-36972-5"],
- ["Limited application of reflective surfaces can mitigate urban heat pollution", "Nature Communications 12, 2021", "https://www.nature.com/articles/s41467-021-23634-7"],
- ["Optimizing retro-reflective surfaces to untrap radiation and cool cities", "Nature Cities, 2024. The physically correct version of the albedo arm, and one this engine cannot represent", "https://www.nature.com/articles/s44284-024-00047-3"],
- ["Harnessing retro-reflective materials for urban heat island mitigation", "Discover Cities, 2025", "https://link.springer.com/article/10.1007/s44327-025-00086-y"]]],
+function refItem(source){
+  const link = refLink(source);
+  const meta = [source.authors_or_publisher, source.year, source.release, source.licence].filter(Boolean).join(", ");
+  const title = link ? `<a href="${link}" target="_blank" rel="noopener">${esc(source.title)}</a>` : `<span>${esc(source.title)}</span>`;
+  const note = source.used_for ? `. ${esc(source.used_for)}` : "";
+  const endpoint = source.endpoint ? `<code class="endpoint">${esc(source.endpoint)}</code>` : "";
+  return `<li>${title}<em>${esc(meta)}${note}</em>${endpoint}</li>`;
+}
 
-["Shaded routing, the forward problem this inverts", [
- ["CoolWalks for active mobility in urban street networks", "Scientific Reports, 2025", "https://www.nature.com/articles/s41598-025-97200-2"],
- ["CoolWalks: assessing the potential of shaded routing for active mobility", "arXiv:2405.01225", "https://arxiv.org/html/2405.01225v1"],
- ["Cool routes: real-time human thermal exposure routing", "Building and Environment", "https://www.sciencedirect.com/science/article/abs/pii/S0360132326004270"],
- ["Mitigating heat stress by reducing solar exposure in pedestrian routing", "Kolaxidis et al., Transactions in GIS, 2025", "https://onlinelibrary.wiley.com/doi/10.1111/tgis.70110"]]],
-
-["Prior systems this builds on and compares against", [
- ["WRI Cool Cities Lab, UTCI methods", "World Resources Institute", "https://coolcities.wri.org/data-and-methods/utci"],
- ["cities-cif, WRI's city indicator framework", "World Resources Institute", "https://github.com/wri/cities-cif"],
- ["cities-OpenUrban, WRI's land cover and opportunity layers", "Source of the cool-roof albedo targets, 0.62 low slope and 0.28 high slope", "https://github.com/wri/cities-OpenUrban"],
- ["En-ROADS climate policy simulator", "Climate Interactive. Checked for overlap: it is global and policy-scale, this is street-scale and spatial", "https://www.climateinteractive.org/en-roads/"],
- ["Handbook on urban heat management in the Global South", "UN-Habitat", "https://unhabitat.org/handbook-on-urban-heat-management-in-the-global-south"]]],
-
-["Data, every source unauthenticated", [
- ["GlobalBuildingAtlas LoD1 footprints and heights", "Source Cooperative. Chosen over Overture, which carried heights for 1 of 14,213 buildings in Ahmedabad. Tiled 5 degrees and read straight as GeoParquet, so one city needs one file rather than a global scan", "https://source.coop/tge-labs/globalbuildingatlas-lod1", "https://data.source.coop/tge-labs/globalbuildingatlas-lod1/{tile}.parquet"],
- ["Copernicus DEM GLO-30 terrain", "AWS Open Data, unsigned. Tiled 1 degree, read as a windowed cloud-optimised GeoTIFF", "https://registry.opendata.aws/copernicus-dem/", "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_{ns}{lat}_00_{ew}{lon}_00_DEM/Copernicus_DSM_COG_10_{ns}{lat}_00_{ew}{lon}_00_DEM.tif"],
- ["ESA WorldCover 10 m v200 2021 land cover", "AWS Open Data, unsigned. Tiled 3 degrees, resampled nearest because a class code must never be interpolated", "https://esa-worldcover.org/", "https://esa-worldcover.s3.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_{ns}{lat}{ew}{lon}_Map.tif"],
- ["Meta and WRI Canopy Height Model, 1 m", "AWS Open Data. Tiled by quadkey against a global footprint index that is fetched once and cached", "https://registry.opendata.aws/dataforgood-fb-forests/", "https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float/chm/{quadkey}.tif"],
- ["GHS-POP R2023A population, 100 m", "European Commission JRC, redistributed here across building volume. Chosen over WorldPop, whose server refuses HTTP range requests, which makes a windowed read impossible and forces a whole-country download", "https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php", "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E2020_GLOBE_R2023A_54009_100/V1-0/tiles/GHS_POP_E2020_GLOBE_R2023A_54009_100_V1_0_R{row}_C{col}.zip"],
- ["Open-Meteo ERA5 historical archive", "Hourly meteorology, no key required, chosen over Copernicus CDS which needs an account and a credentials file. Hourly variables requested: temperature_2m, relative_humidity_2m, wind_speed_10m, wind_direction_10m, surface_pressure, shortwave_radiation, direct_radiation, diffuse_radiation", "https://open-meteo.com/en/docs/historical-weather-api", "https://archive-api.open-meteo.com/v1/archive"],
- ["OpenStreetMap, via Overpass", "The walkable network behind the corridor objective, queried through OSMnx and cached as GraphML per study area because Overpass is a shared free service", "https://www.openstreetmap.org/copyright", "https://overpass-api.de/api/interpreter"]]],
-
-["Validation, the one source outside the credential-free path", [
- ["Landsat Collection 2 Level 2 surface temperature", "Used only to check that simulated heat lands where the satellite saw heat, never to build a bundle. Reached through Microsoft Planetary Computer, which signs each request with a short-lived token, so this is the one place a broker sits in the path. Collection landsat-c2-l2, asset lwir11", "https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2", "https://planetarycomputer.microsoft.com/api/stac/v1"]]],
-
-["Method", [
- ["OSMnx: new methods for acquiring, constructing, analyzing and visualizing complex street networks", "Boeing, Computers, Environment and Urban Systems 65, 2017", ""],
- ["U-Net: convolutional networks for biomedical image segmentation", "Ronneberger, Fischer and Brox, MICCAI 2015. The surrogate architecture", "https://arxiv.org/abs/1505.04597"],
- ["Evolutionary surrogate-assisted prescription", "Cognizant AI Labs. The framing behind treating this as a prescriptor over a learned predictor", "https://arxiv.org/pdf/2012.10504"],
- ["en-roads-py, evolutionary prescription applied to En-ROADS", "Cognizant AI Labs. A working implementation of the prescriptor pattern over a fixed simulator, and the closest existing analogue to what the planner here does over SOLWEIG", "https://github.com/cognizant-ai-labs/en-roads-py"]]],
-];
-
+/* Rendered from the cited sources registry shipped in index.json, so the page cannot carry a
+   bibliography the code does not. Grouped by what each source was used for, because a flat
+   alphabetical list would hide which sources are load-bearing and which are context. */
 function stepReferences(){
+  const groups = S.data.references || [];
   return `${stepHead("references")}
-  <p class="sub">Everything this work rests on. Sources that changed a decision carry a note saying what they changed.</p>
-  <div class="card"><div class="refs">${REFERENCES.map(([group,items])=>
-    `<div class="refgroup"><h3>${group}</h3><ul>${items.map(([title,where,url,endpoint])=>
-      `<li>${url?`<a href="${url}" target="_blank" rel="noopener">${title}</a>`:`<span>${title}</span>`}<em>${where}</em>${endpoint?`<code class="endpoint">${endpoint}</code>`:""}</li>`
-    ).join("")}</ul></div>`).join("")}</div></div></section>`;
+  <p class="sub">Everything this work rests on, read from one registry shared with the code. Sources that changed a decision carry a note saying what they changed.</p>
+  <div class="card"><div class="refs">${groups.map(group=>
+    `<div class="refgroup"><h3>${esc(group.title)}</h3><ul>${group.sources.map(refItem).join("")}</ul></div>`).join("")}</div></div>`;
 }
 
 function stepGlossary(){
