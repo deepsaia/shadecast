@@ -28,7 +28,7 @@ bundle, offline, forever. A benchmark that requires three accounts is not a benc
 
 ```bash
 uv sync
-shadecast list                    # the 32 city corpus and its stratification
+shadecast list                    # the 38 city selection and its stratification
 shadecast build ahmedabad         # assemble one bundle, about 35 seconds
 shadecast plan data/cities/ahmedabad --kind tree --budget 10000000
 ```
