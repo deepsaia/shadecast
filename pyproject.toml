@@ -33,11 +33,17 @@ dependencies = [
     "osmnx>=2.0",
     "rich>=15.0.0",
     "scikit-image>=0.26.0",
+    "safetensors>=0.8.0",
 ]
 
 [project.scripts]
 shadecast = "shadecast.cli:app"
 sdc = "shadecast.cli:app"
+
+[project.optional-dependencies]
+hub = [
+    "huggingface-hub>=2.3.0",
+]
 
 [build-system]
 requires = ["hatchling"]
