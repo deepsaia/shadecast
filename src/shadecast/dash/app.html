@@ -208,7 +208,9 @@ take to close the gap.</p>
   every source is an independent HTTP read, and the population cache amortises: nine cities cost
   297 MB of GHS-POP tiles between them rather than each. Physics does not parallelise away. One
   search of 1,000 evaluations on a single city costs the same as one evaluation on 1,000 cities,
-  and a benchmark needs both, which is the whole reason a learned surrogate is the next step.</p>
+  and a benchmark needs both, which is the whole reason a learned surrogate is the next step.
+  How that surrogate is built, trained and judged is
+  <a href="model_pipeline.html">documented on its own page</a>.</p>
 </div>
 
 <nav class="card index" id="index" aria-label="Contents"></nav>
@@ -218,6 +220,7 @@ take to close the gap.</p>
 <footer>
   Built by <a href="https://github.com/deepsaia/shadecast" target="_blank" rel="noopener">shadecast</a>. Physics by SOLWEIG.
   Maps are rendered in your browser from raw model output, so hovering reads the actual value.
+  The surrogate is described in <a href="model_pipeline.html">the model pipeline</a>.
 </footer>
 </div>
 <script>
