@@ -7,11 +7,14 @@ slug or a name resolved through the database. Only tiles with a bundle count as 
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from .. import cities
 from .tile_paths import TilePaths
 from .urban_centres import UrbanCentres
+
+ALL = "all"
 
 
 def centre_id(text: str) -> int:
@@ -47,3 +50,69 @@ def one_built_tile(text: str, tile: str | None, tiles_root: Path) -> TilePaths:
     if len(found) > 1:
         raise ValueError(f"{text} has {len(found)} built tiles ({ids}); add --tile <id>")
     return found[0]
+
+
+def densest_built_tile(text: str, tiles_root: Path) -> TilePaths:
+    """The built tile with most residents, by the centre's tiles file; the only one when one."""
+    found = built_tiles(text, tiles_root)
+    if not found:
+        raise ValueError(f"{text} has no built tile yet; run 'sdc build {text}' first")
+    return _densest_of(text, found, "--tiles")
+
+
+def _ranked_ids(tiles_json: Path) -> list[str]:
+    """Tile ids densest first, from the centre's tiles file, or none when it is absent."""
+    if not tiles_json.exists():
+        return []
+    rows = json.loads(tiles_json.read_text()).get("tiles", [])
+    rows = sorted(rows, key=lambda row: float(row.get("population_2020") or 0), reverse=True)
+    return [str(row.get("id")) for row in rows]
+
+
+def generated_tiles(text: str, tiles: str | None, tiles_root: Path) -> list[TilePaths]:
+    """Tiles of the city with generated physics: all of them by default, or the named ones.
+
+    A city plans across every kind of area, so its model learns from every tile that has
+    physics, which is exactly what generate produced. Names only narrow that set, and a named
+    tile without physics is refused rather than silently dropped.
+    """
+    with_physics = [
+        paths
+        for paths in TilePaths.existing(tiles_root, centre_id(text))
+        if paths.stages().get("surrogate")
+    ]
+    if not with_physics:
+        raise ValueError(
+            f"{text} has no generated physics yet; run 'sdc surrogate generate {text}' first"
+        )
+    if tiles is None or tiles.strip().lower() in ("", ALL):
+        return with_physics
+    chosen = []
+    for tile_id in [part.strip() for part in tiles.split(",") if part.strip()]:
+        match = [paths for paths in with_physics if paths.tile.id == tile_id]
+        if not match:
+            have = ", ".join(paths.tile.id for paths in with_physics)
+            raise ValueError(
+                f"{text} tile {tile_id} has no generated physics; tiles with physics: {have}"
+            )
+        chosen.extend(match)
+    return chosen
+
+
+def _densest_of(text: str, found: list[TilePaths], option: str) -> TilePaths:
+    """The tile with most residents among ``found``, by the centre's tiles file."""
+    if len(found) == 1:
+        return found[0]
+    for tile_id in _ranked_ids(found[0].tiles_json):
+        for paths in found:
+            if paths.tile.id == tile_id:
+                return paths
+    ids = ", ".join(paths.tile.id for paths in found)
+    raise ValueError(
+        f"{text} has {len(found)} tiles ({ids}) and no tiles.json to rank them; add {option}"
+    )
+
+
+def densest_generated_tile(text: str, tiles_root: Path) -> TilePaths:
+    """The tile with physics and most residents, to assess a city's model against."""
+    return _densest_of(text, generated_tiles(text, None, tiles_root), "--tile")
