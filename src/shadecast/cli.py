@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 from typing import Annotated
 
+import click
 import typer
 
 from . import cities, tile_cli
@@ -41,6 +42,25 @@ app = typer.Typer(
     no_args_is_help=True,
     rich_markup_mode="rich",
 )
+
+
+def entry() -> int:
+    """Console entry point. Ctrl-C ends any command with one line and exit code 130.
+
+    Click's own handling would print "Aborted!" and exit 1; a stop is not an error, and
+    every long command has already said how to resume by the time it gets here.
+    """
+    try:
+        app(standalone_mode=False)
+    except click.exceptions.Exit as exit_:  # typer.Exit, raised on purpose by a command
+        return int(exit_.exit_code)
+    except click.ClickException as error:  # usage errors, bad parameters
+        error.show()
+        return int(error.exit_code)
+    except (KeyboardInterrupt, click.exceptions.Abort):
+        error_console.print("\nstopped")
+        return 130
+    return 0
 
 
 app.add_typer(corpus_app, name="corpus")

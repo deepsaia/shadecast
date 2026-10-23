@@ -38,8 +38,8 @@ dependencies = [
 ]
 
 [project.scripts]
-shadecast = "shadecast.cli:app"
-sdc = "shadecast.cli:app"
+shadecast = "shadecast.cli:entry"
+sdc = "shadecast.cli:entry"
 
 [project.optional-dependencies]
 hub = [
