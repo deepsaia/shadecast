@@ -53,6 +53,19 @@ def discover() -> list[tuple[str, Path, Path]]:
 
 
 ASSETS = ("app.html", "app.js")
+# Self-contained pages published beside the walkthrough, copied as they are.
+PAGES = ("model_pipeline.html",)
+
+
+def publish_pages(destination: Path) -> list[Path]:
+    """Copy every standalone page into the bundle. Returns the paths written."""
+    here = Path(__file__).parent / "dash"
+    written = []
+    for name in PAGES:
+        target = destination / name
+        target.write_text((here / name).read_text())
+        written.append(target)
+    return written
 
 
 def build_bundle(destination: Path, data_root: Path = Path("data")) -> int:
@@ -84,6 +97,7 @@ def build_bundle(destination: Path, data_root: Path = Path("data")) -> int:
         .replace('<script src="app.js"></script>', f'<script src="app.js?v={digest}"></script>')
     )
     (destination / "index.html").write_text(page)
+    publish_pages(destination)
 
     size = sum(f.stat().st_size for f in destination.iterdir() if f.is_file())
     console.print(

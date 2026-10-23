@@ -63,7 +63,9 @@ window found 154,245.
 - **Phase 1 passed.** Nine cities, zero failures, and the first cross city result:
   Lagos returns 38% more cooling benefit per dollar than Ahmedabad.
 - **Phase 2 in progress.** The learned surrogate, which is what makes search
-  affordable at all.
+  affordable at all. How it is built, trained and judged is documented, with every
+  number taken from a model manifest or a recorded run, in
+  [the model pipeline page](https://deepsaia.github.io/shadecast/model_pipeline.html).
 
 Full proposal in [PROPOSAL.md](PROPOSAL.md).
 

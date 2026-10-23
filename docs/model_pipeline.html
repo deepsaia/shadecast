@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surrogate model pipeline</title>
+<meta name="description" content="How shadecast learns a fast stand-in for the physics: inputs, output, data, training, judgment, use, limits, and the manifest each model carries.">
+<style>
+:root{
+  --ground:#F1F4F6; --card:#FCFCFB; --card-2:#E7ECEF; --ink:#0B0B0B; --ink-2:#52514E;
+  --ink-3:#6B7A84; --rule:#D6DDE2; --rule-2:#BAC5CC;
+  --accent:#146B60; --accent-wash:#DDEDEA;
+  --f-b:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-s:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --f-m:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ground:#0E141A; --card:#1A1A19; --card-2:#1E272F; --ink:#FFF; --ink-2:#C3C2B7;
+  --ink-3:#7C8A94; --rule:#28333B; --rule-2:#39454E;
+  --accent:#5FBFAF; --accent-wash:#132A28;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E141A; --card:#1A1A19; --card-2:#1E272F; --ink:#FFF; --ink-2:#C3C2B7;
+  --ink-3:#7C8A94; --rule:#28333B; --rule-2:#39454E;
+  --accent:#5FBFAF; --accent-wash:#132A28;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-b);font-size:15px;line-height:1.55}
+.wrap{max-width:880px;margin:0 auto;padding:32px 16px 64px}
+header h1{font-family:var(--f-s);font-weight:400;font-size:2rem;margin:0 0 4px;letter-spacing:-.01em}
+header p.sub{color:var(--ink-2);margin:0 0 8px}
+header p.meta{font-family:var(--f-m);font-size:.75rem;color:var(--ink-3);margin:0}
+nav.index{margin:24px 0 32px;padding:12px 16px;border:1px solid var(--rule);border-radius:8px;background:var(--card)}
+nav.index ol{margin:0;padding-left:20px;columns:2;column-gap:32px}
+nav.index li{margin:2px 0}
+nav.index a{color:var(--ink);text-decoration:none}
+nav.index a:hover{color:var(--accent)}
+section{margin:0 0 40px}
+h2{font-family:var(--f-s);font-weight:400;font-size:1.45rem;margin:0 0 12px}
+h2 i{font-family:var(--f-m);font-size:.7rem;color:var(--accent);font-style:normal;letter-spacing:.08em;margin-right:8px}
+h3{font-size:1rem;margin:20px 0 8px}
+p{margin:0 0 12px;max-width:72ch}
+ul,ol{margin:0 0 12px;padding-left:20px;max-width:72ch}
+li{margin:4px 0}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:16px;margin:12px 0}
+figure{margin:16px 0}
+figure svg{display:block;width:100%;height:auto;max-width:720px}
+figcaption{font-family:var(--f-s);font-style:italic;color:var(--ink-2);font-size:.95rem;margin-top:8px;max-width:72ch}
+table{border-collapse:collapse;width:100%;margin:8px 0 16px;font-size:.92rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-weight:600;color:var(--ink-2)}
+td.n,th.n{text-align:right;font-family:var(--f-m);font-size:.85rem;white-space:nowrap}
+code,.mono{font-family:var(--f-m);font-size:.85em;background:var(--card-2);padding:1px 4px;border-radius:4px}
+pre{font-family:var(--f-m);font-size:.8rem;line-height:1.5;background:var(--card-2);border:1px solid var(--rule);border-radius:8px;padding:12px;overflow:auto;max-width:720px}
+.note{border-left:3px solid var(--accent);padding:8px 12px;background:var(--accent-wash);border-radius:0 8px 8px 0;max-width:72ch}
+footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--rule);color:var(--ink-3);font-size:.85rem}
+a{color:var(--accent)}
+/* diagram primitives: hairlines, no shadows, 4 px grid */
+svg .box{fill:var(--card);stroke:var(--ink);stroke-width:1}
+svg .focal{fill:var(--accent-wash);stroke:var(--accent);stroke-width:1}
+svg .label{font-family:var(--f-b);font-size:13px;fill:var(--ink)}
+svg .sub{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
+svg .aside{font-family:var(--f-s);font-style:italic;font-size:12px;fill:var(--ink-2)}
+svg .arrow{stroke:var(--ink);stroke-width:1;fill:none;marker-end:url(#tip)}
+svg .leader{stroke:var(--ink-3);stroke-width:1;fill:none;stroke-dasharray:3 3}
+svg .reach{fill:none;stroke:var(--accent);stroke-width:1}
+svg .tree{fill:var(--accent)}
+svg .grid{stroke:var(--rule);stroke-width:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>The surrogate model pipeline</h1>
+  <p class="sub">How shadecast learns a fast stand-in for the physics, what the stand-in knows, how well it does, and where it stops.</p>
+  <p class="meta">Numbers from the model manifests and recorded runs of 2026-08-26, read on 2026-10-23. Model <span class="mono">response-unet-ahmedabad-20260826T143800</span>.</p>
+</header>
+
+<nav class="index" aria-label="Contents">
+  <ol>
+    <li><a href="#what">What the surrogate is</a></li>
+    <li><a href="#inputs">Inputs</a></li>
+    <li><a href="#output">Output</a></li>
+    <li><a href="#data">How the data is made</a></li>
+    <li><a href="#training">How it is trained</a></li>
+    <li><a href="#judging">How it is judged</a></li>
+    <li><a href="#use">How it is used</a></li>
+    <li><a href="#limits">Where it falls short</a></li>
+    <li><a href="#better">How to train it better</a></li>
+    <li><a href="#manifest">The manifest</a></li>
+    <li><a href="#storage">Where models live</a></li>
+  </ol>
+</nav>
+
+<section id="what">
+  <h2><i>01</i>What the surrogate is</h2>
+  <p>The physics engine, SOLWEIG, computes mean radiant temperature for one square kilometer in 160 to 360 seconds. A plan search needs thousands of evaluations. The surrogate is a neural network that predicts the engine's answer in 0.58 seconds.</p>
+  <p>The network is a U-Net. It has 7,764,193 parameters. It reads seven input maps at 1 m and writes one output map at 1 m. Its receptive field is 152 m. Measured cooling from a tree falls below 0.1 C within 26 m in Ahmedabad and 71 m in Lagos, so the field is wide enough.</p>
+  <p>The surrogate is a forward model. It predicts the cooling a plan produces. It does not choose the plan. Planners choose plans. The surrogate tells them, quickly, what each plan does.</p>
+  <figure>
+    <svg viewBox="0 0 720 176" role="img" aria-labelledby="f1t f1d">
+      <title id="f1t">The pipeline from bundle to prediction</title>
+      <desc id="f1d">Six steps in a row: bundle, engine, response fields, patches, training, model with manifest, then use. The model with manifest is highlighted.</desc>
+      <defs><marker id="tip" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--ink)"/></marker></defs>
+      <rect class="box" x="8" y="40" width="96" height="48" rx="8"/><text class="label" x="56" y="60" text-anchor="middle">Bundle</text><text class="sub" x="56" y="76" text-anchor="middle">1 km, 1 m, 5 layers</text>
+      <path class="arrow" d="M104 64 H124"/>
+      <rect class="box" x="128" y="40" width="96" height="48" rx="8"/><text class="label" x="176" y="60" text-anchor="middle">Engine</text><text class="sub" x="176" y="76" text-anchor="middle">17 runs, 255 to 358 s</text>
+      <path class="arrow" d="M224 64 H244"/>
+      <rect class="box" x="248" y="40" width="96" height="48" rx="8"/><text class="label" x="296" y="60" text-anchor="middle">Responses</text><text class="sub" x="296" y="76" text-anchor="middle">cooling fields</text>
+      <path class="arrow" d="M344 64 H364"/>
+      <rect class="box" x="368" y="40" width="96" height="48" rx="8"/><text class="label" x="416" y="60" text-anchor="middle">Patches</text><text class="sub" x="416" y="76" text-anchor="middle">256 px, 24 per run</text>
+      <path class="arrow" d="M464 64 H484"/>
+      <rect class="focal" x="488" y="40" width="112" height="48" rx="8"/><text class="label" x="544" y="60" text-anchor="middle">Model</text><text class="sub" x="544" y="76" text-anchor="middle">weights + manifest</text>
+      <path class="arrow" d="M600 64 H620"/>
+      <rect class="box" x="624" y="40" width="88" height="48" rx="8"/><text class="label" x="668" y="60" text-anchor="middle">Use</text><text class="sub" x="668" y="76" text-anchor="middle">0.58 s per plan</text>
+      <path class="leader" d="M544 92 C544 124 420 124 300 132"/>
+      <text class="aside" x="300" y="152" text-anchor="middle">Assessment compares the model with the engine on designs it never saw.</text>
+    </svg>
+    <figcaption>One engine run per design, 17 designs per tile, one model per tile. The model is the only thing a search touches.</figcaption>
+  </figure>
+</section>
+
+<section id="inputs">
+  <h2><i>02</i>Inputs</h2>
+  <p>The model reads seven channels for every pixel. Each channel is divided by a fixed number, so every city uses the same scale. The numbers are not fitted. This is what lets a model trained in one city read another.</p>
+  <table>
+    <thead><tr><th>Channel</th><th>Source</th><th class="n">Scale</th></tr></thead>
+    <tbody>
+      <tr><td>placement</td><td>the plan: 1 where a tree is added, 0 elsewhere</td><td class="n">none</td></tr>
+      <tr><td>baseline Tmrt</td><td>engine run of the untouched bundle, daylight mean</td><td class="n">80</td></tr>
+      <tr><td>building height</td><td>bundle, GlobalBuildingAtlas minus terrain</td><td class="n">30</td></tr>
+      <tr><td>canopy height</td><td>bundle, Meta and WRI canopy model</td><td class="n">30</td></tr>
+      <tr><td>sky openness</td><td>1 minus mean obstruction height within 25 m, over 30, clipped to 0 to 1</td><td class="n">none</td></tr>
+      <tr><td>is water</td><td>WorldCover class 80</td><td class="n">none</td></tr>
+      <tr><td>is vegetated</td><td>WorldCover classes 10, 20, 30, 40, 90, 95, 100</td><td class="n">none</td></tr>
+    </tbody>
+  </table>
+  <figure>
+    <svg viewBox="0 0 720 208" role="img" aria-labelledby="f2t f2d">
+      <title id="f2t">Seven input channels enter the network and one output map leaves it</title>
+      <desc id="f2d">Seven stacked layers on the left, a U shaped block in the middle, and one output layer on the right labelled cooling in degrees Celsius.</desc>
+      <g>
+        <rect class="box" x="24" y="32" width="160" height="16" rx="4"/><text class="sub" x="104" y="44" text-anchor="middle">placement</text>
+        <rect class="box" x="24" y="52" width="160" height="16" rx="4"/><text class="sub" x="104" y="64" text-anchor="middle">baseline Tmrt / 80</text>
+        <rect class="box" x="24" y="72" width="160" height="16" rx="4"/><text class="sub" x="104" y="84" text-anchor="middle">building height / 30</text>
+        <rect class="box" x="24" y="92" width="160" height="16" rx="4"/><text class="sub" x="104" y="104" text-anchor="middle">canopy height / 30</text>
+        <rect class="box" x="24" y="112" width="160" height="16" rx="4"/><text class="sub" x="104" y="124" text-anchor="middle">sky openness</text>
+        <rect class="box" x="24" y="132" width="160" height="16" rx="4"/><text class="sub" x="104" y="144" text-anchor="middle">is water</text>
+        <rect class="box" x="24" y="152" width="160" height="16" rx="4"/><text class="sub" x="104" y="164" text-anchor="middle">is vegetated</text>
+        <text class="label" x="104" y="192" text-anchor="middle">7 channels, 1 m</text>
+      </g>
+      <path class="arrow" d="M184 100 H220"/>
+      <g>
+        <path class="box" d="M224 32 H336 L352 64 L368 32 H480 V168 H368 L352 136 L336 168 H224 Z"/>
+        <text class="label" x="280" y="76" text-anchor="middle">encoder</text>
+        <text class="sub" x="280" y="92" text-anchor="middle">32, 64, 128, 256</text>
+        <text class="label" x="424" y="76" text-anchor="middle">decoder</text>
+        <text class="sub" x="424" y="92" text-anchor="middle">skip connections</text>
+        <text class="sub" x="352" y="156" text-anchor="middle">bottleneck 512</text>
+        <text class="label" x="352" y="192" text-anchor="middle">ResponseUNet, 7.76 M parameters</text>
+      </g>
+      <path class="arrow" d="M480 100 H516"/>
+      <g>
+        <rect class="focal" x="520" y="56" width="176" height="88" rx="8"/>
+        <text class="label" x="608" y="96" text-anchor="middle">cooling field</text>
+        <text class="sub" x="608" y="112" text-anchor="middle">baseline minus plan, degC</text>
+        <text class="label" x="608" y="192" text-anchor="middle">1 channel, 1 m</text>
+      </g>
+    </svg>
+    <figcaption>Width doubles at each of four levels and halves back up. The output is not clipped at zero: about 0.04 percent of pixels warm near a new tree, and the model can say so.</figcaption>
+  </figure>
+</section>
+
+<section id="output">
+  <h2><i>03</i>Output</h2>
+  <p>The output is one map. Each pixel holds the daylight-mean change in mean radiant temperature, in degrees Celsius. Daylight is 08:00 to 18:00 local time on the design day. A positive value is cooling.</p>
+  <p>The target comes from two engine runs: the untouched bundle and the bundle with the plan. The difference is the response the model learns.</p>
+</section>
+
+<section id="data">
+  <h2><i>04</i>How the data is made</h2>
+  <p>Physics time is the budget. One engine run yields one response field. The design set makes each run count. The Ahmedabad model used 17 runs.</p>
+  <table>
+    <thead><tr><th>Family</th><th class="n">Runs</th><th>Coverage of plantable ground</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>sparse probe</td><td class="n">4</td><td>about 100 isolated trees on a jittered 100 m lattice</td><td>each tree is an independent response, so one run gives about 100</td></tr>
+      <tr><td>clustered</td><td class="n">6</td><td>1, 2, 5, 10, 20, 30 percent in 20 m blobs</td><td>how planting happens; where responses overlap and stop adding up</td></tr>
+      <tr><td>random uniform</td><td class="n">4</td><td>1, 5, 10, 20 percent</td><td>the scattered extreme</td></tr>
+      <tr><td>corridor</td><td class="n">3</td><td>2, 5, 10 percent along the open-network skeleton</td><td>the street tree case</td></tr>
+    </tbody>
+  </table>
+  <figure>
+    <svg viewBox="0 0 720 232" role="img" aria-labelledby="f3t f3d">
+      <title id="f3t">Sparse probes: isolated trees spaced beyond their reach</title>
+      <desc id="f3d">A lattice of small accent dots 100 meters apart, each inside a circle of 71 meters radius. The circles do not overlap, so each response is independent.</desc>
+      <g class="grid">
+        <path d="M24 24 H696 M24 72 H696 M24 120 H696 M24 168 H696 M24 216 H696"/>
+        <path d="M24 24 V216 M120 24 V216 M216 24 V216 M312 24 V216 M408 24 V216 M504 24 V216 M600 24 V216 M696 24 V216"/>
+      </g>
+      <g class="reach">
+        <circle cx="72" cy="48" r="34"/><circle cx="168" cy="48" r="34"/><circle cx="264" cy="48" r="34"/><circle cx="360" cy="48" r="34"/><circle cx="456" cy="48" r="34"/><circle cx="552" cy="48" r="34"/><circle cx="648" cy="48" r="34"/>
+        <circle cx="72" cy="144" r="34"/><circle cx="168" cy="144" r="34"/><circle cx="264" cy="144" r="34"/><circle cx="360" cy="144" r="34"/><circle cx="456" cy="144" r="34"/><circle cx="552" cy="144" r="34"/><circle cx="648" cy="144" r="34"/>
+      </g>
+      <g class="tree">
+        <circle cx="72" cy="48" r="4"/><circle cx="168" cy="48" r="4"/><circle cx="264" cy="48" r="4"/><circle cx="360" cy="48" r="4"/><circle cx="456" cy="48" r="4"/><circle cx="552" cy="48" r="4"/><circle cx="648" cy="48" r="4"/>
+        <circle cx="72" cy="144" r="4"/><circle cx="168" cy="144" r="4"/><circle cx="264" cy="144" r="4"/><circle cx="360" cy="144" r="4"/><circle cx="456" cy="144" r="4"/><circle cx="552" cy="144" r="4"/><circle cx="648" cy="144" r="4"/>
+      </g>
+      <path class="leader" d="M72 96 H168"/>
+      <text class="sub" x="120" y="112" text-anchor="middle">100 m spacing</text>
+      <text class="sub" x="648" y="196" text-anchor="middle">reach 71 m, under 0.1 C beyond</text>
+    </svg>
+    <figcaption>Trees spaced beyond their measured reach give responses that do not overlap. One run returns one observation per tree, not one per run.</figcaption>
+  </figure>
+  <p>Each response field is cropped into 24 patches of 256 by 256 pixels. The sampler favors ground within 80 m of a tree and keeps a 5 percent floor elsewhere. Ahmedabad gave 416 training patches and 128 held-out patches. Ahmedabad and Lagos together gave 832 and 256.</p>
+</section>
+
+<section id="training">
+  <h2><i>05</i>How it is trained</h2>
+  <table>
+    <thead><tr><th>Setting</th><th>Value</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>loss</td><td>Huber, delta 1.0</td><td>18 C at a tree must not drown 0.1 C at 30 m; the far field is the spillover</td></tr>
+      <tr><td>optimizer</td><td>AdamW, learning rate 0.002, cosine schedule</td><td>a standard choice; not yet compared with others</td></tr>
+      <tr><td>batch</td><td>8 patches</td><td>fits one device</td></tr>
+      <tr><td>epochs</td><td>40 for this model, no early stop</td><td>the default is now 30 with patience 10: training stops when held-out skill has not improved for 10 epochs</td></tr>
+      <tr><td>kept weights</td><td>the epoch with the best held-out skill</td><td>the Ahmedabad curve swung between 0.57 and 0.77 after epoch 10</td></tr>
+      <tr><td>seed</td><td>0</td><td>one seed; an ensemble is planned</td></tr>
+      <tr><td>device, time</td><td>Apple GPU, 233 s for one tile, 518 s for two</td><td>data, not compute, is the limit</td></tr>
+    </tbody>
+  </table>
+  <h3>The split</h3>
+  <p>Patches from one design overlap and share context. A random split of patches would leak. The split is by design. A quarter of the designs are held out whole. The test asks whether the model predicts an intervention pattern it never saw.</p>
+  <p>A second split holds out a whole city. That asks whether the model transfers to geometry it never saw. The two questions are different. The pipeline reports both.</p>
+  <figure>
+    <svg viewBox="0 0 720 168" role="img" aria-labelledby="f4t f4d">
+      <title id="f4t">Held out by design, never by patch</title>
+      <desc id="f4d">Four groups of patch rectangles, each group one design. Three groups are plain and labelled train. One group is highlighted and labelled held out.</desc>
+      <g>
+        <text class="sub" x="100" y="24" text-anchor="middle">clustered 1 %</text>
+        <rect class="box" x="24" y="32" width="48" height="32" rx="4"/><rect class="box" x="76" y="32" width="48" height="32" rx="4"/><rect class="box" x="128" y="32" width="48" height="32" rx="4"/>
+        <rect class="box" x="24" y="68" width="48" height="32" rx="4"/><rect class="box" x="76" y="68" width="48" height="32" rx="4"/><rect class="box" x="128" y="68" width="48" height="32" rx="4"/>
+        <text class="label" x="100" y="128" text-anchor="middle">train</text>
+      </g>
+      <g>
+        <text class="sub" x="276" y="24" text-anchor="middle">random 10 %</text>
+        <rect class="box" x="200" y="32" width="48" height="32" rx="4"/><rect class="box" x="252" y="32" width="48" height="32" rx="4"/><rect class="box" x="304" y="32" width="48" height="32" rx="4"/>
+        <rect class="box" x="200" y="68" width="48" height="32" rx="4"/><rect class="box" x="252" y="68" width="48" height="32" rx="4"/><rect class="box" x="304" y="68" width="48" height="32" rx="4"/>
+        <text class="label" x="276" y="128" text-anchor="middle">train</text>
+      </g>
+      <g>
+        <text class="sub" x="452" y="24" text-anchor="middle">corridor 5 %</text>
+        <rect class="box" x="376" y="32" width="48" height="32" rx="4"/><rect class="box" x="428" y="32" width="48" height="32" rx="4"/><rect class="box" x="480" y="32" width="48" height="32" rx="4"/>
+        <rect class="box" x="376" y="68" width="48" height="32" rx="4"/><rect class="box" x="428" y="68" width="48" height="32" rx="4"/><rect class="box" x="480" y="68" width="48" height="32" rx="4"/>
+        <text class="label" x="452" y="128" text-anchor="middle">train</text>
+      </g>
+      <g>
+        <text class="sub" x="628" y="24" text-anchor="middle">clustered 10 %</text>
+        <rect class="focal" x="552" y="32" width="48" height="32" rx="4"/><rect class="focal" x="604" y="32" width="48" height="32" rx="4"/><rect class="focal" x="656" y="32" width="48" height="32" rx="4"/>
+        <rect class="focal" x="552" y="68" width="48" height="32" rx="4"/><rect class="focal" x="604" y="68" width="48" height="32" rx="4"/><rect class="focal" x="656" y="68" width="48" height="32" rx="4"/>
+        <text class="label" x="628" y="128" text-anchor="middle">held out</text>
+      </g>
+      <text class="aside" x="360" y="156" text-anchor="middle">Every patch of a design sits on the same side of the line.</text>
+    </svg>
+    <figcaption>The held-out designs for the Ahmedabad model were clustered 5 and 10 percent and random 5 and 10 percent.</figcaption>
+  </figure>
+</section>
+
+<section id="judging">
+  <h2><i>06</i>How it is judged</h2>
+  <p>Pixel error alone is the wrong measure. The response is near zero almost everywhere. A model that predicts zero everywhere has a small error and is useless. Four questions decide, in this order.</p>
+  <ol>
+    <li><strong>Does it beat predicting nothing?</strong> Skill is 1 minus the model error over the error of predicting no change. Zero means no better than nothing. One means perfect.</li>
+    <li><strong>Does the tail survive?</strong> Error is reported by distance from a tree, from the tree itself out to 80 m. The far bands are the spillover.</li>
+    <li><strong>Is the plan score right?</strong> Plans are scored on population-weighted exposure, which integrates the whole field. That integral must be unbiased.</li>
+    <li><strong>Does it order plans correctly?</strong> A search only needs to know which of two plans is better.</li>
+  </ol>
+  <table>
+    <thead><tr><th>Measure, Ahmedabad model on 4 held-out designs</th><th class="n">Value</th></tr></thead>
+    <tbody>
+      <tr><td>skill against predicting nothing</td><td class="n">0.82</td></tr>
+      <tr><td>error in the population-weighted plan score</td><td class="n">2.8 %</td></tr>
+      <tr><td>rank correlation over the 4 designs</td><td class="n">1.0</td></tr>
+      <tr><td>time per field, engine</td><td class="n">162 s</td></tr>
+      <tr><td>time per field, surrogate</td><td class="n">0.58 s</td></tr>
+      <tr><td>a search of 1,000 evaluations, engine</td><td class="n">45 h</td></tr>
+      <tr><td>a search of 1,000 evaluations, surrogate</td><td class="n">10 min</td></tr>
+    </tbody>
+  </table>
+  <table>
+    <thead><tr><th>Distance from a tree, design clustered 5 %</th><th class="n">Engine, C</th><th class="n">Surrogate, C</th></tr></thead>
+    <tbody>
+      <tr><td>at the tree</td><td class="n">9.20</td><td class="n">9.52</td></tr>
+      <tr><td>1 to 2 m</td><td class="n">7.93</td><td class="n">7.88</td></tr>
+      <tr><td>3 to 5 m</td><td class="n">2.70</td><td class="n">2.68</td></tr>
+      <tr><td>6 to 10 m</td><td class="n">0.77</td><td class="n">0.75</td></tr>
+      <tr><td>11 to 20 m</td><td class="n">0.19</td><td class="n">0.19</td></tr>
+      <tr><td>21 to 40 m</td><td class="n">0.04</td><td class="n">0.05</td></tr>
+      <tr><td>41 to 80 m</td><td class="n">0.01</td><td class="n">0.02</td></tr>
+    </tbody>
+  </table>
+  <p>A ranking over four items is a weak result. The transfer question has two points so far. Trained on Ahmedabad alone, skill on Rio is 0.46. Trained on Ahmedabad and Lagos, skill on Rio is 0.55. More cities help. More cities are in the physics queue now.</p>
+</section>
+
+<section id="use">
+  <h2><i>07</i>How it is used</h2>
+  <p>Today the surrogate is used for one thing: assessment on designs it never trained on. No published number comes from it. Every number in the results comes from the engine.</p>
+  <p>The planners do not use it yet. Greedy and the orchard planner rank baseline harm and place trees. A surrogate-backed search is planned. The loop below is the plan, not the present.</p>
+  <figure>
+    <svg viewBox="0 0 720 200" role="img" aria-labelledby="f5t f5d">
+      <title id="f5t">Where the surrogate will sit in the search loop</title>
+      <desc id="f5d">A loop of three boxes: planner proposes, surrogate predicts, planner updates, repeated thousands of times. The chosen plans leave the loop to the engine, which verifies them before anything is reported.</desc>
+      <rect class="box" x="24" y="56" width="128" height="56" rx="8"/><text class="label" x="88" y="80" text-anchor="middle">Planner</text><text class="sub" x="88" y="96" text-anchor="middle">proposes plans</text>
+      <path class="arrow" d="M152 72 H200"/>
+      <rect class="focal" x="204" y="56" width="128" height="56" rx="8"/><text class="label" x="268" y="80" text-anchor="middle">Surrogate</text><text class="sub" x="268" y="96" text-anchor="middle">0.58 s per plan</text>
+      <path class="arrow" d="M204 100 H152"/>
+      <text class="sub" x="176" y="128" text-anchor="middle">thousands of times</text>
+      <path class="arrow" d="M332 84 H412"/>
+      <rect class="box" x="416" y="56" width="128" height="56" rx="8"/><text class="label" x="480" y="80" text-anchor="middle">Front</text><text class="sub" x="480" y="96" text-anchor="middle">the plans that remain</text>
+      <path class="arrow" d="M544 84 H592"/>
+      <rect class="box" x="596" y="56" width="104" height="56" rx="8"/><text class="label" x="648" y="80" text-anchor="middle">Engine</text><text class="sub" x="648" y="96" text-anchor="middle">verifies, 162 s</text>
+      <path class="leader" d="M648 116 C648 148 560 160 480 164"/>
+      <text class="aside" x="480" y="188" text-anchor="middle">Nothing is reported from the surrogate alone. The engine has the last word.</text>
+    </svg>
+    <figcaption>A search selects for the surrogate's errors. Verification by the engine is part of the design, not an option.</figcaption>
+  </figure>
+</section>
+
+<section id="limits">
+  <h2><i>08</i>Where it falls short</h2>
+  <p>These are the things that physics time did not allow. They are recorded so nobody mistakes an untested case for a tested one.</p>
+  <ul>
+    <li>One design day per city. The model has seen one sun path and one season.</li>
+    <li>Trees only. Shade structures, de-paving and cool surfaces have no input channel.</li>
+    <li>17 runs per city and 4 held-out designs. A ranking over 4 items proves little.</li>
+    <li>A transfer curve with two points, from one held-out city.</li>
+    <li>No search of settings: one learning rate, one width, one seed.</li>
+    <li>No uncertainty. One network cannot say where it is guessing.</li>
+    <li>No engine verification of a search, because no search uses the surrogate yet.</li>
+    <li>The sky openness channel is a proxy. The engine computes the real sky view factor for every baseline run and nobody reads it.</li>
+    <li>No augmentation. A flip or a rotation mirrors the sun path and puts shadows on the wrong side. Augmentation needs a sun-direction channel first.</li>
+    <li>Patches favor ground near trees. The far field is under-represented despite the floor.</li>
+    <li>Batch normalization with a batch of 8 on one device.</li>
+    <li>The checkpoint is a pickle with one metadata field. The manifest now fills that gap.</li>
+  </ul>
+</section>
+
+<section id="better">
+  <h2><i>09</i>How to train it better</h2>
+  <p>In order of value per engine hour. Each item is a GitHub issue.</p>
+  <ol>
+    <li>Keep the best epoch and stop early. Done, issue 99.</li>
+    <li>Write a manifest with every model. Done, issue 98.</li>
+    <li>Read the sky view factor and the shadow fraction from the baseline run, and add a sun-path channel from the design day and latitude. Issue 100.</li>
+    <li>Give each trusted intervention kind its own placement channel. Issue 47.</li>
+    <li>Define the validation protocol: folds by design, a held-out-city curve over fifteen cities, engine verification of every chosen plan. Issue 101.</li>
+    <li>Train five seeds and report where the spread is wide. Issue 102.</li>
+    <li>Then regenerate the physics and retrain every selected tile with manifests. Issue 105.</li>
+  </ol>
+</section>
+
+<section id="manifest">
+  <h2><i>10</i>The manifest</h2>
+  <p>Every trained model lives in its own directory with a file named <code>manifest.json</code>. The manifest says what the model is. A reader with the manifest and no code can decide whether to trust it.</p>
+  <table>
+    <thead><tr><th>Section</th><th>What it holds</th></tr></thead>
+    <tbody>
+      <tr><td><code>model_id</code>, <code>created</code></td><td>response-unet, the cities, the time of training</td></tr>
+      <tr><td><code>architecture</code></td><td>class, depth, widths, bottleneck, parameters, receptive field, output constraint</td></tr>
+      <tr><td><code>inputs</code></td><td>the seven channels in order, each scale, the land cover classes behind the flags</td></tr>
+      <tr><td><code>output</code></td><td>quantity, daylight window, units, sign</td></tr>
+      <tr><td><code>data</code></td><td>tiles trained on, design families, designs held out, patch size, patch counts</td></tr>
+      <tr><td><code>training</code></td><td>every setting, device, torch version, selection rule, best and last epoch, the full history</td></tr>
+      <tr><td><code>metrics</code></td><td>best skill, held-out error, the zero baseline it is read against</td></tr>
+      <tr><td><code>provenance</code></td><td>engine version, package version, code commit</td></tr>
+      <tr><td><code>weights</code></td><td>file, format, SHA-256 digest, size</td></tr>
+      <tr><td><code>licence</code>, <code>intended_use</code></td><td>Apache-2.0, and what the model is for</td></tr>
+    </tbody>
+  </table>
+  <p>Read a manifest with one command.</p>
+  <pre>uv run shadecast surrogate describe data/tiles/6143/t43N_249_2547/models/response-unet-ahmedabad-20260826T143800</pre>
+  <pre>{
+  "model_id": "response-unet-ahmedabad-20260826T143800",
+  "architecture": {"class": "ResponseUNet", "depth": 4, "widths": [32, 64, 128, 256],
+                   "bottleneck": 512, "parameters": 7764193, "receptive_field_m": 152},
+  "data": {"tiles": [{"city": "ahmedabad", "tile": "t43N_249_2547", "urban_centre": 6143, "designs": 17}],
+           "held_out_designs": ["clustered_0105", "clustered_0110", "random_uniform_0205", "random_uniform_0210"],
+           "patch_px": 256, "train_patches": 416, "test_patches": 128},
+  "training": {"best_epoch": 36, "last_epoch": 40, "train_seconds": 233.3, "device": "mps"},
+  "metrics": {"best_skill": 0.7687, "final_test_mae_C": 0.41, "zero_baseline_mae_C": 1.78},
+  "provenance": {"engine": "solweig_gpu 2.0.0"},
+  "weights": {"file": "model.pt", "format": "torch state_dict, pickle"}
+}</pre>
+  <div class="note"><p>The two models trained on 2026-08-26 predate the manifest. Their manifests were rebuilt from their training reports and say so in a note. Their weights are the last epoch, not the best.</p></div>
+</section>
+
+<section id="storage">
+  <h2><i>11</i>Where models live</h2>
+  <p>Models, data and results are not in git. They live under <code>data/</code>, which git ignores. The layout puts each tile's models beside the physics that trained them.</p>
+  <pre>data/tiles/&lt;urban center id&gt;/&lt;tile id&gt;/
+  bundle/        the five layers, provenance.json
+  surrogate/     baseline/ and one directory per design
+  models/        one directory per trained model: model.pt, manifest.json, assessment.json
+data/models/     models trained on several tiles</pre>
+  <p>Storing models elsewhere is an option, never a requirement. A model store interface will have three backends: a local directory, which is the default, the Hugging Face Hub, and a git-lfs repository. Each holds the same files. Fetching from a public store needs no account. Publishing needs the credential that store asks for, at build time. This is issue 103.</p>
+</section>
+
+<footer>
+  Part of <a href="index.html">the shadecast walkthrough</a>. Physics by SOLWEIG through solweig-gpu. Sources are cited in the walkthrough's references, from the project's cited sources registry.
+</footer>
+</div>
+</body>
+</html>
