@@ -161,6 +161,8 @@ def training_section(report: dict) -> dict:
         "best_epoch": report.get("best_epoch"),
         "last_epoch": report.get("last_epoch"),
         "stopped_early": report.get("stopped_early"),
+        "interrupted": report.get("interrupted", False),
+        "resumed_from_epoch": report.get("resumed_from_epoch", 0),
         "train_seconds": report.get("train_seconds"),
         "history": report.get("history", []),
     }
