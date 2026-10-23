@@ -1,120 +1,145 @@
-"""The CoolBench city corpus.
+"""The CoolBench city corpus: a selection of urban centres from GHS-UCDB.
 
-Stratified by Koppen climate zone and World Bank income group, with deliberate
-over-sampling of tropical and Global South cities. The 2026 review that found
-tropical cities to be only 9% of urban-heat mitigation studies is the reason
-this is a design constraint rather than an afterthought.
+The database is the corpus; the benchmark reports on a selection. ``corpus.json`` beside this
+module lists the selected urban centres by database id with the only fields the database
+cannot know: our short key, our regional grouping, whether WRI's Cool Cities Lab also covers
+the city, and a note. Every stratum (Koppen class, income group, country, population, and the
+centroid that seeds the tile search) is read from the database, so nothing here is typed from
+memory.
 
-`in_wri` marks cities that also appear in WRI's Cool Cities Lab. Those are the
-cross-validation set: our independently built bundles should agree with their
-published UTCI where the two overlap, and any disagreement is informative.
-
-Coordinates are a search *seed*, not the study area. The actual AOI is chosen by
-`aoi.select` from population density, so nobody has to hand-tune a box and the
-choice is reproducible.
+The selection is stratified by Koppen climate zone and World Bank income group, with deliberate
+over-sampling of tropical and Global South cities. The 2026 review that found tropical cities
+to be only 9% of urban-heat mitigation studies is the reason this is a design constraint rather
+than an afterthought.
 """
 
 from __future__ import annotations
 
+import json
+from collections.abc import Iterable
 from dataclasses import dataclass
+from pathlib import Path
+
+from .corpus import ucdb
+from .corpus.urban_centres import UrbanCentres
+
+SELECTION_PATH = Path(__file__).with_name("corpus.json")
+SELECTION_FIELDS: dict[str, type] = {
+    "ucdb_id": int,
+    "key": str,
+    "region": str,
+    "in_wri": bool,
+    "note": str,
+}
+REQUIRED_FIELDS = ("ucdb_id", "key", "region")
+GLOBAL_SOUTH_INCOMES = ("L", "LM", "UM")
 
 
 @dataclass(frozen=True)
 class City:
     key: str
+    ucdb_id: int
     name: str
     country: str
     lat: float
     lon: float
-    koppen: str  # main Koppen-Geiger class
-    income: str  # World Bank group: L, LM, UM, H
+    koppen: str | None  # Koppen-Geiger class of the majority of the urban centre, or None
+    income: str | None  # World Bank group: L, LM, UM, H, or None
     region: str
+    population: int
+    tiles: int  # 1 km GHS cells inside the urban centre, which is its area in km2
     in_wri: bool = False
     note: str = ""
 
     @property
     def global_south(self) -> bool:
-        return self.income in ("L", "LM", "UM")
+        return self.income in GLOBAL_SOUTH_INCOMES
 
 
-_C = [
-    # ---- South Asia ----
-    City(
-        "ahmedabad",
-        "Ahmedabad",
-        "IND",
-        23.0225,
-        72.5850,
-        "BSh",
-        "LM",
-        "South Asia",
-        note="First Heat Action Plan in South Asia, 2013. Plan-rediscovery validation case.",
-    ),
-    City("delhi", "Delhi", "IND", 28.6519, 77.2315, "BSh", "LM", "South Asia"),
-    City("karachi", "Karachi", "PAK", 24.8607, 67.0011, "BWh", "LM", "South Asia"),
-    City("dhaka", "Dhaka", "BGD", 23.7509, 90.3934, "Aw", "LM", "South Asia"),
-    City("chennai", "Chennai", "IND", 13.0827, 80.2707, "Aw", "LM", "South Asia"),
-    # ---- Southeast Asia ----
-    City("jakarta", "Jakarta", "IDN", -6.1751, 106.8272, "Af", "UM", "SE Asia", in_wri=True),
-    City("bangkok", "Bangkok", "THA", 13.7563, 100.5018, "Aw", "UM", "SE Asia"),
-    City("hochiminh", "Ho Chi Minh City", "VNM", 10.7769, 106.7009, "Aw", "LM", "SE Asia"),
-    City("manila", "Manila", "PHL", 14.5995, 120.9842, "Aw", "LM", "SE Asia"),
-    # ---- Africa ----
-    City("lagos", "Lagos", "NGA", 6.4550, 3.3841, "Aw", "LM", "Africa"),
-    City("nairobi", "Nairobi", "KEN", -1.2864, 36.8172, "Cwb", "LM", "Africa", in_wri=True),
-    City("accra", "Accra", "GHA", 5.6037, -0.1870, "Aw", "LM", "Africa"),
-    City("cairo", "Cairo", "EGY", 30.0444, 31.2357, "BWh", "LM", "Africa"),
-    City("daressalaam", "Dar es Salaam", "TZA", -6.7924, 39.2083, "Aw", "LM", "Africa"),
-    City("khartoum", "Khartoum", "SDN", 15.5007, 32.5599, "BWh", "L", "Africa"),
-    City("johannesburg", "Johannesburg", "ZAF", -26.2041, 28.0473, "Cwb", "UM", "Africa"),
-    # ---- Latin America ----
-    City("rio", "Rio de Janeiro", "BRA", -22.9068, -43.1729, "Aw", "UM", "LatAm", in_wri=True),
-    City("mexicocity", "Mexico City", "MEX", 19.4326, -99.1332, "Cwb", "UM", "LatAm", in_wri=True),
-    City("lima", "Lima", "PER", -12.0464, -77.0428, "BWh", "UM", "LatAm"),
-    City("saopaulo", "Sao Paulo", "BRA", -23.5505, -46.6333, "Cfa", "UM", "LatAm"),
-    City("monterrey", "Monterrey", "MEX", 25.6866, -100.3161, "BSh", "UM", "LatAm"),
-    # ---- Middle East ----
-    City("dubai", "Dubai", "ARE", 25.2048, 55.2708, "BWh", "H", "Middle East"),
-    City("baghdad", "Baghdad", "IRQ", 33.3152, 44.3661, "BWh", "UM", "Middle East"),
-    # ---- Europe ----
-    City("athens", "Athens", "GRC", 37.9838, 23.7275, "Csa", "H", "Europe"),
-    City(
-        "seville",
-        "Seville",
-        "ESP",
-        37.3891,
-        -5.9845,
-        "Csa",
-        "H",
-        "Europe",
-        note="Named and ranked its heatwaves from 2022. Second rediscovery case.",
-    ),
-    City("milan", "Milan", "ITA", 45.4642, 9.1900, "Cfa", "H", "Europe"),
-    City("london", "London", "GBR", 51.5074, -0.1278, "Cfb", "H", "Europe", in_wri=True),
-    City("lyon", "Lyon", "FRA", 45.7640, 4.8357, "Cfb", "H", "Europe"),
-    # ---- North America ----
-    City("phoenix", "Phoenix", "USA", 33.4484, -112.0740, "BWh", "H", "N America"),
-    City("boston", "Boston", "USA", 42.3601, -71.0589, "Dfa", "H", "N America", in_wri=True),
-    City("houston", "Houston", "USA", 29.7604, -95.3698, "Cfa", "H", "N America"),
-    # ---- Oceania ----
-    City("sydney", "Sydney", "AUS", -33.8688, 151.2093, "Cfa", "H", "Oceania"),
-]
-
-CORPUS: dict[str, City] = {c.key: c for c in _C}
+def _check_entry(entry: dict, path: Path) -> None:
+    key = entry.get("key", "?")
+    unknown = sorted(set(entry) - set(SELECTION_FIELDS))
+    if unknown:
+        raise ValueError(
+            f"{path.name}: city {key!r} has fields that belong to the database, not here: {unknown}"
+        )
+    missing = [name for name in REQUIRED_FIELDS if name not in entry]
+    if missing:
+        raise ValueError(f"{path.name}: city {key!r} lacks {missing}")
+    for name, kind in SELECTION_FIELDS.items():
+        value = entry.get(name)
+        if value is not None and not isinstance(value, kind):
+            raise ValueError(f"{path.name}: city {key!r} field {name!r} must be {kind.__name__}")
 
 
-def summary() -> dict:
-    n = len(CORPUS)
-    south = sum(c.global_south for c in CORPUS.values())
-    tropical = sum(c.koppen.startswith("A") for c in CORPUS.values())
-    arid = sum(c.koppen.startswith("B") for c in CORPUS.values())
+def selection(path: Path = SELECTION_PATH) -> list[dict]:
+    """Read the selection file and refuse anything that is not an id plus our own fields."""
+    path = Path(path)
+    entries: list[dict] = json.loads(path.read_text())
+    seen_keys: set[str] = set()
+    seen_ids: set[int] = set()
+    for entry in entries:
+        _check_entry(entry, path)
+        key = str(entry.get("key"))
+        ucdb_id = int(entry.get("ucdb_id", 0))
+        if key in seen_keys or ucdb_id in seen_ids:
+            raise ValueError(f"{path.name}: duplicate city {key!r} ({ucdb_id})")
+        seen_keys.add(key)
+        seen_ids.add(ucdb_id)
+    return entries
+
+
+def urban_centres(cache_dir: Path = ucdb.CACHE) -> UrbanCentres:
+    """The database, fetched on first use and read from the cache after that."""
+    return UrbanCentres.load(cache_dir)
+
+
+def _city(entry: dict, centres: UrbanCentres) -> City:
+    key = str(entry.get("key"))
+    ucdb_id = int(entry.get("ucdb_id", 0))
+    try:
+        centre = centres.by_id(ucdb_id)
+    except KeyError as exc:
+        raise KeyError(f"city {key!r}: the database has no urban centre {ucdb_id}") from exc
+    return City(
+        key=key,
+        ucdb_id=centre.id,
+        name=centre.name,
+        country=centre.country,
+        lat=centre.lat,
+        lon=centre.lon,
+        koppen=centre.koppen,
+        income=centre.income,
+        region=str(entry.get("region")),
+        population=centre.population,
+        tiles=centre.tiles,
+        in_wri=bool(entry.get("in_wri", False)),
+        note=str(entry.get("note", "")),
+    )
+
+
+def corpus(
+    entries: list[dict] | None = None, centres: UrbanCentres | None = None
+) -> dict[str, City]:
+    """The selected cities keyed by short key, in selection order."""
+    chosen = entries if entries is not None else selection()
+    database = centres if centres is not None else urban_centres()
+    return {str(entry.get("key")): _city(entry, database) for entry in chosen}
+
+
+def summary(cities: Iterable[City]) -> dict:
+    listed = list(cities)
+    n = len(listed)
+    south = sum(c.global_south for c in listed)
+    tropical = sum((c.koppen or "").startswith("A") for c in listed)
+    arid = sum((c.koppen or "").startswith("B") for c in listed)
     return {
         "cities": n,
         "global_south": f"{south} ({south / n:.0%})",
         "tropical_A": f"{tropical} ({tropical / n:.0%})",
         "arid_B": f"{arid} ({arid / n:.0%})",
-        "southern_hemisphere": sum(c.lat < 0 for c in CORPUS.values()),
-        "wri_overlap": sum(c.in_wri for c in CORPUS.values()),
-        "regions": len({c.region for c in CORPUS.values()}),
-        "koppen_classes": len({c.koppen for c in CORPUS.values()}),
+        "southern_hemisphere": sum(c.lat < 0 for c in listed),
+        "wri_overlap": sum(c.in_wri for c in listed),
+        "regions": len({c.region for c in listed}),
+        "koppen_classes": len({c.koppen for c in listed if c.koppen}),
     }

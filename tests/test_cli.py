@@ -1,12 +1,53 @@
-"""Command line surface. No network and no engine, so these stay fast."""
+"""Command line surface. No network, no engine and no database, so these stay fast."""
 
+import pytest
 from typer.testing import CliRunner
 
-from shadecast.cities import CORPUS
+from shadecast import cities
+from shadecast.cities import City
 from shadecast.cli import app
 from shadecast.console import build_table, corpus_table, result_table
 
 runner = CliRunner()
+
+FIXTURE = {
+    "ahmedabad": City(
+        "ahmedabad",
+        6143,
+        "Ahmedabad",
+        "India",
+        23.02,
+        72.6,
+        "BSh",
+        "LM",
+        "South Asia",
+        7898650,
+        365,
+    ),
+    "london": City(
+        "london",
+        5816,
+        "London",
+        "United Kingdom",
+        51.5,
+        -0.1,
+        "Cfb",
+        "H",
+        "Europe",
+        10408332,
+        1649,
+        True,
+    ),
+}
+
+
+def _fixture_corpus(entries=None, centres=None) -> dict[str, City]:
+    return dict(FIXTURE)
+
+
+@pytest.fixture(autouse=True)
+def _offline_corpus(monkeypatch):
+    monkeypatch.setattr(cities, "corpus", _fixture_corpus)
 
 
 def test_help_lists_every_command():
@@ -40,8 +81,8 @@ def test_build_rejects_an_unknown_city():
 
 
 def test_corpus_table_has_a_row_per_city():
-    table = corpus_table(list(CORPUS.values()))
-    assert table.row_count == len(CORPUS)
+    table = corpus_table(list(FIXTURE.values()))
+    assert table.row_count == len(FIXTURE)
 
 
 def test_build_table_starts_empty():

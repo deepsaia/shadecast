@@ -14,7 +14,7 @@ from typing import Annotated
 
 import typer
 
-from .cities import CORPUS
+from . import cities
 from .console import console
 from .dash.builder import build_index
 from .dash.server import serve
@@ -45,7 +45,7 @@ def find_bundle(city: str) -> Path | None:
 def discover() -> list[tuple[str, Path, Path]]:
     """Every city that has both a bundle and generated physics."""
     found = []
-    for city in CORPUS:
+    for city in cities.corpus():
         surrogate_dir = Path("data/surrogate") / city
         bundle = find_bundle(city)
         if bundle and (surrogate_dir / "baseline" / "tmrt_daylight.npy").exists():
@@ -79,8 +79,10 @@ def build_bundle(destination: Path, data_root: Path = Path("data")) -> int:
     # with max-age=600, so without this a returning visitor keeps running the previous
     # app.js for up to ten minutes after a republish and sees a page that no longer exists.
     digest = hashlib.sha256(script.encode()).hexdigest()[:10]
-    page = (here / "app.html").read_text().replace(
-        '<script src="app.js"></script>', f'<script src="app.js?v={digest}"></script>'
+    page = (
+        (here / "app.html")
+        .read_text()
+        .replace('<script src="app.js"></script>', f'<script src="app.js?v={digest}"></script>')
     )
     (destination / "index.html").write_text(page)
 
