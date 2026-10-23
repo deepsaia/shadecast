@@ -20,7 +20,7 @@ class UrbanCentre:
     names: tuple[str, ...]
     slug: str
     country: str
-    population: int
+    population_2025: int  # the GHS-POP 2025 epoch, as GHS-UCDB reports it
     area_km2: int
     income: str | None
     koppen_code: int | None
