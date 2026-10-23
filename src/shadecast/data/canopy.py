@@ -22,6 +22,7 @@ from shapely.geometry import box, shape
 
 from ..aoi import AOI
 
+SOURCE = "meta_wri_chm"  # key in cited_sources.json
 BASE = "https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float"
 CACHE = Path.home() / ".cache" / "shadecast"
 

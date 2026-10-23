@@ -25,6 +25,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+SOURCE = "ghs_ucdb"  # key in cited_sources.json
 RELEASE = "R2024A"
 VERSION = "V1_2"
 BASE_URL = (

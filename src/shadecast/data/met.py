@@ -21,6 +21,7 @@ import requests
 
 from ..aoi import AOI
 
+SOURCE = "open_meteo_era5"  # key in cited_sources.json
 ARCHIVE = "https://archive-api.open-meteo.com/v1/archive"
 HOURLY = [
     "temperature_2m",

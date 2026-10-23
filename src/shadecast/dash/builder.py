@@ -19,6 +19,7 @@ from pathlib import Path
 import numpy as np
 import rasterio
 
+from .. import sources
 from ..experiments.factorial import verdict as factorial_verdict
 from ..exposure import outdoor_mask, outdoor_weights
 from ..interventions import cost
@@ -180,6 +181,7 @@ def build_index(cities: list[tuple[str, Path, Path]], out_dir: Path, data_root: 
     payload = {
         "cities": [build_city(c, b, s, out_dir) for c, b, s in cities],
         "findings": findings.collect(Path(data_root), verdict),
+        "references": sources.grouped(),
     }
     (out_dir / "index.json").write_text(json.dumps(payload, separators=(",", ":")))
     logger.info("index.json written with %d cities", len(payload["cities"]))

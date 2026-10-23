@@ -1,0 +1,360 @@
+{
+  "groups": [
+    {"key": "radiation", "title": "The radiation model"},
+    {"key": "reflective", "title": "Reflective surfaces, and why those arms are quarantined"},
+    {"key": "routing", "title": "Shaded routing, the forward problem this inverts"},
+    {"key": "prior", "title": "Prior systems this builds on and compares against"},
+    {"key": "data", "title": "Data, every source unauthenticated"},
+    {"key": "validation", "title": "Validation, the one source outside the credential-free path"},
+    {"key": "method", "title": "Method"}
+  ],
+  "sources": [
+    {
+      "key": "solweig_2008",
+      "group": "radiation",
+      "title": "SOLWEIG 1.0: modelling spatial variations of 3D radiant fluxes and mean radiant temperature in complex urban settings",
+      "authors_or_publisher": "Lindberg, Holmer and Thorsson, International Journal of Biometeorology 52",
+      "year": 2008,
+      "doi": "10.1007/s00484-008-0162-7",
+      "used_for": "The radiation model behind every mean radiant temperature field in this work."
+    },
+    {
+      "key": "umep_2018",
+      "group": "radiation",
+      "title": "Urban Multi-scale Environmental Predictor (UMEP): an integrated tool for city-based climate services",
+      "authors_or_publisher": "Lindberg et al., Environmental Modelling and Software 99",
+      "year": 2018,
+      "doi": "10.1016/j.envsoft.2017.09.020",
+      "url": "https://umep-docs.readthedocs.io/",
+      "used_for": "Origin of the surface class table the engine reads, which shadecast extends with cool surfaces."
+    },
+    {
+      "key": "solweig_gpu",
+      "group": "radiation",
+      "title": "solweig-gpu, the SOLWEIG implementation this benchmark calls",
+      "authors_or_publisher": "solweig-gpu maintainers, PyPI",
+      "year": 2025,
+      "release": "2.0.0",
+      "licence": "GPL-3.0",
+      "url": "https://solweig-gpu.readthedocs.io/en/latest/input_data.html",
+      "short": "solweig-gpu 2.0.0, GPL-3.0, as a subprocess",
+      "used_for": "Runs every physics cell, invoked across a process boundary so this codebase stays Apache-2.0."
+    },
+    {
+      "key": "solweig_source",
+      "group": "radiation",
+      "title": "SOLWEIG model source and documentation",
+      "authors_or_publisher": "UMEP development group",
+      "url": "https://umep-dev.github.io/solweig/",
+      "used_for": "Reference implementation consulted for the ground temperature and albedo code paths."
+    },
+    {
+      "key": "utci_2012",
+      "group": "radiation",
+      "title": "Deriving the operational procedure for the Universal Thermal Climate Index (UTCI)",
+      "authors_or_publisher": "Bröde et al., International Journal of Biometeorology 56",
+      "year": 2012,
+      "doi": "10.1007/s00484-011-0454-1",
+      "used_for": "The comfort index the engine derives after Tmrt. Not scored here, because Tmrt is what shade changes."
+    },
+    {
+      "key": "reflective_pavement_phoenix_2023",
+      "group": "reflective",
+      "title": "Evidence-based guidance on reflective pavement for urban heat mitigation in Arizona",
+      "authors_or_publisher": "Nature Communications 14, 1467",
+      "year": 2023,
+      "doi": "10.1038/s41467-023-36972-5",
+      "url": "https://www.nature.com/articles/s41467-023-36972-5",
+      "used_for": "Field measurement across 58 km of treated Phoenix street: pedestrian mean radiant temperature rises significantly on the road, with no significant change on the sidewalk. The falsification target for the albedo arms."
+    },
+    {
+      "key": "reflective_surfaces_2021",
+      "group": "reflective",
+      "title": "Limited application of reflective surfaces can mitigate urban heat pollution",
+      "authors_or_publisher": "Nature Communications 12",
+      "year": 2021,
+      "doi": "10.1038/s41467-021-23634-7",
+      "url": "https://www.nature.com/articles/s41467-021-23634-7",
+      "used_for": "Context for how far reflective surfaces can be applied before they warm the people below them."
+    },
+    {
+      "key": "retroreflective_2024",
+      "group": "reflective",
+      "title": "Optimizing retro-reflective surfaces to untrap radiation and cool cities",
+      "authors_or_publisher": "Nature Cities",
+      "year": 2024,
+      "doi": "10.1038/s44284-024-00047-3",
+      "url": "https://www.nature.com/articles/s44284-024-00047-3",
+      "used_for": "The physically correct version of the albedo arm, and one this engine cannot represent because it assumes Lambertian reflection."
+    },
+    {
+      "key": "retroreflective_2025",
+      "group": "reflective",
+      "title": "Harnessing retro-reflective materials for urban heat island mitigation",
+      "authors_or_publisher": "Discover Cities",
+      "year": 2025,
+      "doi": "10.1007/s44327-025-00086-y",
+      "url": "https://link.springer.com/article/10.1007/s44327-025-00086-y",
+      "used_for": "Review of retro-reflective materials, recorded as a stated limit of the benchmark."
+    },
+    {
+      "key": "coolwalks_2025",
+      "group": "routing",
+      "title": "CoolWalks for active mobility in urban street networks",
+      "authors_or_publisher": "Scientific Reports",
+      "year": 2025,
+      "doi": "10.1038/s41598-025-97200-2",
+      "url": "https://www.nature.com/articles/s41598-025-97200-2",
+      "used_for": "Shows shaded routing gives no benefit on a regular grid with uniform heights, the basis of hypothesis H9."
+    },
+    {
+      "key": "coolwalks_arxiv_2024",
+      "group": "routing",
+      "title": "CoolWalks: assessing the potential of shaded routing for active mobility",
+      "authors_or_publisher": "arXiv:2405.01225",
+      "year": 2024,
+      "url": "https://arxiv.org/html/2405.01225v1",
+      "used_for": "The forward routing problem this benchmark inverts."
+    },
+    {
+      "key": "cool_routes",
+      "group": "routing",
+      "title": "Cool routes: real-time human thermal exposure routing",
+      "authors_or_publisher": "Building and Environment",
+      "url": "https://www.sciencedirect.com/science/article/abs/pii/S0360132326004270",
+      "used_for": "Real-time thermal exposure routing, the walker's side of the problem."
+    },
+    {
+      "key": "pedestrian_routing_tgis_2025",
+      "group": "routing",
+      "title": "Mitigating heat stress by reducing solar exposure in pedestrian routing",
+      "authors_or_publisher": "Kolaxidis et al., Transactions in GIS",
+      "year": 2025,
+      "doi": "10.1111/tgis.70110",
+      "url": "https://onlinelibrary.wiley.com/doi/10.1111/tgis.70110",
+      "used_for": "Perceived cost routing over solar exposure, the form the corridor objective borrows."
+    },
+    {
+      "key": "wri_cool_cities_lab",
+      "group": "prior",
+      "title": "WRI Cool Cities Lab, UTCI methods",
+      "authors_or_publisher": "World Resources Institute",
+      "url": "https://coolcities.wri.org/data-and-methods/utci",
+      "used_for": "The forward model this work compares against. Cities it also covers are flagged in_wri in the selection."
+    },
+    {
+      "key": "wri_cities_cif",
+      "group": "prior",
+      "title": "cities-cif, WRI's city indicator framework",
+      "authors_or_publisher": "World Resources Institute",
+      "url": "https://github.com/wri/cities-cif",
+      "used_for": "Needs Earth Engine, a CDS key and an AWS profile, which is why this benchmark has the credential rule."
+    },
+    {
+      "key": "wri_cities_openurban",
+      "group": "prior",
+      "title": "cities-OpenUrban, WRI's land cover and opportunity layers",
+      "authors_or_publisher": "World Resources Institute",
+      "url": "https://github.com/wri/cities-OpenUrban",
+      "used_for": "Source of the cool-roof albedo targets, 0.62 low slope and 0.28 high slope."
+    },
+    {
+      "key": "en_roads",
+      "group": "prior",
+      "title": "En-ROADS climate policy simulator",
+      "authors_or_publisher": "Climate Interactive",
+      "url": "https://www.climateinteractive.org/en-roads/",
+      "used_for": "Checked for overlap: it is global and policy-scale, this is street-scale and spatial. The two nest."
+    },
+    {
+      "key": "unhabitat_heat_handbook",
+      "group": "prior",
+      "title": "Handbook on urban heat management in the Global South",
+      "authors_or_publisher": "UN-Habitat",
+      "url": "https://unhabitat.org/handbook-on-urban-heat-management-in-the-global-south",
+      "used_for": "Practice context for the Global South cities the selection oversamples."
+    },
+    {
+      "key": "gba_lod1",
+      "group": "data",
+      "title": "GlobalBuildingAtlas LoD1 footprints and heights",
+      "authors_or_publisher": "Technical University of Munich, on Source Cooperative",
+      "year": 2025,
+      "url": "https://source.coop/tge-labs/globalbuildingatlas-lod1",
+      "endpoint": "https://data.source.coop/tge-labs/globalbuildingatlas-lod1/{tile}.parquet",
+      "access": "anonymous",
+      "short": "GlobalBuildingAtlas LoD1, Source Cooperative",
+      "used_for": "Building footprints and heights. Chosen over Overture, which carried a height for 1 of 14,213 buildings in Ahmedabad. Tiled 5 degrees and read straight as GeoParquet, so one city needs one file rather than a global scan."
+    },
+    {
+      "key": "copernicus_dem",
+      "group": "data",
+      "title": "Copernicus DEM GLO-30",
+      "authors_or_publisher": "European Space Agency, on AWS Open Data",
+      "release": "GLO-30 cloud-optimised GeoTIFF",
+      "licence": "Copernicus DEM licence",
+      "url": "https://registry.opendata.aws/copernicus-dem/",
+      "endpoint": "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_{ns}{lat}_00_{ew}{lon}_00_DEM/Copernicus_DSM_COG_10_{ns}{lat}_00_{ew}{lon}_00_DEM.tif",
+      "access": "anonymous",
+      "short": "Copernicus DEM GLO-30, AWS Open Data",
+      "used_for": "Terrain in metres above sea level. Tiled 1 degree, read as a windowed cloud-optimised GeoTIFF, unsigned."
+    },
+    {
+      "key": "esa_worldcover",
+      "group": "data",
+      "title": "ESA WorldCover 10 m land cover, 2021",
+      "authors_or_publisher": "European Space Agency, on AWS Open Data",
+      "year": 2021,
+      "release": "v200",
+      "licence": "CC BY 4.0",
+      "url": "https://esa-worldcover.org/",
+      "endpoint": "https://esa-worldcover.s3.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_{ns}{lat}{ew}{lon}_Map.tif",
+      "access": "anonymous",
+      "short": "ESA WorldCover 10 m v200 2021, AWS Open Data",
+      "used_for": "Ground cover mapped onto the UMEP surface classes. Tiled 3 degrees, resampled nearest because a class code must never be interpolated."
+    },
+    {
+      "key": "meta_wri_chm",
+      "group": "data",
+      "title": "Meta and WRI global canopy height model, 1 m",
+      "authors_or_publisher": "Meta and World Resources Institute, on AWS Open Data",
+      "year": 2024,
+      "release": "v1, alsgedi_global_v6_float",
+      "licence": "CC BY 4.0",
+      "url": "https://registry.opendata.aws/dataforgood-fb-forests/",
+      "endpoint": "https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float/chm/{quadkey}.tif",
+      "access": "anonymous",
+      "short": "Meta and WRI 1 m canopy height, AWS Open Data",
+      "used_for": "Vegetation height above ground, the engine's canopy model. Tiled by quadkey against a global footprint index fetched once and cached."
+    },
+    {
+      "key": "ghs_pop",
+      "group": "data",
+      "title": "GHS-POP population grid, 100 m, epoch 2020",
+      "authors_or_publisher": "European Commission, Joint Research Centre",
+      "year": 2023,
+      "release": "R2023A, E2020, 100 m, World Mollweide",
+      "licence": "CC BY 4.0",
+      "url": "https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php",
+      "endpoint": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E2020_GLOBE_R2023A_54009_100/V1-0/tiles/GHS_POP_E2020_GLOBE_R2023A_54009_100_V1_0_R{row}_C{col}.zip",
+      "access": "anonymous",
+      "short": "GHS-POP R2023A 100 m, JRC",
+      "used_for": "Population, redistributed across building volume, and the density scan that chooses study areas. Chosen over WorldPop, whose server refuses HTTP range requests and forces a whole-country download."
+    },
+    {
+      "key": "open_meteo_era5",
+      "group": "data",
+      "title": "Open-Meteo historical weather API, ERA5 reanalysis",
+      "authors_or_publisher": "Open-Meteo",
+      "release": "ERA5 through the archive API",
+      "licence": "CC BY 4.0",
+      "url": "https://open-meteo.com/en/docs/historical-weather-api",
+      "endpoint": "https://archive-api.open-meteo.com/v1/archive",
+      "access": "anonymous",
+      "short": "Open-Meteo ERA5 archive, no key",
+      "used_for": "Hourly meteorology for the design day: temperature_2m, relative_humidity_2m, wind_speed_10m, wind_direction_10m, surface_pressure, shortwave_radiation, direct_radiation, diffuse_radiation. Chosen over Copernicus CDS, which needs an account and a credentials file."
+    },
+    {
+      "key": "osm_overpass",
+      "group": "data",
+      "title": "OpenStreetMap, via the Overpass API",
+      "authors_or_publisher": "OpenStreetMap contributors",
+      "licence": "ODbL 1.0",
+      "url": "https://www.openstreetmap.org/copyright",
+      "endpoint": "https://overpass-api.de/api/interpreter",
+      "access": "anonymous",
+      "short": "OpenStreetMap via Overpass",
+      "used_for": "The walkable network behind the corridor objective, queried through OSMnx and cached as GraphML per study area because Overpass is a shared free service."
+    },
+    {
+      "key": "ghs_ucdb",
+      "group": "data",
+      "title": "GHS Urban Centre Database R2024A",
+      "authors_or_publisher": "European Commission, Joint Research Centre",
+      "year": 2024,
+      "release": "R2024A V1_2",
+      "licence": "CC BY 4.0",
+      "url": "https://human-settlement.emergency.copernicus.eu/ucdb2024Overview.php",
+      "endpoint": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_THEME_GLOBE_R2024A/GHS_UCDB_THEME_{theme}_GLOBE_R2024A/V1-2/GHS_UCDB_THEME_{theme}_GLOBE_R2024A_V1_2.zip",
+      "access": "anonymous",
+      "short": "GHS-UCDB R2024A, JRC",
+      "used_for": "The corpus: 11,422 urban centres with name, country, population, area, World Bank income group and Koppen-Geiger class, and the polygons whose 1 km cells are the benchmark's tiles."
+    },
+    {
+      "key": "koppen_beck_2018",
+      "group": "data",
+      "title": "Present and future Köppen-Geiger climate classification maps at 1-km resolution",
+      "authors_or_publisher": "Beck et al., Scientific Data 5, 180214",
+      "year": 2018,
+      "licence": "CC BY 4.0",
+      "doi": "10.1038/sdata.2018.214",
+      "url": "https://www.gloh2o.org/koppen/",
+      "access": "anonymous",
+      "via": "ghs_ucdb",
+      "short": "Köppen-Geiger 1 km maps, Beck et al. 2018",
+      "used_for": "The Koppen class of each urban centre, as the class covering the majority of its surface, reached through GHS-UCDB."
+    },
+    {
+      "key": "world_bank_income",
+      "group": "data",
+      "title": "World Bank country and lending groups",
+      "authors_or_publisher": "The World Bank",
+      "year": 2022,
+      "release": "2022 classification, as carried by GHS-UCDB",
+      "licence": "CC BY 4.0",
+      "url": "https://datahelpdesk.worldbank.org/knowledgebase/articles/906519",
+      "access": "anonymous",
+      "via": "ghs_ucdb",
+      "short": "World Bank income groups, via GHS-UCDB",
+      "used_for": "The income stratum of each urban centre, joined by country, reached through GHS-UCDB."
+    },
+    {
+      "key": "landsat_c2l2",
+      "group": "validation",
+      "title": "Landsat Collection 2 Level 2 surface temperature",
+      "authors_or_publisher": "United States Geological Survey, via Microsoft Planetary Computer",
+      "release": "Collection 2 Level 2, asset lwir11",
+      "licence": "Public domain, USGS",
+      "url": "https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2",
+      "endpoint": "https://planetarycomputer.microsoft.com/api/stac/v1",
+      "access": "token broker",
+      "short": "Landsat C2 L2 surface temperature, Planetary Computer",
+      "used_for": "Checks that simulated heat lands where the satellite saw heat, never to build a bundle. Reached through a broker that signs each request with a short-lived token, so this is the one place a broker sits in the path."
+    },
+    {
+      "key": "osmnx_2017",
+      "group": "method",
+      "title": "OSMnx: new methods for acquiring, constructing, analyzing and visualizing complex street networks",
+      "authors_or_publisher": "Boeing, Computers, Environment and Urban Systems 65",
+      "year": 2017,
+      "doi": "10.1016/j.compenvurbsys.2017.05.004",
+      "used_for": "Fetches and projects the walk network."
+    },
+    {
+      "key": "unet_2015",
+      "group": "method",
+      "title": "U-Net: convolutional networks for biomedical image segmentation",
+      "authors_or_publisher": "Ronneberger, Fischer and Brox, MICCAI",
+      "year": 2015,
+      "url": "https://arxiv.org/abs/1505.04597",
+      "used_for": "The surrogate architecture."
+    },
+    {
+      "key": "esp_2020",
+      "group": "method",
+      "title": "Evolutionary surrogate-assisted prescription",
+      "authors_or_publisher": "Cognizant AI Labs",
+      "year": 2020,
+      "url": "https://arxiv.org/pdf/2012.10504",
+      "used_for": "The framing behind treating this as a prescriptor over a learned predictor."
+    },
+    {
+      "key": "en_roads_py",
+      "group": "method",
+      "title": "en-roads-py, evolutionary prescription applied to En-ROADS",
+      "authors_or_publisher": "Cognizant AI Labs",
+      "url": "https://github.com/cognizant-ai-labs/en-roads-py",
+      "used_for": "A working implementation of the prescriptor pattern over a fixed simulator, and the closest existing analogue to what the planner here does over SOLWEIG."
+    }
+  ]
+}

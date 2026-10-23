@@ -17,6 +17,7 @@ from pathlib import Path
 import numpy as np
 import rasterio
 
+from . import sources
 from .aoi import AOI
 from .aoi_selector import select
 from .cities import City
@@ -29,6 +30,20 @@ from .data import rasters as R
 from .quality import assess
 
 SCHEMA = 1
+# Which cited source each bundle layer comes from, by registry key.
+LAYER_SOURCES = {
+    "dem": R.DEM_SOURCE,
+    "buildings": B.SOURCE,
+    "canopy": C.SOURCE,
+    "landcover": R.WORLDCOVER_SOURCE,
+    "population": P.SOURCE,
+    "met": M.SOURCE,
+}
+
+
+def source_record(key: str) -> dict:
+    """The provenance fields that tie a layer to its citation."""
+    return {"source_key": key, "source": sources.short(key), "citation": sources.citation(key)}
 
 
 def _write(path: Path, arr: np.ndarray, aoi: AOI, dtype: str = "float32") -> None:
@@ -96,7 +111,7 @@ def build_city(
     dem = R.terrain(aoi)
     _write(out_dir / "DEM.tif", dem, aoi)
     prov["dem"] = {
-        "source": "Copernicus DEM GLO-30 (AWS Open Data, unsigned)",
+        **source_record(LAYER_SOURCES.get("dem", "")),
         "min_m": round(float(dem.min()), 2),
         "max_m": round(float(dem.max()), 2),
     }
@@ -106,7 +121,7 @@ def build_city(
     bh = B.rasterize_heights(aoi, gdf)
     _write(out_dir / "Building_DSM.tif", dem + bh, aoi)
     prov["buildings"] = {
-        "source": "GlobalBuildingAtlas LoD1 (Source Cooperative)",
+        **source_record(LAYER_SOURCES.get("buildings", "")),
         "tiles": B.tiles_for(aoi),
         "count": len(gdf),
         "height_completeness": round(float(gdf["height"].notna().mean()), 4),
@@ -120,7 +135,7 @@ def build_city(
     chm = C.canopy_height(aoi)
     _write(out_dir / "Trees.tif", chm, aoi)
     prov["canopy"] = {
-        "source": "Meta/WRI 1m CHM (AWS Open Data)",
+        **source_record(LAYER_SOURCES.get("canopy", "")),
         "tiles": C.tiles_for(aoi),
         "cover_gt2m": round(float((chm > 2).mean()), 4),
         "max_m": round(float(chm.max()), 2),
@@ -135,7 +150,7 @@ def build_city(
     # of this grid, so an integer raster truncates every albedo to zero with no error.
     _write(out_dir / "landcover_umep.tif", umep, aoi, dtype="float32")
     prov["landcover"] = {
-        "source": "ESA WorldCover 10m v200 2021 (AWS Open Data, unsigned)",
+        **source_record(LAYER_SOURCES.get("landcover", "")),
         "umep_mix": LC.summarise(umep),
     }
 
@@ -143,7 +158,7 @@ def build_city(
     pop = P.dasymetric(aoi, bh)
     _write(out_dir / "population.tif", pop, aoi)
     prov["population"] = {
-        "source": "GHS-POP R2023A 100m (JRC)",
+        **source_record(LAYER_SOURCES.get("population", "")),
         "tiles": [list(t) for t in P.tiles_for(aoi)],
         "total": round(float(pop.sum()), 1),
         "method": "dasymetric by building volume",
@@ -152,7 +167,7 @@ def build_city(
     # Meteorological forcing for the hottest observed day in the window.
     _, date = M.build(aoi, out_dir / "met.txt", start, end)
     prov["met"] = {
-        "source": "Open-Meteo ERA5 archive (no key)",
+        **source_record(LAYER_SOURCES.get("met", "")),
         "window": [start, end],
         "design_day": date,
     }
