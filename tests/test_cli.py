@@ -53,8 +53,26 @@ def _offline_corpus(monkeypatch):
 def test_help_lists_every_command():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for command in ("list", "build", "plan", "run"):
+    for command in ("list", "build", "plan", "run", "repair"):
         assert command in result.stdout
+
+
+def test_repair_backfills_provenance_of_a_selected_bundle(tmp_path):
+    bundle = tmp_path / "ahmedabad"
+    bundle.mkdir()
+    (bundle / "provenance.json").write_text(
+        '{"city": {"key": "ahmedabad"}, "met": {"source": "old"}}'
+    )
+    result = runner.invoke(app, ["repair", str(bundle)])
+    assert result.exit_code == 0
+    assert "urban_centre" in result.stdout and "met" in result.stdout
+    assert runner.invoke(app, ["repair", str(bundle)]).stdout.count("nothing to do") == 1
+
+
+def test_repair_refuses_a_bundle_outside_the_selection(tmp_path):
+    bundle = tmp_path / "atlantis"
+    bundle.mkdir()
+    assert runner.invoke(app, ["repair", str(bundle)]).exit_code == 1
 
 
 def test_list_renders_the_corpus():
