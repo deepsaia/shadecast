@@ -30,12 +30,30 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-b);f
 header h1{font-family:var(--f-s);font-weight:400;font-size:2rem;margin:0 0 4px;letter-spacing:-.01em}
 header p.sub{color:var(--ink-2);margin:0 0 8px}
 header p.meta{font-family:var(--f-m);font-size:.75rem;color:var(--ink-3);margin:0}
-nav.index{margin:24px 0 32px;padding:12px 16px;border:1px solid var(--rule);border-radius:8px;background:var(--card)}
-nav.index ol{margin:0;padding-left:20px;columns:2;column-gap:32px}
-nav.index li{margin:2px 0}
-nav.index a{color:var(--ink);text-decoration:none}
-nav.index a:hover{color:var(--accent)}
-section{margin:0 0 40px}
+/* Contents: a floating panel on the left, so a reader deep in the page can jump to any
+   section without scrolling back up. A sticky column when there is room, a drawer when not. */
+.page{display:grid;grid-template-columns:minmax(0,1fr)}
+@media(min-width:1100px){
+  .page{grid-template-columns:14rem minmax(0,1fr)}
+  .toc{position:sticky;top:var(--toc-top,0px);align-self:start;max-height:calc(100vh - var(--toc-top,0px));
+    overflow:auto;padding:1.5rem 1rem 1.5rem 1.25rem;border-right:1px solid var(--rule)}
+  .toc-toggle{display:none}
+}
+@media(max-width:1099.98px){
+  .toc{position:fixed;left:0;top:0;bottom:0;z-index:40;width:min(18rem,85vw);padding:1.25rem 1rem;overflow:auto;
+    background:var(--ground);border-right:1px solid var(--rule-2);transform:translateX(-100%);transition:transform .2s ease}
+  .toc.open{transform:none}
+  .toc-toggle{position:fixed;left:1rem;bottom:1rem;z-index:41;font:inherit;font-size:.8rem;padding:.45rem .85rem;
+    border-radius:999px;border:1px solid var(--rule-2);background:var(--card);color:var(--ink);cursor:pointer}
+}
+.toc-head{font-size:.74rem;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin:0 0 .5rem;font-weight:650}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li a{display:grid;grid-template-columns:auto 1fr;gap:.6rem;align-items:baseline;padding:.32rem .5rem .32rem .5rem;
+  text-decoration:none;color:var(--ink-2);font-size:.85rem;border-bottom:1px solid var(--rule);border-left:2px solid transparent}
+.toc li a:hover{color:var(--accent)}
+.toc li a i{font-family:var(--f-m);font-size:.7rem;color:var(--accent);font-style:normal}
+.toc li a.active{color:var(--ink);border-left-color:var(--accent)}
+section{margin:0 0 40px;scroll-margin-top:24px}
 h2{font-family:var(--f-s);font-weight:400;font-size:1.45rem;margin:0 0 12px}
 h2 i{font-family:var(--f-m);font-size:.7rem;color:var(--accent);font-style:normal;letter-spacing:.08em;margin-right:8px}
 h3{font-size:1rem;margin:20px 0 8px}
@@ -69,6 +87,23 @@ svg .grid{stroke:var(--rule);stroke-width:1}
 </style>
 </head>
 <body>
+<div class="page">
+<aside class="toc" id="toc" aria-label="Contents">
+  <div class="toc-head">Contents</div>
+  <ol>
+    <li><a href="#what"><i>01</i><span>What the surrogate is</span></a></li>
+    <li><a href="#inputs"><i>02</i><span>Inputs</span></a></li>
+    <li><a href="#output"><i>03</i><span>Output</span></a></li>
+    <li><a href="#data"><i>04</i><span>How the data is made</span></a></li>
+    <li><a href="#training"><i>05</i><span>How it is trained</span></a></li>
+    <li><a href="#judging"><i>06</i><span>How it is judged</span></a></li>
+    <li><a href="#use"><i>07</i><span>How it is used</span></a></li>
+    <li><a href="#limits"><i>08</i><span>Where it falls short</span></a></li>
+    <li><a href="#better"><i>09</i><span>How to train it better</span></a></li>
+    <li><a href="#manifest"><i>10</i><span>The manifest</span></a></li>
+    <li><a href="#storage"><i>11</i><span>Where models live</span></a></li>
+  </ol>
+</aside>
 <div class="wrap">
 <header>
   <h1>The surrogate model pipeline</h1>
@@ -76,21 +111,6 @@ svg .grid{stroke:var(--rule);stroke-width:1}
   <p class="meta">Numbers from the model manifests and recorded runs of 2026-08-26, read on 2026-10-23. Model <span class="mono">response-unet-ahmedabad-20260826T143800</span>.</p>
 </header>
 
-<nav class="index" aria-label="Contents">
-  <ol>
-    <li><a href="#what">What the surrogate is</a></li>
-    <li><a href="#inputs">Inputs</a></li>
-    <li><a href="#output">Output</a></li>
-    <li><a href="#data">How the data is made</a></li>
-    <li><a href="#training">How it is trained</a></li>
-    <li><a href="#judging">How it is judged</a></li>
-    <li><a href="#use">How it is used</a></li>
-    <li><a href="#limits">Where it falls short</a></li>
-    <li><a href="#better">How to train it better</a></li>
-    <li><a href="#manifest">The manifest</a></li>
-    <li><a href="#storage">Where models live</a></li>
-  </ol>
-</nav>
 
 <section id="what">
   <h2><i>01</i>What the surrogate is</h2>
@@ -100,20 +120,20 @@ svg .grid{stroke:var(--rule);stroke-width:1}
   <figure>
     <svg viewBox="0 0 720 176" role="img" aria-labelledby="f1t f1d">
       <title id="f1t">The pipeline from bundle to prediction</title>
-      <desc id="f1d">Six steps in a row: bundle, engine, response fields, patches, training, model with manifest, then use. The model with manifest is highlighted.</desc>
+      <desc id="f1d">Six boxes in a row: bundle, engine, response fields, patches, model with manifest, then use. The model with manifest is highlighted.</desc>
       <defs><marker id="tip" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--ink)"/></marker></defs>
-      <rect class="box" x="8" y="40" width="96" height="48" rx="8"/><text class="label" x="56" y="60" text-anchor="middle">Bundle</text><text class="sub" x="56" y="76" text-anchor="middle">1 km, 1 m, 5 layers</text>
-      <path class="arrow" d="M104 64 H124"/>
-      <rect class="box" x="128" y="40" width="96" height="48" rx="8"/><text class="label" x="176" y="60" text-anchor="middle">Engine</text><text class="sub" x="176" y="76" text-anchor="middle">17 runs, 255 to 358 s</text>
-      <path class="arrow" d="M224 64 H244"/>
+      <rect class="box" x="8" y="40" width="88" height="48" rx="8"/><text class="label" x="52" y="60" text-anchor="middle">Bundle</text><text class="sub" x="52" y="76" text-anchor="middle">1 km at 1 m</text>
+      <path class="arrow" d="M96 64 H108"/>
+      <rect class="box" x="112" y="40" width="120" height="48" rx="8"/><text class="label" x="172" y="60" text-anchor="middle">Engine</text><text class="sub" x="172" y="76" text-anchor="middle">17 runs, 4 to 6 min</text>
+      <path class="arrow" d="M232 64 H244"/>
       <rect class="box" x="248" y="40" width="96" height="48" rx="8"/><text class="label" x="296" y="60" text-anchor="middle">Responses</text><text class="sub" x="296" y="76" text-anchor="middle">cooling fields</text>
-      <path class="arrow" d="M344 64 H364"/>
-      <rect class="box" x="368" y="40" width="96" height="48" rx="8"/><text class="label" x="416" y="60" text-anchor="middle">Patches</text><text class="sub" x="416" y="76" text-anchor="middle">256 px, 24 per run</text>
-      <path class="arrow" d="M464 64 H484"/>
-      <rect class="focal" x="488" y="40" width="112" height="48" rx="8"/><text class="label" x="544" y="60" text-anchor="middle">Model</text><text class="sub" x="544" y="76" text-anchor="middle">weights + manifest</text>
-      <path class="arrow" d="M600 64 H620"/>
-      <rect class="box" x="624" y="40" width="88" height="48" rx="8"/><text class="label" x="668" y="60" text-anchor="middle">Use</text><text class="sub" x="668" y="76" text-anchor="middle">0.58 s per plan</text>
-      <path class="leader" d="M544 92 C544 124 420 124 300 132"/>
+      <path class="arrow" d="M344 64 H356"/>
+      <rect class="box" x="360" y="40" width="108" height="48" rx="8"/><text class="label" x="414" y="60" text-anchor="middle">Patches</text><text class="sub" x="414" y="76" text-anchor="middle">256 px, 24 a run</text>
+      <path class="arrow" d="M468 64 H480"/>
+      <rect class="focal" x="484" y="40" width="112" height="48" rx="8"/><text class="label" x="540" y="60" text-anchor="middle">Model</text><text class="sub" x="540" y="76" text-anchor="middle">weights + manifest</text>
+      <path class="arrow" d="M596 64 H608"/>
+      <rect class="box" x="612" y="40" width="88" height="48" rx="8"/><text class="label" x="656" y="60" text-anchor="middle">Use</text><text class="sub" x="656" y="76" text-anchor="middle">0.58 s a plan</text>
+      <path class="leader" d="M540 92 C540 124 420 124 300 132"/>
       <text class="aside" x="300" y="152" text-anchor="middle">Assessment compares the model with the engine on designs it never saw.</text>
     </svg>
     <figcaption>One engine run per design, 17 designs per tile, one model per tile. The model is the only thing a search touches.</figcaption>
@@ -207,7 +227,7 @@ svg .grid{stroke:var(--rule);stroke-width:1}
       </g>
       <path class="leader" d="M72 96 H168"/>
       <text class="sub" x="120" y="112" text-anchor="middle">100 m spacing</text>
-      <text class="sub" x="648" y="196" text-anchor="middle">reach 71 m, under 0.1 C beyond</text>
+      <text class="sub" x="696" y="196" text-anchor="end">reach 71 m, under 0.1 C beyond</text>
     </svg>
     <figcaption>Trees spaced beyond their measured reach give responses that do not overlap. One run returns one observation per tree, not one per run.</figcaption>
   </figure>
@@ -408,5 +428,35 @@ data/models/     models trained on several tiles</pre>
   Part of <a href="index.html">the shadecast walkthrough</a>. Physics by SOLWEIG through solweig-gpu. Sources are cited in the walkthrough's references, from the project's cited sources registry.
 </footer>
 </div>
+</div>
+<button class="toc-toggle" id="toctoggle" aria-controls="toc" aria-expanded="false">Contents</button>
+<script>
+/* Contents panel: mark the section in view, and on narrow screens open and close the drawer. */
+(function(){
+  const toc=document.getElementById("toc"), toggle=document.getElementById("toctoggle");
+  const bar=document.querySelector(".topbar");
+  function fitTop(){ if(bar) document.documentElement.style.setProperty("--toc-top", bar.offsetHeight+"px"); }
+  function mark(){
+    const all=Array.from(toc.querySelectorAll('a[href^="#"]'));
+    if(!all.length) return;
+    const line=(bar?bar.offsetHeight:0)+24;
+    let current=all[0];
+    for(const a of all){
+      const s=document.getElementById(a.getAttribute("href").slice(1));
+      if(s && s.getBoundingClientRect().top<=line) current=a;
+    }
+    all.forEach(a=>a.classList.toggle("active",a===current));
+  }
+  let queued=false;
+  function onScroll(){ if(queued) return; queued=true; requestAnimationFrame(()=>{ queued=false; mark(); }); }
+  function setOpen(open){ toc.classList.toggle("open",open); toggle.setAttribute("aria-expanded",String(open)); }
+  toggle.addEventListener("click",()=>setOpen(!toc.classList.contains("open")));
+  toc.addEventListener("click",e=>{ if(e.target.closest("a")) setOpen(false); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") setOpen(false); });
+  addEventListener("scroll",onScroll,{passive:true});
+  addEventListener("resize",()=>{ fitTop(); mark(); });
+  fitTop(); mark();
+})();
+</script>
 </body>
 </html>
