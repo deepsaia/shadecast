@@ -102,3 +102,25 @@ def test_raster_corners_floor_to_step(step):
         assert lo % step == 0
         # SW corner must not be north or east of the AOI
         assert la <= math.floor(a.bounds_wgs84[1])
+
+
+# --- the expanded corpus ---------------------------------------------------
+
+NEW_CITIES = ("savannah", "oaxaca", "recife", "bristol", "barcelona", "hamburg")
+
+
+def test_corpus_holds_the_expanded_city_set():
+    assert len(CORPUS) == 38
+    for key in NEW_CITIES:
+        assert key in CORPUS, key
+
+
+@pytest.mark.parametrize("key", NEW_CITIES)
+def test_new_city_seed_resolves_to_a_gba_tile(key):
+    city = CORPUS[key]
+    tiles = gba_tiles(AOI(key, city.lat, city.lon))
+    assert tiles, key
+    for tile in tiles:
+        west, north, east, south = tile.split("_")
+        assert west[0] in "ew" and east[0] in "ew"
+        assert north[0] in "ns" and south[0] in "ns"
