@@ -16,7 +16,9 @@ runner = CliRunner()
 def _bundle(root: Path, centre: int, tile: str) -> Path:
     bundle = root / str(centre) / tile / "bundle"
     bundle.mkdir(parents=True)
-    (bundle / "provenance.json").write_text(json.dumps({"city": {"key": "ahmedabad"}}))
+    (bundle / "provenance.json").write_text(
+        json.dumps({"city": {"key": "ahmedabad"}, "tile": {"id": tile, "urban_centre": centre}})
+    )
     return bundle
 
 
@@ -66,6 +68,47 @@ def test_generate_takes_a_city_name_and_writes_beside_its_bundle(tmp_path, monke
     assert seen["jobs"] == 3
 
 
+def test_generate_runs_each_listed_tile_or_all_of_them(tmp_path, monkeypatch):
+    monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
+    first = _bundle(tmp_path, 6143, "t43N_249_2547")
+    second = _bundle(tmp_path, 6143, "t43N_250_2547")
+    seen: list[Path] = []
+
+    def fake_generate(bundle_dir, destination, settings, progress):
+        seen.append(Path(bundle_dir))
+        progress.start("x", total=1, done=1)
+        return {"entries": 1, "manifest": []}
+
+    monkeypatch.setattr(surrogate_cli, "generate", fake_generate)
+    result = runner.invoke(app, ["surrogate", "generate", "ahmedabad", "--tiles", "t43N_250_2547"])
+    assert result.exit_code == 0, result.output
+    assert seen == [second]
+    seen.clear()
+    result = runner.invoke(app, ["surrogate", "generate", "ahmedabad", "--tiles", "all"])
+    assert result.exit_code == 0, result.output
+    assert seen == [first, second]
+    assert "tile 1 of 2" in result.stdout and "tile 2 of 2" in result.stdout
+
+
+def test_generate_without_tiles_takes_the_densest_built_one(tmp_path, monkeypatch):
+    monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
+    _bundle(tmp_path, 6143, "t43N_249_2547")
+    dense = _bundle(tmp_path, 6143, "t43N_250_2547")
+    with pytest.raises(ValueError, match=r"no tiles\.json"):
+        tile_lookup.densest_built_tile("ahmedabad", tmp_path)
+    (tmp_path / "6143" / "tiles.json").write_text(
+        json.dumps(
+            {
+                "tiles": [
+                    {"id": "t43N_249_2547", "population_2020": 100},
+                    {"id": "t43N_250_2547", "population_2020": 900},
+                ]
+            }
+        )
+    )
+    assert tile_lookup.densest_built_tile("ahmedabad", tmp_path).bundle == dense
+
+
 def test_generate_refuses_a_city_without_a_bundle(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
     result = runner.invoke(app, ["surrogate", "generate", "ahmedabad"])
@@ -73,9 +116,19 @@ def test_generate_refuses_a_city_without_a_bundle(tmp_path, monkeypatch):
     assert "sdc build ahmedabad" in result.output
 
 
+def _physics(bundle: Path) -> Path:
+    surrogate = bundle.parent / "surrogate"
+    surrogate.mkdir()
+    (surrogate / "manifest.json").write_text("{}")
+    return surrogate
+
+
 def test_training_pairs_accept_keys_paths_and_mixed_pairs(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
     bundle = _bundle(tmp_path, 6143, "t43N_249_2547")
+    with pytest.raises(ValueError, match="no generated physics"):
+        surrogate_cli.training_pairs("ahmedabad", None, None)
+    _physics(bundle)
     assert surrogate_cli.training_pairs("ahmedabad", None, None) == [
         (bundle.parent / "surrogate", bundle)
     ]
@@ -84,13 +137,26 @@ def test_training_pairs_accept_keys_paths_and_mixed_pairs(tmp_path, monkeypatch)
     ]
     mixed = surrogate_cli.training_pairs(None, None, ["ahmedabad", "x/s=x/b"])
     assert mixed == [(bundle.parent / "surrogate", bundle), (Path("x/s"), Path("x/b"))]
+    second = _bundle(tmp_path, 6143, "t43N_250_2547")
+    only_first = surrogate_cli.training_pairs("ahmedabad", None, None)
+    assert only_first == [(bundle.parent / "surrogate", bundle)]  # the second has no physics yet
+    with pytest.raises(ValueError, match="has no generated physics"):
+        surrogate_cli.training_pairs("ahmedabad", None, None, "t43N_250_2547")
+    _physics(second)
+    both = surrogate_cli.training_pairs("ahmedabad", None, None)  # every tile with physics
+    assert both == [(bundle.parent / "surrogate", bundle), (second.parent / "surrogate", second)]
+    assert surrogate_cli.training_pairs("ahmedabad", None, None, "t43N_249_2547") == [
+        (bundle.parent / "surrogate", bundle)
+    ]
     with pytest.raises(ValueError, match="give a city key"):
         surrogate_cli.training_pairs(None, None, None)
 
 
 def test_newest_model_is_picked_for_a_city(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
+    monkeypatch.setattr(surrogate_cli, "MODELS_ROOT", tmp_path / "models")
     bundle = _bundle(tmp_path, 6143, "t43N_249_2547")
+    _physics(bundle)
     models = bundle.parent / "models"
     for name in (
         "response-unet-ahmedabad-20260826T143800",
@@ -103,6 +169,26 @@ def test_newest_model_is_picked_for_a_city(tmp_path, monkeypatch):
     assert surrogate_dir == bundle.parent / "surrogate" and found_bundle == bundle
     named, _, _ = surrogate_cli.newest_model("ahmedabad", "response-unet-ahmedabad-20260826T143800")
     assert named.name == "response-unet-ahmedabad-20260826T143800"
+    pooled = tmp_path / "models" / "response-unet-ahmedabad-2tiles-20261024T090000"
+    pooled.mkdir(parents=True)
+    (pooled / "model.pt").write_bytes(b"w")
+    (pooled / "manifest.json").write_text(
+        json.dumps(
+            {
+                "created": "2026-10-24T09:00:00+00:00",
+                "data": {"tiles": [{"urban_centre": 6143}, {"urban_centre": 6143}]},
+            }
+        )
+    )
+    newest, _, _ = surrogate_cli.newest_model("ahmedabad", None)
+    assert newest == pooled
+    assert (
+        surrogate_cli.assessment_name(pooled, bundle) == "assessment-ahmedabad-t43N_249_2547.json"
+    )
+    assert (
+        surrogate_cli.assessment_name(models / "response-unet-ahmedabad-20260826T143800", bundle)
+        == "assessment.json"
+    )
 
 
 def test_resume_command_repeats_the_options():
@@ -110,5 +196,5 @@ def test_resume_command_repeats_the_options():
         "sdc surrogate generate savannah --jobs 4"
     )
     assert surrogate_cli.resume_command("x/bundle", "t1", Path("o"), "shade", 1) == (
-        "sdc surrogate generate x/bundle --tile t1 --out o --kind shade"
+        "sdc surrogate generate x/bundle --tiles t1 --out o --kind shade"
     )

@@ -5,7 +5,7 @@ import pytest
 import torch
 
 from shadecast.surrogate.patch_set import PatchSet
-from shadecast.surrogate.training import evaluate_skill, train
+from shadecast.surrogate.training import evaluate_skill, split_by_city, train
 from shadecast.surrogate.training_settings import TrainingSettings
 
 CHANNELS, SIDE = 7, 32
@@ -60,3 +60,15 @@ def test_settings_are_recorded_in_the_report():
     assert report["settings"]["loss"] == "huber"
     assert report["settings"]["huber_delta"] == 1.0
     assert report["device"] == "cpu"
+
+
+def test_a_city_holdout_matches_every_tile_of_the_city():
+    origins = ["ahmedabad:t1/d1", "ahmedabad:t2/d1", "lagos:t9/d1", "rio/d1"]
+    _, test_mask = split_by_city(origins, "ahmedabad")
+    assert test_mask.tolist() == [True, True, False, False]
+    _, one_tile = split_by_city(origins, "ahmedabad:t2")
+    assert one_tile.tolist() == [False, True, False, False]
+    _, plain = split_by_city(origins, "rio")
+    assert plain.tolist() == [False, False, False, True]
+    with pytest.raises(ValueError, match="phoenix"):
+        split_by_city(origins, "phoenix")

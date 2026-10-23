@@ -29,6 +29,23 @@ NEAR_INTERVENTION_M = 80.0
 FAR_FIELD_FLOOR = 0.05
 
 
+def tile_key(bundle: Path) -> str:
+    """``city:tile`` for a bundle in the tile layout, else the bundle directory's name.
+
+    Origins are ``key/design``, and a city holdout matches the part before the colon, so one
+    key names a whole city and ``city:tile`` names one of its tiles.
+    """
+    provenance_path = Path(bundle) / "provenance.json"
+    if not provenance_path.exists():
+        return Path(bundle).name
+    provenance = json.loads(provenance_path.read_text())
+    city = provenance.get("city", {}).get("key")
+    tile = provenance.get("tile", {}).get("id")
+    if city and tile:
+        return f"{city}:{tile}"
+    return str(city or Path(bundle).name)
+
+
 def entries(surrogate_dir: Path) -> list[dict]:
     """Every generated response in a surrogate directory."""
     manifest = Path(surrogate_dir) / "manifest.json"
@@ -68,7 +85,7 @@ def crop_cities(
         inputs, targets, origins = crop_batch(
             surrogate_dir, bundle, replace(settings, seed=settings.seed + index)
         )
-        city = Path(bundle).name
+        city = tile_key(bundle)
         all_inputs.append(inputs)
         all_targets.append(targets)
         all_origins.extend(f"{city}/{origin}" for origin in origins)

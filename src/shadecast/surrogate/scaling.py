@@ -20,7 +20,7 @@ from pathlib import Path
 
 from .patch_set import PatchSet
 from .patch_settings import PatchSettings
-from .patches import crop_cities
+from .patches import crop_cities, tile_key
 from .training import train
 from .training_settings import TrainingSettings
 
@@ -28,7 +28,8 @@ logger = logging.getLogger(__name__)
 
 
 def city_of(bundle: Path) -> str:
-    return Path(bundle).name
+    """The city part of a pair's label, so a curve point names cities, not tiles."""
+    return tile_key(bundle).split(":", 1)[0]
 
 
 def transfer_curve(

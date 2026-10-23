@@ -217,11 +217,13 @@ def weights_section(model_path: Path) -> dict:
 
 def new_model_id(pairs: list[tuple[Path, Path]], created: datetime) -> str:
     """response-unet-<cities>-<timestamp>, unique per training run and readable."""
-    tiles = "+".join(
+    keys = [
         str(json.loads((Path(bundle) / "provenance.json").read_text()).get("city", {}).get("key"))
         for _, bundle in pairs
-    )
-    return f"response-unet-{tiles}-{created.strftime('%Y%m%dT%H%M%S')}"
+    ]
+    cities = "+".join(dict.fromkeys(keys))  # each city once, in order
+    pooled = f"-{len(keys)}tiles" if len(keys) > len(set(keys)) else ""
+    return f"response-unet-{cities}{pooled}-{created.strftime('%Y%m%dT%H%M%S')}"
 
 
 def now() -> datetime:

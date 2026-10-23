@@ -36,8 +36,21 @@ sdc surrogate train savannah      # fit the surrogate on that tile
 sdc surrogate assess savannah     # judge the newest model against the engine
 ```
 
-Every command takes the city name. A tile's directory is `data/tiles/<urban centre id>/<tile id>/`,
-and `sdc tile path <city>` prints it, so nobody needs to know the id.
+Every command takes the city name and means its densest tile unless told otherwise. One
+generation run is one tile: the 17 designs are 17 engine runs over the same square kilometre.
+To study more of a city, choose tiles explicitly and the same options carry through:
+
+```bash
+sdc tile list savannah                          # every tile of the centre, densest first
+sdc build savannah --tiles t17N_488_3550,t17N_489_3550   # named tiles
+sdc build savannah --stratified 3               # three tiles spread over built-fraction terciles
+sdc build savannah --tiles all                  # every tile; about a minute each to build
+sdc surrogate generate savannah --tiles all --jobs 4     # physics for every built tile, in turn
+sdc surrogate train savannah --tiles all        # one model pooled over every tile with physics
+```
+
+A tile's directory is `data/tiles/<urban centre id>/<tile id>/`, and `sdc tile path <city>`
+prints it, so nobody needs to know the id.
 
 The physics engine is optional and lives in its own uv environment, which is what
 keeps its GPL licence off this project:
