@@ -2,9 +2,10 @@
 
 A header with the tile and the engine setup, a status line with the elapsed time, a bar over
 the plan with the pace and the time left, sparklines of engine seconds and cooling per
-design, a live hardware reading, the designs running now and a table of the last ten
-finished. Log records are routed through the same console so they print above the display
-instead of tearing it. Quiet mode renders nothing and is what the library and tests use.
+design, a live hardware reading, the designs running now, a table of the last ten finished,
+how to stop and resume, and a rolling log box. The box shows warnings and errors always and
+the chatty lines only when the command ran with -v. Quiet mode renders nothing and is what
+the library and the tests use.
 """
 
 from __future__ import annotations
@@ -17,15 +18,17 @@ from datetime import datetime
 
 from rich.console import Console, Group, RenderableType
 from rich.live import Live
-from rich.logging import RichHandler
+from rich.panel import Panel
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, TaskID, TextColumn
 from rich.table import Table
 from rich.text import Text
 
 from ..hardware import Hardware
+from .log_tail import LogTail
 
 BLOCKS = "▁▂▃▄▅▆▇█"
 LAST_ROWS = 10
+LOG_LINES = 10
 
 
 def sparkline(values: list[float]) -> str:
@@ -46,12 +49,18 @@ def clock(seconds: float) -> str:
     return f"{seconds // 60}m {seconds % 60:02d}s"
 
 
+def verbose_logging() -> bool:
+    """True when the command ran with -v, which sets the root logger to DEBUG."""
+    return logging.getLogger().getEffectiveLevel() <= logging.DEBUG
+
+
 @dataclass
 class GenerationProgress:
     console: Console | None
     jobs: int = 1
     threads: int | None = None
     kind: str = "tree"
+    resume_command: str = ""
     label: str = ""
     total: int = 0
     done_at_start: int = 0
@@ -66,6 +75,7 @@ class GenerationProgress:
     live: Live | None = None
     bar: Progress | None = None
     task: TaskID | None = None
+    tail: LogTail | None = None
     saved_handlers: list[logging.Handler] = field(default_factory=list)
     lock: threading.Lock = field(default_factory=threading.Lock)
 
@@ -86,11 +96,13 @@ class GenerationProgress:
             console=self.console,
             auto_refresh=False,
         )
+        # Records go into the rolling box instead of the terminal, so the display stays whole.
         root = logging.getLogger()
         self.saved_handlers = list(root.handlers)
         for handler in self.saved_handlers:
             root.removeHandler(handler)
-        root.addHandler(RichHandler(console=self.console, show_path=False, markup=False))
+        self.tail = LogTail(logging.DEBUG if verbose_logging() else logging.WARNING, LOG_LINES)
+        root.addHandler(self.tail)
         self.live = Live(
             get_renderable=self.render, console=self.console, refresh_per_second=2, transient=False
         )
@@ -184,6 +196,10 @@ class GenerationProgress:
         if self.failed:
             parts.append(Text(""))
             parts.append(Text("failed: " + "; ".join(self.failed), style="red"))
+        parts.extend([Text(""), self._controls()])
+        box = self._log_box()
+        if box is not None:
+            parts.extend([Text(""), box])
         return Group(*parts)
 
     def _header(self, hardware: Hardware) -> Text:
@@ -290,6 +306,26 @@ class GenerationProgress:
                 f"{float(meta.get('engine_seconds', 0)):.0f}",
             )
         return table
+
+    def _controls(self) -> Text:
+        text = Text()
+        text.append("stop    ", style="bold")
+        text.append("Ctrl-C: the designs running now finish, the queued ones are cancelled\n")
+        text.append("resume  ", style="bold")
+        text.append(self.resume_command or "run the same command again", style="cyan")
+        text.append("   designs on disk are skipped, the baseline is kept", style="dim")
+        return text
+
+    def _log_box(self) -> Panel | None:
+        if self.tail is None or not self.tail.lines:
+            return None
+        title = "log" if verbose_logging() else "warnings"
+        return Panel(
+            Text("\n".join(self.tail.lines), style="dim"),
+            title=f"{title}, newest last",
+            title_align="left",
+            border_style="dim",
+        )
 
     def _advance(self) -> None:
         if self.live is not None:
