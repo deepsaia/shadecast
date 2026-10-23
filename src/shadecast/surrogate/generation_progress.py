@@ -2,10 +2,10 @@
 
 A header with the tile and the engine setup, a status line with the elapsed time, a bar over
 the plan with the pace and the time left, sparklines of engine seconds and cooling per
-design, a live hardware reading, the designs running now, a table of the last ten finished,
-how to stop and resume, and a rolling log box. The box shows warnings and errors always and
-the chatty lines only when the command ran with -v. Quiet mode renders nothing and is what
-the library and the tests use.
+design, a live hardware reading, the designs running now with their engine phase, a table of
+the last ten finished, how to stop and resume, and a rolling log box. The box shows warnings
+and errors always and the chatty lines only when the command ran with -v. Quiet mode renders
+nothing and is what the library and the tests use.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 
 from rich.console import Console, Group, RenderableType
 from rich.live import Live
@@ -24,6 +25,7 @@ from rich.table import Table
 from rich.text import Text
 
 from ..hardware import Hardware
+from .engine_phase import design_phase, phase_bar
 from .log_tail import LogTail
 
 BLOCKS = "▁▂▃▄▅▆▇█"
@@ -49,15 +51,6 @@ def clock(seconds: float) -> str:
     return f"{seconds // 60}m {seconds % 60:02d}s"
 
 
-RUNNING_BAR_WIDTH = 20
-
-
-def running_bar(share: float) -> str:
-    """A thin bar for a share between 0 and 1, the same glyphs as the designs bar."""
-    filled = round(min(max(share, 0.0), 1.0) * RUNNING_BAR_WIDTH)
-    return "━" * filled + "╺" + "━" * max(0, RUNNING_BAR_WIDTH - filled - 1)
-
-
 def verbose_logging() -> bool:
     """True when the command ran with -v, which sets the root logger to DEBUG."""
     return logging.getLogger().getEffectiveLevel() <= logging.DEBUG
@@ -76,7 +69,7 @@ class GenerationProgress:
     started_at: float = field(default_factory=time.time)
     baseline_seconds: float | None = None
     baseline_kept: bool = False
-    running: dict[str, float] = field(default_factory=dict)
+    running: dict[str, tuple[float, Path | None]] = field(default_factory=dict)
     finished: list[dict] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
     failed: list[str] = field(default_factory=list)
@@ -152,9 +145,9 @@ class GenerationProgress:
     def baseline_kept_from_disk(self) -> None:
         self.baseline_kept = True
 
-    def design_started(self, name: str) -> None:
+    def design_started(self, name: str, target: Path | None = None) -> None:
         with self.lock:
-            self.running[name] = time.time()
+            self.running[name] = (time.time(), target)
 
     def design_done(self, meta: dict) -> None:
         with self.lock:
@@ -283,29 +276,24 @@ class GenerationProgress:
         return text
 
     def _running_now(self) -> Text:
-        """One line per running design: elapsed, and a bar against the run's mean so far.
+        """One line per running design: elapsed time and the engine phase read from its files.
 
-        The engine prints nothing during its main loop, so the bar is elapsed time against
-        the mean engine seconds of the designs finished in this run. Until one has finished
-        there is nothing to measure against, and the line says so.
+        The engine prints nothing per pixel or per hour and writes its outputs once at the
+        end, so the only exact progress is which phase it is in: inputs, sky view factor,
+        radiation, outputs. No estimate is shown per design.
         """
         text = Text("running now\n", style="bold")
         with self.lock:
-            items = sorted(self.running.items(), key=lambda item: item[1])
+            items = sorted(self.running.items(), key=lambda item: item[1][0])
         if not items:
             idle = "nothing" if self.phase in ("done", "failed", "stopped") else "waiting"
             text.append(f"  {idle}", style="dim")
             return text
-        expected = self.mean_seconds()
-        for name, since in items:
-            elapsed = time.time() - since
-            text.append(f"  {name:<24} {clock(elapsed):>8}  ")
-            if expected is None:
-                text.append("no finished design to measure against yet\n", style="dim")
-                continue
-            share = min(elapsed / expected, 0.99)
-            text.append(running_bar(share), style="cyan")
-            text.append(f"  about {clock(max(0.0, expected - elapsed))} left\n", style="dim")
+        for name, (since, target) in items:
+            text.append(f"  {name:<24} {clock(time.time() - since):>8}  ")
+            phase = design_phase(target) if target is not None else 0
+            text.append(phase_bar(phase), style="cyan")
+            text.append("\n")
         return text
 
     def _last_table(self) -> Table:

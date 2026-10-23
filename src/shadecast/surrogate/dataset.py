@@ -308,7 +308,7 @@ def run_design(context: TileContext, spec: dict, progress: GenerationProgress) -
         progress.design_skipped(name, "empty placement")
         return None
 
-    progress.design_started(name)
+    progress.design_started(name, target)
     target.mkdir(parents=True, exist_ok=True)
     for fname in BUNDLE_FILES:
         shutil.copy(context.bundle / fname, target / fname)
