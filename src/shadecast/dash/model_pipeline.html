@@ -416,7 +416,7 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
       <tr><td>loss</td><td>Huber, delta 1.0</td><td>18 C at a tree must not drown 0.1 C at 30 m; the far field is the spillover</td></tr>
       <tr><td>optimizer</td><td>AdamW, learning rate 0.002, cosine schedule</td><td>a standard choice; not yet compared with others (issue 115)</td></tr>
       <tr><td>batch</td><td>8 patches</td><td>fits one device</td></tr>
-      <tr><td>epochs</td><td>40 for this model, no early stop</td><td>the default is now 30 with patience 10: training stops when held-out skill has not improved for 10 epochs</td></tr>
+      <tr><td>epochs</td><td>40 for this model, no early stop</td><td>the default is now 60 with patience 10: training stops when held-out skill has not improved for 10 epochs; 30 proved too few on 2026-10-23</td></tr>
       <tr><td>kept weights</td><td>the epoch with the best held-out skill</td><td>the Ahmedabad curve swung between 0.57 and 0.77 after epoch 10</td></tr>
       <tr><td>seed</td><td>0</td><td>one seed; an ensemble is planned (issue 102)</td></tr>
       <tr><td>device, time</td><td>Apple GPU, 233 s for one tile, 518 s for two</td><td>data, not compute, is the limit</td></tr>
@@ -523,7 +523,7 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
 
 <section id="gaps">
   <h2><i>09</i>Where it falls short, and what to do</h2>
-  <p>These are the things that physics time did not allow, each with its remedy, the issue that tracks it, and whether the gap is closed. They are recorded so that nobody mistakes an untested case for a tested one. Done means the remedy is merged and in use. Built means it is merged and measured once, in section 02. Partly means the channel is in and the rest of the remedy is open.</p>
+  <p>These are the things that physics time did not allow, each with its remedy, the issue that tracks it, and whether the gap is closed. They are recorded so that nobody mistakes an untested case for a tested one. Done means the remedy is merged and in use. Built means it is merged and measured once, in section 02. Partly means the channel is in and the rest of the remedy is open. Decided means the approach is settled and the work is queued.</p>
   <div class="scroll"><table>
     <thead><tr><th>Gap</th><th>Why it matters</th><th>Remedy</th><th class="n">Issue</th><th class="status">Status</th></tr></thead>
     <tbody>
@@ -533,7 +533,7 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
       <tr><td>Sky openness is a proxy</td><td>the engine computes the real sky view factor for every baseline run and nobody read it</td><td>read the sky view factor and the sunlit fraction from the baseline run</td><td class="n">100</td><td class="status done"><b>&#10003;</b> built</td></tr>
       <tr><td>One design day per city</td><td>the model has seen one sun path and one season</td><td>a sun-path channel from the date and latitude; then several days per city</td><td class="n">100, 44</td><td class="status part"><b>&#10003;</b> partly</td></tr>
       <tr><td>No augmentation</td><td>a flip or a rotation mirrors the sun and puts shadows on the wrong side</td><td>a sun-side channel first, then flips that turn the sun with the map</td><td class="n">100</td><td class="status part"><b>&#10003;</b> partly</td></tr>
-      <tr><td>Trees only</td><td>shade structures, de-paving and cool surfaces have no input channel</td><td>one placement channel per intervention kind, and mixed designs</td><td class="n">47</td><td class="status">open</td></tr>
+      <tr><td>Trees only</td><td>shade structures, de-paving and cool surfaces have no surrogate</td><td>one surrogate per physical channel and measure, summed for a mixed plan and verified by the engine: shade next (47), de-paving after its pilot (40), albedo once the physics is settled (21)</td><td class="n">47, 40, 21</td><td class="status part"><b>&#10003;</b> decided</td></tr>
       <tr><td>17 runs and 4 held-out designs per city</td><td>a ranking over 4 items proves little</td><td>a validation protocol: folds by design, more held-out designs, reported per data-quality tier</td><td class="n">101</td><td class="status">open</td></tr>
       <tr><td>A transfer curve with two points</td><td>one held-out city</td><td>a held-out-city curve over every tile with physics</td><td class="n">101</td><td class="status">open</td></tr>
       <tr><td>One learning rate, one width, one seed</td><td>nothing says these settings are good</td><td>a small sweep, every run with its own manifest, ranked under the protocol</td><td class="n">115</td><td class="status">open</td></tr>
