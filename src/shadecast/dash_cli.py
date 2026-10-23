@@ -16,7 +16,8 @@ import typer
 
 from . import cities
 from .console import console
-from .corpus.tile_paths import TILES_ROOT, TilePaths
+from .corpus import tile_paths
+from .corpus.tile_paths import TilePaths
 from .dash.builder import build_index
 from .dash.server import serve
 
@@ -35,7 +36,7 @@ def tile_entries(key: str, urban_centre: int) -> list[tuple[str, Path, Path]]:
     """Every tile of a city with a bundle and a baseline field, named by key and tile."""
     ready = [
         paths
-        for paths in TilePaths.existing(TILES_ROOT, urban_centre)
+        for paths in TilePaths.existing(tile_paths.TILES_ROOT, urban_centre)
         if paths.stages().get("bundle") and paths.stages().get("baseline")
     ]
     if len(ready) == 1:

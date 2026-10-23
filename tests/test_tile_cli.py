@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 
 from shadecast import tile_cli
 from shadecast.cli import app
+from shadecast.corpus import tile_paths
 from shadecast.corpus.urban_centre import UrbanCentre
 from shadecast.corpus.urban_centres import UrbanCentres
 
@@ -99,15 +100,16 @@ def _refuse_describe(centre: UrbanCentre) -> list[dict]:
 
 @pytest.fixture(autouse=True)
 def _offline(monkeypatch, tmp_path):
+    monkeypatch.setenv("COLUMNS", "200")
     monkeypatch.setattr(tile_cli, "load_centres", _fixture_centres)
     monkeypatch.setattr(tile_cli, "describe", _fixture_describe)
-    monkeypatch.setattr(tile_cli, "TILES_ROOT", tmp_path)
+    monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
 
 
 def test_help_lists_the_tile_commands():
     result = runner.invoke(app, ["tile", "--help"])
     assert result.exit_code == 0
-    for command in ("list", "select", "stats", "path"):
+    for command in ("list", "select", "stats", "path", "status"):
         assert command in result.stdout
 
 
@@ -199,3 +201,36 @@ def test_path_prints_where_a_tile_lives_and_its_stages(tmp_path):
 def test_path_refuses_a_malformed_tile_id():
     result = runner.invoke(app, ["tile", "path", "ahmedabad", "6908"])
     assert result.exit_code == 1
+
+
+def _built(root: Path, tile_id: str, *, with_physics: bool) -> None:
+    tile = root / "6143" / tile_id
+    (tile / "bundle").mkdir(parents=True)
+    (tile / "bundle" / "provenance.json").write_text("{}")
+    if with_physics:
+        (tile / "surrogate" / "baseline").mkdir(parents=True)
+        (tile / "surrogate" / "baseline" / "tmrt_daylight.npy").write_bytes(b"")
+
+
+def test_status_reports_k_of_n_per_stage(tmp_path):
+    _built(tmp_path, "t43N_249_2547", with_physics=True)
+    _built(tmp_path, "t43N_250_2547", with_physics=False)
+    result = runner.invoke(app, ["tile", "status", "ahmedabad", "--json"])
+    assert result.exit_code == 0, result.output
+    status = json.loads(result.stdout)
+    assert status["tiles"] == 6
+    assert status["totals"] == {
+        "bundle": 2,
+        "baseline": 1,
+        "surrogate": 0,
+        "model": 0,
+        "results": 0,
+    }
+    assert [row["tile"] for row in status["rows"]] == ["t43N_249_2547", "t43N_250_2547"]
+    table = runner.invoke(app, ["tile", "status", "ahmedabad"])
+    assert "2 of 6" in table.stdout
+
+
+def test_status_of_an_untouched_centre_is_zero_of_n(tmp_path):
+    status = json.loads(runner.invoke(app, ["tile", "status", "ahmedabad", "--json"]).stdout)
+    assert status["totals"]["bundle"] == 0 and status["tiles"] == 6

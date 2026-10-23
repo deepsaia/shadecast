@@ -21,10 +21,13 @@ from .console import (
     pairs_table,
     records_table,
 )
+from .corpus import tile_paths
 from .corpus.draw import Draw
 from .corpus.sampling import sample as draw_sample
 from .corpus.sampling import strata
+from .corpus.slugs import slugify
 from .corpus.statistics import corpus_stats
+from .corpus.tile_status import summary_line, tile_status
 from .corpus.urban_centre import UrbanCentre
 from .corpus.urban_centres import UrbanCentres
 
@@ -40,6 +43,15 @@ app = typer.Typer(
 def load_centres() -> UrbanCentres:
     """The database, fetched on first use and cached after that."""
     return UrbanCentres.load()
+
+
+def matched_name(centre: UrbanCentre, text: str) -> str:
+    """The name that made a centre match a search, which is often not its main name."""
+    key = slugify(text)
+    for name in centre.names:
+        if key and key in slugify(name):
+            return name
+    return centre.name
 
 
 def as_record(centre: UrbanCentre) -> dict:
@@ -72,10 +84,12 @@ def search(
     """List urban centres whose names contain the text, most populous first."""
     found = load_centres().search(text, country=country, min_population=min_population)
     shown = found[:limit]
+    matched = {centre.id: matched_name(centre, text) for centre in shown}
     if as_json:
-        console.print_json(json.dumps([as_record(centre) for centre in shown]))
+        rows = [{**as_record(centre), "matched": matched.get(centre.id)} for centre in shown]
+        console.print_json(json.dumps(rows))
         return
-    console.print(centres_table(shown))
+    console.print(centres_table(shown, matched))
     console.print(f"[dim]{len(shown)} of {len(found)} matches shown.[/]")
 
 
@@ -90,10 +104,12 @@ def show(
     except (KeyError, ValueError) as exc:
         error_console.print(str(exc), style="red", markup=False)
         raise typer.Exit(code=1) from exc
+    report = tile_status(found, tile_paths.TILES_ROOT)
     if as_json:
-        console.print_json(json.dumps(as_record(found)))
+        console.print_json(json.dumps({**as_record(found), "status": report.get("totals", {})}))
         return
     console.print(centre_details(found))
+    console.print(f"[dim]{summary_line(report)}.[/]")
 
 
 @app.command("sample")

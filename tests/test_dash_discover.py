@@ -6,6 +6,7 @@ import pytest
 
 from shadecast import cities, dash_cli
 from shadecast.cities import City
+from shadecast.corpus import tile_paths
 
 AHMEDABAD = City(
     "ahmedabad", 6143, "Ahmedabad", "India", 23.0, 72.6, "BSh", "LM", "South Asia", 7898650, 365
@@ -28,8 +29,9 @@ def _tile(root: Path, urban_centre: int, tile_id: str) -> Path:
 
 @pytest.fixture(autouse=True)
 def _offline(monkeypatch, tmp_path):
+    monkeypatch.setenv("COLUMNS", "200")
     monkeypatch.setattr(cities, "corpus", _fixture_corpus)
-    monkeypatch.setattr(dash_cli, "TILES_ROOT", tmp_path / "tiles")
+    monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path / "tiles")
     monkeypatch.chdir(tmp_path)
 
 

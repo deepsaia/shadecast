@@ -42,8 +42,13 @@ def corpus_table(cities: list[City]) -> Table:
     return table
 
 
-def centres_table(centres: list[UrbanCentre]) -> Table:
-    """Render urban centres from the database, one row each."""
+def centres_table(centres: list[UrbanCentre], matched: dict[int, str] | None = None) -> Table:
+    """Render urban centres from the database, one row each.
+
+    `matched` names the alias that made each centre match a search, shown when it is not the
+    main name, because a San Jose found inside the San Francisco centre is a surprise otherwise.
+    """
+    aliases = matched or {}
     table = Table(header_style="dim")
     table.add_column("id", justify="right", style="dim", no_wrap=True)
     table.add_column("slug", style="cyan", no_wrap=True)
@@ -54,10 +59,14 @@ def centres_table(centres: list[UrbanCentre]) -> Table:
     table.add_column("koppen", no_wrap=True)
     table.add_column("tiles", justify="right", no_wrap=True)
     for centre in centres:
+        alias = aliases.get(centre.id)
+        shown = (
+            centre.name if alias in (None, centre.name) else f"{centre.name} [dim](via {alias})[/]"
+        )
         table.add_row(
             str(centre.id),
             centre.slug,
-            centre.name,
+            shown,
             centre.country,
             f"{centre.population_2025:,}",
             centre.income or "?",
