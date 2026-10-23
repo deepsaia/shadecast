@@ -152,4 +152,4 @@ def test_sample_is_stratified_and_reproducible():
         ("Aw", "LM"),
         ("BWh", "L"),
     }
-    assert all(row["population"] >= 600000 for row in first)
+    assert all(row["population_2025"] >= 600000 for row in first)

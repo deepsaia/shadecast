@@ -32,8 +32,8 @@ TILES = [
         "id": "t6897_2808",
         "x_km": 6897,
         "y_km": 2808,
-        "population": 9000.0,
-        "density_per_km2": 9000.0,
+        "population_2020": 9000.0,
+        "density_2020_per_km2": 9000.0,
         "built_fraction": 0.9,
         "mean_height_m": 9.0,
     },
@@ -41,8 +41,8 @@ TILES = [
         "id": "t6898_2808",
         "x_km": 6898,
         "y_km": 2808,
-        "population": 7000.0,
-        "density_per_km2": 7000.0,
+        "population_2020": 7000.0,
+        "density_2020_per_km2": 7000.0,
         "built_fraction": 0.8,
         "mean_height_m": 8.0,
     },
@@ -50,8 +50,8 @@ TILES = [
         "id": "t6897_2807",
         "x_km": 6897,
         "y_km": 2807,
-        "population": 5000.0,
-        "density_per_km2": 5000.0,
+        "population_2020": 5000.0,
+        "density_2020_per_km2": 5000.0,
         "built_fraction": 0.5,
         "mean_height_m": 6.0,
     },
@@ -59,8 +59,8 @@ TILES = [
         "id": "t6898_2807",
         "x_km": 6898,
         "y_km": 2807,
-        "population": 3000.0,
-        "density_per_km2": 3000.0,
+        "population_2020": 3000.0,
+        "density_2020_per_km2": 3000.0,
         "built_fraction": 0.4,
         "mean_height_m": 5.0,
     },
@@ -68,8 +68,8 @@ TILES = [
         "id": "t6899_2807",
         "x_km": 6899,
         "y_km": 2807,
-        "population": 1000.0,
-        "density_per_km2": 1000.0,
+        "population_2020": 1000.0,
+        "density_2020_per_km2": 1000.0,
         "built_fraction": 0.1,
         "mean_height_m": 3.0,
     },
@@ -77,8 +77,8 @@ TILES = [
         "id": "t6899_2808",
         "x_km": 6899,
         "y_km": 2808,
-        "population": 0.0,
-        "density_per_km2": 0.0,
+        "population_2020": 0.0,
+        "density_2020_per_km2": 0.0,
         "built_fraction": 0.0,
         "mean_height_m": 0.0,
     },
@@ -153,7 +153,7 @@ def test_select_densest_stratified_ids_and_random():
     again = runner.invoke(
         app, ["tile", "select", "ahmedabad", "--random", "2", "--seed", "1", "--json"]
     ).stdout
-    assert first == again and all(row["population"] > 0 for row in json.loads(first))
+    assert first == again and all(row["population_2020"] > 0 for row in json.loads(first))
 
 
 def test_select_needs_exactly_one_strategy():

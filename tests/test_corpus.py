@@ -119,7 +119,7 @@ def test_corpus_joins_the_selection_to_the_database():
     assert city.koppen == "BSh"
     assert city.income == "LM"
     assert city.region == "South Asia"
-    assert city.population == 7898650
+    assert city.population_2025 == 7898650
     assert city.tiles == 365
     assert city.lat == pytest.approx(23.0192)
     assert city.note == "First Heat Action Plan."

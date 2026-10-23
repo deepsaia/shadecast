@@ -4,14 +4,16 @@ from shadecast.corpus.sampling import sample, strata
 from shadecast.corpus.urban_centre import UrbanCentre
 
 
-def _centre(centre_id: int, koppen: str | None, income: str | None, population: int) -> UrbanCentre:
+def _centre(
+    centre_id: int, koppen: str | None, income: str | None, population_2025: int
+) -> UrbanCentre:
     return UrbanCentre(
         id=centre_id,
         name=f"City {centre_id}",
         names=(f"City {centre_id}",),
         slug=f"city{centre_id}",
         country="Nowhere",
-        population=population,
+        population_2025=population_2025,
         area_km2=100,
         income=income,
         koppen_code=None,
@@ -43,7 +45,7 @@ def test_sample_draws_up_to_k_per_stratum_above_the_population_floor():
     drawn = sample(CENTRES, per_stratum=2, min_population=300_000, seed=0)
     by_stratum = strata(drawn)
     assert by_stratum == {("Aw", "LM"): 2, ("BWh", "L"): 1, ("Cfb", "H"): 2}
-    assert all(c.population >= 300_000 for c in drawn)
+    assert all(c.population_2025 >= 300_000 for c in drawn)
     assert {c.id for c in drawn} <= {1, 2, 3, 5, 6, 7}
 
 
@@ -62,5 +64,5 @@ def test_sample_orders_by_stratum_then_population():
     drawn = sample(CENTRES, per_stratum=3, min_population=0, seed=1)
     keys = [(c.koppen, c.income) for c in drawn]
     assert keys == sorted(keys)
-    aw = [c.population for c in drawn if c.koppen == "Aw"]
+    aw = [c.population_2025 for c in drawn if c.koppen == "Aw"]
     assert aw == sorted(aw, reverse=True)

@@ -152,7 +152,7 @@ def test_by_id_returns_an_urban_centre_with_its_strata():
     assert centre.names == ("Ahmedabad", "Amdavad")
     assert centre.slug == "ahmedabad"
     assert centre.country == "India"
-    assert centre.population == 7898650
+    assert centre.population_2025 == 7898650
     assert centre.area_km2 == 365
     assert centre.tiles == 365
     assert centre.income == "LM"

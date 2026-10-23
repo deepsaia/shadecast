@@ -18,7 +18,7 @@ AHMEDABAD = City(
     koppen="BSh",
     income="LM",
     region="South Asia",
-    population=7898650,
+    population_2025=7898650,
     tiles=365,
     note="First Heat Action Plan in South Asia, 2013.",
 )
@@ -43,7 +43,7 @@ def test_urban_centre_record_carries_strata_release_and_citation():
     assert record["release"] == f"{ucdb.RELEASE} {ucdb.VERSION}"
     assert record["name"] == "Ahmedabad"
     assert record["country"] == "India"
-    assert record["population"] == 7898650
+    assert record["population_2025"] == 7898650
     assert record["area_km2"] == 365
     assert record["tiles"] == 365
     assert record["koppen"] == "BSh"
@@ -77,7 +77,7 @@ def test_dash_summarises_the_urban_centre_when_present():
         "name": "Ahmedabad",
         "koppen": "BSh",
         "income": "LM",
-        "population": 7898650,
+        "population_2025": 7898650,
         "tiles": 365,
     }
 
