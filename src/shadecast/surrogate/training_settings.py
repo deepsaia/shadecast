@@ -17,6 +17,7 @@ class TrainingSettings:
     device: str | None = None  # None picks the best available
     loss: str = "huber"
     huber_delta: float = 1.0
+    channels: str = "engine"  # a key of features.CHANNEL_SETS, so the manifest lists the channels
 
     def as_dict(self) -> dict:
         return asdict(self)

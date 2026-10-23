@@ -417,6 +417,15 @@
       "authors_or_publisher": "Cognizant AI Labs",
       "url": "https://github.com/cognizant-ai-labs/en-roads-py",
       "used_for": "A working implementation of the prescriptor pattern over a fixed simulator, and the closest existing analogue to what the planner here does over SOLWEIG."
+    },
+    {
+      "key": "cooper_1969",
+      "group": "radiation",
+      "title": "The absorption of radiation in solar stills",
+      "authors_or_publisher": "Cooper, Solar Energy 12(3)",
+      "year": 1969,
+      "doi": "10.1016/0038-092X(69)90047-4",
+      "used_for": "The solar declination formula behind the sun-path input channels of the surrogate."
     }
   ]
 }

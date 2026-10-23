@@ -19,6 +19,7 @@ import logging
 from pathlib import Path
 
 from .patch_set import PatchSet
+from .patch_settings import PatchSettings
 from .patches import crop_cities
 from .training import train
 from .training_settings import TrainingSettings
@@ -54,7 +55,7 @@ def transfer_curve(
         logger.info("training on %d cities %s, testing on %s", count, names, holdout_city)
 
         inputs, targets, origins = crop_cities(
-            [*subset, *held], size=patch, per_entry=per_entry, seed=seed
+            [*subset, *held], PatchSettings(size=patch, per_entry=per_entry, seed=seed)
         )
         settings = TrainingSettings(epochs=epochs, holdout_city=holdout_city, seed=seed)
         report = train(PatchSet(inputs, targets, origins), settings, out_path=None)

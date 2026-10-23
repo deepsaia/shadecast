@@ -56,11 +56,30 @@ SCALES = {
     "baseline_tmrt": features.TMRT_SCALE,
     "building_height": features.HEIGHT_SCALE,
     "canopy_height": features.CANOPY_SCALE,
+    "sun_noon_elevation": features.ELEVATION_SCALE,
+}
+DEFINITIONS = {
+    "sky_openness": (
+        f"1 minus mean obstruction height within {features.OPENNESS_RADIUS_M:.0f} m "
+        f"over {features.HEIGHT_SCALE:.0f} m, clipped to 0 to 1"
+    ),
+    "sky_view_factor": "the engine's ray-cast sky view factor from the baseline run, 0 to 1",
+    "sunlit_fraction": (
+        "share of the daylight hours, 08:00 to 18:00, in which the sun reaches the pixel, "
+        "from the baseline run's hourly shadow stack"
+    ),
+    "sun_noon_elevation": (
+        "solar noon elevation on the design day from latitude and Cooper's declination, "
+        "constant over the tile"
+    ),
+    "sun_noon_side": (
+        "+1 when the noon sun is to the south, -1 when to the north, constant over the tile"
+    ),
 }
 
 
-def architecture() -> dict:
-    model = ResponseUNet()
+def architecture(in_channels: int) -> dict:
+    model = ResponseUNet(in_channels=in_channels)
     return {
         "class": type(model).__name__,
         "depth": model.depth,
@@ -74,18 +93,20 @@ def architecture() -> dict:
     }
 
 
-def inputs() -> dict:
+def inputs(channel_set: str) -> dict:
     channels = []
-    for name in features.IN_CHANNELS_ORDER:
+    for name in features.CHANNEL_SETS[channel_set]:
         channel: dict = {"name": name, "scale": SCALES.get(name)}
         channel.update(LAND_COVER_FLAGS.get(name, {}))
-        if name == "sky_openness":
-            channel["definition"] = (
-                f"1 minus mean obstruction height within {features.OPENNESS_RADIUS_M:.0f} m "
-                f"over {features.HEIGHT_SCALE:.0f} m, clipped to 0 to 1"
-            )
+        if name in DEFINITIONS:
+            channel["definition"] = DEFINITIONS[name]
         channels.append(channel)
-    return {"resolution_m": RESOLUTION_M, "channels": channels}
+    return {"resolution_m": RESOLUTION_M, "channel_set": channel_set, "channels": channels}
+
+
+def channel_set_of(report: dict) -> str:
+    """The channel set a training report says it used; reports older than the key used base."""
+    return str(report.get("settings", {}).get("channels", "base"))
 
 
 def output() -> dict:
@@ -211,8 +232,8 @@ def build(built: ManifestInputs) -> dict:
     return {
         "model_id": built.model_id,
         "created": built.created,
-        "architecture": architecture(),
-        "inputs": inputs(),
+        "architecture": architecture(len(features.CHANNEL_SETS[channel_set_of(built.report)])),
+        "inputs": inputs(channel_set_of(built.report)),
         "output": output(),
         "data": data_section(built),
         "training": training_section(built.report),

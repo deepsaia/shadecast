@@ -86,7 +86,10 @@ def test_manifest_has_every_required_section(tmp_path):
 def test_manifest_describes_the_architecture_and_inputs(tmp_path):
     built = manifest.build(_inputs(tmp_path))
     assert built["architecture"]["class"] == "ResponseUNet"
-    assert built["architecture"]["parameters"] == 7_764_193
+    assert built["architecture"]["parameters"] == 7_765_345  # eleven input channels
+    assert built["inputs"]["channel_set"] == "engine"
+    assert len(built["inputs"]["channels"]) == 11
+    assert built["inputs"]["channels"][7]["name"] == "sky_view_factor"
     assert built["architecture"]["widths"] == [32, 64, 128, 256]
     assert built["architecture"]["receptive_field_m"] == 204
     assert built["architecture"]["receptive_field_min_m"] == 188
@@ -159,3 +162,17 @@ def test_describe_shows_the_receptive_field_as_a_range():
         {"receptive_field_m": 204, "receptive_field_min_m": 188}
     ) == ("188 to 204 m")
     assert manifest.receptive_field_text({"receptive_field_m": 152}) == "152 m"
+
+
+def test_a_base_channel_report_describes_the_seven_channel_model(tmp_path):
+    inputs = _inputs(tmp_path)
+    inputs.report["settings"]["channels"] = "base"
+    built = manifest.build(inputs)
+    assert built["architecture"]["parameters"] == 7_764_193
+    assert built["inputs"]["channel_set"] == "base"
+    assert [c["name"] for c in built["inputs"]["channels"]][-1] == "is_vegetated"
+
+
+def test_a_report_without_a_channel_key_is_read_as_base():
+    assert manifest.channel_set_of({"settings": {}}) == "base"
+    assert manifest.channel_set_of({"settings": {"channels": "engine"}}) == "engine"

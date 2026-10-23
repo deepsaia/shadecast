@@ -18,9 +18,9 @@ import torch
 from torch import nn
 from torch.nn import functional
 
-# placement, baseline Tmrt, building height, canopy height, sky openness,
-# is_water, is_vegetated
-IN_CHANNELS = 7
+from .features import IN_CHANNELS_ORDER
+
+IN_CHANNELS = len(IN_CHANNELS_ORDER)
 
 
 class ResponseUNet(nn.Module):
@@ -28,6 +28,7 @@ class ResponseUNet(nn.Module):
 
     def __init__(self, in_channels: int = IN_CHANNELS, width: int = 32, depth: int = 4) -> None:
         super().__init__()
+        self.in_channels = in_channels
         self.depth = depth
         self.width = width
         self.encoders = nn.ModuleList()
