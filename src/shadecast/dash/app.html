@@ -42,19 +42,33 @@ select{font-family:var(--f-b);font-size:.95rem;padding:.35rem .6rem;border:1px s
 .lede{color:var(--ink-2);font-size:.95rem;margin:0 0 1.6rem}
 .lede b{color:var(--ink)}
 .scope{margin:0 0 1.2rem}
-.scope h3,.index h3{font-size:.74rem;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin:0 0 .5rem;font-weight:650}
+.scope h3{font-size:.74rem;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin:0 0 .5rem;font-weight:650}
 .scope > p{margin:0 0 .9rem;color:var(--ink-2);font-size:.88rem;line-height:1.55}
 .scope p.note{margin:.8rem 0 0;font-size:.78rem;color:var(--ink-3);line-height:1.5}
 .scope p.note b{color:var(--ink-2)}
-/* Ten entries read as a wall in one column, so they split once there is room for two. */
-.index{margin:0 0 1.6rem}
-.index ol{list-style:none;margin:0;padding:0;display:grid;gap:0}
-@media(min-width:760px){.index ol{grid-template-columns:1fr 1fr;column-gap:1.8rem}}
-.index li a{display:grid;grid-template-columns:auto 1fr;gap:.6rem;align-items:baseline;
-  padding:.32rem .1rem;text-decoration:none;color:var(--ink);font-size:.85rem;
-  border-bottom:1px solid var(--rule)}
-.index li a:hover{color:var(--accent)}
-.index li a i{font-family:var(--f-m);font-size:.7rem;color:var(--accent);font-style:normal}
+/* Contents: a floating panel on the left, so a reader deep in the page can jump to any
+   section without scrolling back up. A sticky column when there is room, a drawer when not. */
+.page{display:grid;grid-template-columns:minmax(0,1fr)}
+@media(min-width:1100px){
+  .page{grid-template-columns:14rem minmax(0,1fr)}
+  .toc{position:sticky;top:var(--toc-top,0px);align-self:start;max-height:calc(100vh - var(--toc-top,0px));
+    overflow:auto;padding:1.5rem 1rem 1.5rem 1.25rem;border-right:1px solid var(--rule)}
+  .toc-toggle{display:none}
+}
+@media(max-width:1099.98px){
+  .toc{position:fixed;left:0;top:0;bottom:0;z-index:40;width:min(18rem,85vw);padding:1.25rem 1rem;overflow:auto;
+    background:var(--ground);border-right:1px solid var(--rule-2);transform:translateX(-100%);transition:transform .2s ease}
+  .toc.open{transform:none}
+  .toc-toggle{position:fixed;left:1rem;bottom:1rem;z-index:41;font:inherit;font-size:.8rem;padding:.45rem .85rem;
+    border-radius:999px;border:1px solid var(--rule-2);background:var(--card);color:var(--ink);cursor:pointer}
+}
+.toc-head{font-size:.74rem;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin:0 0 .5rem;font-weight:650}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li a{display:grid;grid-template-columns:auto 1fr;gap:.6rem;align-items:baseline;padding:.32rem .5rem .32rem .5rem;
+  text-decoration:none;color:var(--ink-2);font-size:.85rem;border-bottom:1px solid var(--rule);border-left:2px solid transparent}
+.toc li a:hover{color:var(--accent)}
+.toc li a i{font-family:var(--f-m);font-size:.7rem;color:var(--accent);font-style:normal}
+.toc li a.active{color:var(--ink);border-left-color:var(--accent)}
 .step{margin:0 0 2rem;scroll-margin-top:4.5rem}
 .step > h2{font-size:1.05rem;margin:0 0 .15rem;display:flex;align-items:baseline;gap:.6rem}
 .step > h2 i{font-family:var(--f-m);font-size:.7rem;color:var(--accent);font-style:normal}
@@ -173,6 +187,8 @@ a{color:var(--accent)}
   </div>
 </header>
 
+<div class="page">
+<aside class="toc" id="toc" aria-label="Contents"></aside>
 <div class="wrap">
 
 <p class="lede">Given a city and a budget, which cooling measures should you build, and where?
@@ -213,8 +229,6 @@ take to close the gap.</p>
   <a href="model_pipeline.html">documented on its own page</a>.</p>
 </div>
 
-<nav class="card index" id="index" aria-label="Contents"></nav>
-
 <div id="app"><div class="loading">loading…</div></div>
 
 <footer>
@@ -223,6 +237,8 @@ take to close the gap.</p>
   The surrogate is described in <a href="model_pipeline.html">the model pipeline</a>.
 </footer>
 </div>
+</div>
+<button class="toc-toggle" id="toctoggle" aria-controls="toc" aria-expanded="false">Contents</button>
 <script>
 const $ = id => document.getElementById(id);
 const S = {data:null, city:null, plan:null, hour:15, playing:false, atlas:{}};
@@ -299,6 +315,32 @@ function attachReadout(canvas,readout,getAtlas,getTile,unit){
 }
 const fmt = (n,d=0)=> n===null||n===undefined||!isFinite(n) ? "—" : Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
 const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+/* Contents panel: mark the section in view, and on narrow screens open and close the drawer. */
+(function(){
+  const toc=document.getElementById("toc"), toggle=document.getElementById("toctoggle");
+  const bar=document.querySelector(".topbar");
+  function fitTop(){ if(bar) document.documentElement.style.setProperty("--toc-top", bar.offsetHeight+"px"); }
+  function mark(){
+    const all=Array.from(toc.querySelectorAll('a[href^="#"]'));
+    if(!all.length) return;
+    const line=(bar?bar.offsetHeight:0)+24;
+    let current=all[0];
+    for(const a of all){
+      const s=document.getElementById(a.getAttribute("href").slice(1));
+      if(s && s.getBoundingClientRect().top<=line) current=a;
+    }
+    all.forEach(a=>a.classList.toggle("active",a===current));
+  }
+  let queued=false;
+  function onScroll(){ if(queued) return; queued=true; requestAnimationFrame(()=>{ queued=false; mark(); }); }
+  function setOpen(open){ toc.classList.toggle("open",open); toggle.setAttribute("aria-expanded",String(open)); }
+  toggle.addEventListener("click",()=>setOpen(!toc.classList.contains("open")));
+  toc.addEventListener("click",e=>{ if(e.target.closest("a")) setOpen(false); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") setOpen(false); });
+  addEventListener("scroll",onScroll,{passive:true});
+  addEventListener("resize",()=>{ fitTop(); mark(); });
+  fitTop(); mark();
+})();
 </script>
 <script src="app.js"></script>
 </body>

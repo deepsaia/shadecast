@@ -128,7 +128,7 @@ function stepHead(slug){
 /* The index is navigation, so it sits above the steps and outside the part of the page
    that render() rewrites when the city changes. */
 function pageIndex(){
-  return `<h3>Contents</h3><ol>${STEPS.map(([slug, title], i) =>
+  return `<div class="toc-head">Contents</div><ol>${STEPS.map(([slug, title], i) =>
     `<li><a href="#${slug}"><i>${String(i + 1).padStart(2, "0")}</i><span>${title}</span></a></li>`
   ).join("")}</ol>`;
 }
@@ -660,7 +660,8 @@ function gotoStep(hash){
   // the map fields arrive later, so blanking first just collapsed the page height and
   // threw the reader's scroll position away.
   sel.onchange=async e=>{ S.city=e.target.value; S.plan=null; await render(); };
-  $("index").innerHTML=pageIndex();
+  $("toc").innerHTML=pageIndex();
+  dispatchEvent(new Event("scroll"));  // the panel marks the section in view
   await render();
   gotoStep(location.hash);
   addEventListener("hashchange", () => gotoStep(location.hash));
