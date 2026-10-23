@@ -69,17 +69,10 @@ Full proposal in [PROPOSAL.md](PROPOSAL.md).
 
 ## Data sources
 
-All open, all unsigned, no API keys.
-
-| Layer | Source |
-|---|---|
-| Buildings and heights | GlobalBuildingAtlas LoD1 (Source Cooperative) |
-| Terrain | Copernicus DEM GLO-30 (AWS Open Data) |
-| Canopy height | Meta and WRI 1 m CHM (AWS Open Data) |
-| Land cover | ESA WorldCover 10 m (AWS Open Data) |
-| Population | GHS-POP R2023A 100 m (JRC) |
-| Meteorology | ERA5 via Open-Meteo |
-| Physics | SOLWEIG via solweig-gpu, run as a subprocess |
+All open, all unsigned, no API keys. Every dataset, model and paper this work rests on is cited
+once, in `src/shadecast/cited_sources.json`, and the walkthrough's references section is
+rendered from that file. Each built bundle records the source key and citation of every layer
+in its `provenance.json`.
 
 ## Licence
 
