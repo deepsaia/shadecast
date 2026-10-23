@@ -20,8 +20,10 @@ from .corpus import tile_paths
 from .surrogate import manifest
 from .surrogate.assessment import assess
 from .surrogate.assessment_inputs import AssessmentInputs
-from .surrogate.dataset import default_plan, generate
+from .surrogate.dataset import default_plan, engine_threads, generate, tile_label
 from .surrogate.features import CHANNEL_SETS
+from .surrogate.generation_progress import GenerationProgress
+from .surrogate.generation_settings import GenerationSettings
 from .surrogate.manifest_inputs import ManifestInputs
 from .surrogate.patch_set import PatchSet
 from .surrogate.patch_settings import PatchSettings
@@ -70,20 +72,41 @@ def generate_data(
     bundle: Annotated[Path, typer.Argument(help="A built city bundle directory.")],
     out: Annotated[Path | None, typer.Option("--out", help="Where to write responses.")] = None,
     kind: Annotated[str, typer.Option("--kind", help="Intervention type.")] = "tree",
+    jobs: Annotated[
+        int,
+        typer.Option(
+            "--jobs", "-j", help="Engine runs side by side. The baseline runs alone first."
+        ),
+    ] = 1,
 ) -> None:
     """Run the designed experiments through the physics engine.
 
-    Sparse probe designs make one engine call yield roughly a hundred independent
-    single intervention responses, which is what keeps the physics budget affordable.
+    Shows a bar over the plan and a line per finished design with its engine time. Designs
+    already on disk are skipped, so an interrupted run resumes where it stopped. Put -v
+    before the command for debug logging.
     """
     destination = out if out else default_out(bundle)
+    provenance = json.loads((bundle / "provenance.json").read_text())
     plan = default_plan()
     console.print(
-        f"[cyan]{bundle.name}[/]: {len(plan)} designs, "
-        f"about {len(plan) * 200 / 60:.0f} minutes of engine time"
+        f"[cyan]{tile_label(bundle, provenance)}[/]: {len(plan)} designs, {jobs} at a time, "
+        f"into {destination}. The engine has taken 4 to 10 minutes a design so far."
     )
-    summary = generate(bundle, destination, plan=plan, kind=kind)
-    console.print(f"[green]{summary['entries']}[/] responses written to {destination}")
+    settings = GenerationSettings(plan=plan, kind=kind, jobs=jobs)
+    started = time.time()
+    progress = GenerationProgress(console, jobs=jobs, threads=engine_threads(settings), kind=kind)
+    try:
+        with progress:
+            summary = generate(bundle, destination, settings, progress)
+    except RuntimeError as error:
+        error_console.print(f"[red]{error}[/]")
+        raise typer.Exit(code=1) from error
+    mean = progress.mean_seconds()
+    pace = f", {mean:.0f} s a design" if mean else ""
+    console.print(
+        f"[green]{summary['entries']}[/] responses in {destination}  "
+        f"({(time.time() - started) / 60:.0f} min{pace})"
+    )
 
 
 @app.command("train")

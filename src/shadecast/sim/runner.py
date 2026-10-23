@@ -135,6 +135,23 @@ def build_command(
     return command
 
 
+THREAD_VARIABLES = (
+    "OMP_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "NUMBA_NUM_THREADS",
+)
+
+
+def thread_environment(threads: int | None) -> dict[str, str]:
+    """The engine's environment, with every thread pool capped when a cap is given."""
+    environment = dict(os.environ)
+    if threads is not None:
+        for name in THREAD_VARIABLES:
+            environment[name] = str(max(1, threads))
+    return environment
+
+
 def run(
     base_path: Path,
     date: str,
@@ -146,11 +163,13 @@ def run(
     save_shadow: bool = True,
     landcover: str | None = None,
     timeout: int = 7200,
+    threads: int | None = None,
 ) -> RunResult:
     """Run SOLWEIG over a prepared bundle directory.
 
     The bundle must already contain the rasters and met file the engine expects.
-    Outputs land in ``base_path/output_folder``.
+    Outputs land in ``base_path/output_folder``. ``threads`` caps the CPU threads the
+    engine process may use, so several runs side by side do not oversubscribe the cores.
     """
     base_path = Path(base_path)
     missing = [name for name in REQUIRED_INPUTS if not (base_path / name).exists()]
@@ -171,7 +190,12 @@ def run(
 
     started = time.time()
     completed = subprocess.run(
-        command, capture_output=True, text=True, timeout=timeout, check=False
+        command,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=False,
+        env=thread_environment(threads),
     )
     elapsed = time.time() - started
 
