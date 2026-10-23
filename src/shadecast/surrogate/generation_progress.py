@@ -49,6 +49,15 @@ def clock(seconds: float) -> str:
     return f"{seconds // 60}m {seconds % 60:02d}s"
 
 
+RUNNING_BAR_WIDTH = 20
+
+
+def running_bar(share: float) -> str:
+    """A thin bar for a share between 0 and 1, the same glyphs as the designs bar."""
+    filled = round(min(max(share, 0.0), 1.0) * RUNNING_BAR_WIDTH)
+    return "━" * filled + "╺" + "━" * max(0, RUNNING_BAR_WIDTH - filled - 1)
+
+
 def verbose_logging() -> bool:
     """True when the command ran with -v, which sets the root logger to DEBUG."""
     return logging.getLogger().getEffectiveLevel() <= logging.DEBUG
@@ -274,16 +283,29 @@ class GenerationProgress:
         return text
 
     def _running_now(self) -> Text:
+        """One line per running design: elapsed, and a bar against the run's mean so far.
+
+        The engine prints nothing during its main loop, so the bar is elapsed time against
+        the mean engine seconds of the designs finished in this run. Until one has finished
+        there is nothing to measure against, and the line says so.
+        """
         text = Text("running now\n", style="bold")
         with self.lock:
             items = sorted(self.running.items(), key=lambda item: item[1])
         if not items:
-            text.append(
-                "  nothing" if self.phase in ("done", "failed") else "  waiting", style="dim"
-            )
+            idle = "nothing" if self.phase in ("done", "failed", "stopped") else "waiting"
+            text.append(f"  {idle}", style="dim")
             return text
+        expected = self.mean_seconds()
         for name, since in items:
-            text.append(f"  {name:<24} {clock(time.time() - since)}\n")
+            elapsed = time.time() - since
+            text.append(f"  {name:<24} {clock(elapsed):>8}  ")
+            if expected is None:
+                text.append("no finished design to measure against yet\n", style="dim")
+                continue
+            share = min(elapsed / expected, 0.99)
+            text.append(running_bar(share), style="cyan")
+            text.append(f"  about {clock(max(0.0, expected - elapsed))} left\n", style="dim")
         return text
 
     def _last_table(self) -> Table:
