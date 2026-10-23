@@ -1,11 +1,13 @@
-"""Backfill layers that a bundle predates.
+"""Backfill layers and provenance that a bundle predates.
 
-Bundles built by an older version of the builder can be missing layers that were
-added later. Rebuilding is not always an option: once physics has been run against
-a bundle's geometry, every generated response is tied to that exact grid, and a
-rebuild that shifts the study area silently invalidates hours of simulation.
+Bundles built by an older version of the builder can be missing layers that were added later,
+or provenance fields such as the urban centre and the citation of each layer. Rebuilding is not
+always an option: once physics has been run against a bundle's geometry, every generated
+response is tied to that exact grid, and a rebuild that shifts the study area silently
+invalidates hours of simulation.
 
-So missing layers are recomputed onto the bundle's own recorded grid instead.
+So missing layers are recomputed onto the bundle's own recorded grid instead, and missing
+provenance is filled in from the selection and the registry without touching a raster.
 """
 
 from __future__ import annotations
@@ -18,6 +20,8 @@ import numpy as np
 import rasterio
 
 from .aoi import AOI
+from .build import LAYER_SOURCES, source_record, urban_centre_record
+from .cities import City
 from .data import population as population_layer
 from .data.landcover import to_umep
 
@@ -51,6 +55,29 @@ def building_height(bundle: Path) -> np.ndarray:
     with rasterio.open(Path(bundle) / "DEM.tif") as src:
         terrain = src.read(1)
     return np.maximum(surface - terrain, 0)
+
+
+def backfill_provenance(bundle: Path, city: City) -> list[str]:
+    """Add the urban centre and the citation of each layer to an older provenance file.
+
+    Returns the sections touched, so a caller can say exactly what changed and a second
+    call on the same bundle returns nothing.
+    """
+    path = Path(bundle) / "provenance.json"
+    provenance = json.loads(path.read_text())
+    touched: list[str] = []
+    if "urban_centre" not in provenance:
+        provenance["urban_centre"] = urban_centre_record(city)
+        touched.append("urban_centre")
+    for layer, key in LAYER_SOURCES.items():
+        section = provenance.get(layer)
+        if isinstance(section, dict) and "source_key" not in section:
+            section.update(source_record(key))
+            touched.append(layer)
+    if touched:
+        path.write_text(json.dumps(provenance, indent=2))
+        logger.info("%s: provenance gained %s", Path(bundle).name, ", ".join(touched))
+    return touched
 
 
 def backfill(bundle: Path) -> list[str]:
