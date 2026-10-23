@@ -28,6 +28,7 @@ class ResponseUNet(nn.Module):
     def __init__(self, in_channels: int = IN_CHANNELS, width: int = 32, depth: int = 4) -> None:
         super().__init__()
         self.depth = depth
+        self.width = width
         self.encoders = nn.ModuleList()
         self.pools = nn.ModuleList()
         self.decoders = nn.ModuleList()

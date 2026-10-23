@@ -22,10 +22,26 @@ def load_json(path: Path) -> dict | list | None:
         return None
 
 
-def surrogate_summary(assessment_path: Path, transfer_path: Path) -> dict:
+def load_dict(path: Path | None) -> dict:
+    """A JSON object from a file, or an empty one when the file is absent or not an object."""
+    payload = load_json(path) if path else None
+    return payload if isinstance(payload, dict) else {}
+
+
+def latest_assessment(tiles_root: Path) -> Path | None:
+    """The most recently created assessed model across every tile, or None."""
+    newest: tuple[str, Path] | None = None
+    for assessment in Path(tiles_root).glob("*/*/models/*/assessment.json"):
+        created = str(load_dict(assessment.parent / "manifest.json").get("created", ""))
+        if newest is None or created > newest[0]:
+            newest = (created, assessment)
+    return newest[1] if newest else None
+
+
+def surrogate_summary(assessment_path: Path | None, transfer_path: Path) -> dict:
     """How good the learned response model is, and whether more cities help it."""
-    assessment = load_json(assessment_path) or {}
-    transfer = load_json(transfer_path) or {}
+    assessment = load_dict(assessment_path)
+    transfer = load_dict(transfer_path)
     head = assessment.get("headline", {})
     speed = assessment.get("speed", {})
     points = transfer.get("points", [])
@@ -135,8 +151,7 @@ def collect(data_root: Path, verdict: dict) -> dict:
     root = Path(data_root)
     result = {
         "surrogate": surrogate_summary(
-            root / "surrogate" / "ahmedabad" / "assessment.json",
-            root / "surrogate" / "transfer_curve.json",
+            latest_assessment(root / "tiles"), root / "transfer_curve.json"
         ),
         "factorial": factorial_summary(root / "factorial.json", verdict),
         "targeting": targeting_summary(root / "targeting.json"),
