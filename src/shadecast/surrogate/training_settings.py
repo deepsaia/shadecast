@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass
 
 @dataclass(frozen=True)
 class TrainingSettings:
-    epochs: int = 30
+    epochs: int = 60  # an upper bound; patience stops training once held-out skill stalls
     batch_size: int = 8
     learning_rate: float = 2e-3
     holdout: float = 0.25  # share of designs held out, when no city is
