@@ -21,6 +21,7 @@ from . import sources
 from .aoi import AOI
 from .aoi_selector import select
 from .cities import City
+from .corpus import ucdb
 from .data import buildings as B
 from .data import canopy as C
 from .data import landcover as LC
@@ -44,6 +45,22 @@ LAYER_SOURCES = {
 def source_record(key: str) -> dict:
     """The provenance fields that tie a layer to its citation."""
     return {"source_key": key, "source": sources.short(key), "citation": sources.citation(key)}
+
+
+def urban_centre_record(city: City) -> dict:
+    """The urban centre a bundle belongs to, with the strata the benchmark is reported on."""
+    return {
+        "id": city.ucdb_id,
+        "release": f"{ucdb.RELEASE} {ucdb.VERSION}",
+        "name": city.name,
+        "country": city.country,
+        "population": city.population,
+        "area_km2": city.tiles,
+        "tiles": city.tiles,
+        "koppen": city.koppen,
+        "income": city.income,
+        **source_record(ucdb.SOURCE),
+    }
 
 
 def _write(path: Path, arr: np.ndarray, aoi: AOI, dtype: str = "float32") -> None:
@@ -94,6 +111,7 @@ def build_city(
             "region": city.region,
             "in_wri_cool_cities_lab": city.in_wri,
         },
+        "urban_centre": urban_centre_record(city),
         "aoi": {
             "seed_lat": city.lat,
             "seed_lon": city.lon,

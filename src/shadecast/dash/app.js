@@ -351,6 +351,15 @@ function tradeoffChart(plans,selected){
 }
 
 /* ------------------------------------ steps ------------------------------------------ */
+/* Strata read from the GHS Urban Centre Database through the bundle's provenance. Absent on a
+   bundle built before the database was the corpus, in which case nothing is shown rather than
+   a guess. */
+function urbanCentreLine(u){
+  if(!u) return "";
+  const strata = [u.koppen ? `Köppen ${esc(u.koppen)}` : "", u.income ? `income group ${esc(u.income)}` : ""].filter(Boolean).join(", ");
+  return ` Urban centre <b>${esc(u.name)}</b> (GHS-UCDB ${u.id}), ${strata}, ${fmt(u.population)} people, ${fmt(u.tiles)} tiles of 1 km&sup2;.`;
+}
+
 function stepAssemble(c){
   const p=c.provenance;
   return `${stepHead("assemble")}
@@ -364,7 +373,7 @@ function stepAssemble(c){
       <div class="kv"><div class="n">${fmt(p.population)}</div><div class="l">residents in the square kilometre</div></div>
     </div>
     <div class="chain">${Object.entries(p.sources).map(([k,v])=>`<span class="chip">${k}: ${esc(v)}</span>`).join("")}</div>
-    <p class="outcome">Design day <b>${p.design_day}</b> at ${p.lat.toFixed(3)}, ${p.lon.toFixed(3)}. Input quality tier <b>${p.tier}</b>.</p>
+    <p class="outcome">Design day <b>${p.design_day}</b> at ${p.lat.toFixed(3)}, ${p.lon.toFixed(3)}. Input quality tier <b>${p.tier}</b>.${urbanCentreLine(p.urban_centre)}</p>
   </div></section>`;
 }
 
