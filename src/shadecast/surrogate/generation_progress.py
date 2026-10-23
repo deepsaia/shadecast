@@ -110,7 +110,10 @@ class GenerationProgress:
         return self
 
     def __exit__(self, exc_type: object, *exc: object) -> None:
-        self.phase = "failed" if exc_type else "done"
+        if exc_type is KeyboardInterrupt:
+            self.phase = "stopped"
+        else:
+            self.phase = "failed" if exc_type else "done"
         if self.live is not None:
             self.live.refresh()
             self.live.stop()

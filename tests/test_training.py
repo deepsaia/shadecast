@@ -4,9 +4,11 @@ import numpy as np
 import pytest
 import torch
 
+from shadecast.surrogate import training
 from shadecast.surrogate.patch_set import PatchSet
 from shadecast.surrogate.training import evaluate_skill, split_by_city, train
 from shadecast.surrogate.training_settings import TrainingSettings
+from shadecast.surrogate.training_state import CHECKPOINT_NAME
 
 CHANNELS, SIDE = 7, 32
 
@@ -72,3 +74,67 @@ def test_a_city_holdout_matches_every_tile_of_the_city():
     assert plain.tolist() == [False, False, False, True]
     with pytest.raises(ValueError, match="phoenix"):
         split_by_city(origins, "phoenix")
+
+
+def test_a_checkpoint_is_written_every_epoch_and_removed_when_done(tmp_path):
+    out = tmp_path / "model" / "model.pt"
+    report = train(_patches(), _settings(epochs=3, patience=10), out_path=out)
+    assert report["last_epoch"] == 3 and not report["interrupted"]
+    assert not (out.parent / CHECKPOINT_NAME).exists()
+
+
+def test_an_interrupt_keeps_the_best_weights_and_the_checkpoint(tmp_path, monkeypatch):
+    calls = {"n": 0}
+    real = training._fit_one_epoch
+
+    def interrupt_on_third(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 3:
+            raise KeyboardInterrupt
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(training, "_fit_one_epoch", interrupt_on_third)
+    out = tmp_path / "model" / "model.pt"
+    report = train(_patches(), _settings(epochs=6, patience=10), out_path=out)
+    assert report["interrupted"] and report["last_epoch"] == 2
+    assert out.exists() and (out.parent / CHECKPOINT_NAME).exists()
+    assert report["best_epoch"] in (1, 2)
+
+
+def test_training_resumes_from_the_checkpoint(tmp_path, monkeypatch):
+    calls = {"n": 0}
+    real = training._fit_one_epoch
+
+    def interrupt_on_third(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 3:
+            raise KeyboardInterrupt
+        return real(*args, **kwargs)
+
+    out = tmp_path / "model" / "model.pt"
+    monkeypatch.setattr(training, "_fit_one_epoch", interrupt_on_third)
+    train(_patches(), _settings(epochs=5, patience=10), out_path=out)
+    monkeypatch.setattr(training, "_fit_one_epoch", real)
+    report = train(_patches(), _settings(epochs=5, patience=10), out_path=out)
+    assert report["resumed_from_epoch"] == 2
+    assert report["last_epoch"] == 5
+    assert [step["epoch"] for step in report["history"]] == [1, 2, 3, 4, 5]
+    assert not (out.parent / CHECKPOINT_NAME).exists()
+
+
+def test_a_checkpoint_for_other_data_is_refused(tmp_path, monkeypatch):
+    calls = {"n": 0}
+    real = training._fit_one_epoch
+
+    def interrupt_on_second(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise KeyboardInterrupt
+        return real(*args, **kwargs)
+
+    out = tmp_path / "model" / "model.pt"
+    monkeypatch.setattr(training, "_fit_one_epoch", interrupt_on_second)
+    train(_patches(), _settings(epochs=4, patience=10), out_path=out)
+    monkeypatch.setattr(training, "_fit_one_epoch", real)
+    with pytest.raises(ValueError, match="different data"):
+        train(_patches(), _settings(epochs=9, patience=10), out_path=out)

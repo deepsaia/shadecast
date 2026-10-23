@@ -18,7 +18,6 @@ training curve happened to end; a best-epoch model does not.
 
 from __future__ import annotations
 
-import copy
 import json
 import logging
 import time
@@ -31,7 +30,9 @@ from torch import nn
 
 from .model import ResponseUNet
 from .patch_set import PatchSet
+from .trainables import Trainables
 from .training_settings import TrainingSettings
+from .training_state import CHECKPOINT_NAME, TrainingState
 
 logger = logging.getLogger(__name__)
 
@@ -197,50 +198,78 @@ def train(patches: PatchSet, settings: TrainingSettings, out_path: Path | None =
     schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimiser, T_max=settings.epochs)
     criterion = nn.HuberLoss(delta=settings.huber_delta)
 
-    history: list[dict] = []
-    best_state = copy.deepcopy(model.state_dict())
-    best_epoch = 0
-    best_skill = float("-inf")
-    started = time.time()
-    for epoch in range(1, settings.epochs + 1):
-        loss = _fit_one_epoch(
-            model, optimiser, criterion, _batches(x_train, y_train, settings.batch_size, generator)
-        )
-        schedule.step()
-        mae, skill = _skill(_predict(model, x_test, settings.batch_size), y_test)
-        history.append({"epoch": epoch, "train_loss": loss, "test_mae_C": mae, "skill": skill})
-        if skill > best_skill:
-            best_skill, best_epoch = skill, epoch
-            best_state = copy.deepcopy(model.state_dict())
-        if epoch % 5 == 0 or epoch == 1:
-            logger.info(
-                "epoch %2d: train loss %.4f, held-out MAE %.4f C, skill %+.3f",
-                epoch,
-                loss,
-                mae,
-                skill,
-            )
-        if epoch - best_epoch >= settings.patience:
-            logger.info("no better skill for %d epochs, stopping at %d", settings.patience, epoch)
-            break
+    checkpoint = Path(out_path).parent / CHECKPOINT_NAME if out_path is not None else None
+    fingerprint = {
+        "channels": patches.channels,
+        "patches": len(patches),
+        "seed": settings.seed,
+        "epochs": settings.epochs,
+    }
+    trainables = Trainables(model, optimiser, schedule, generator)
+    state = TrainingState.fresh(model)
+    if checkpoint is not None:
+        checkpoint.parent.mkdir(parents=True, exist_ok=True)
+    if checkpoint is not None and checkpoint.exists():
+        state = TrainingState.load(checkpoint, trainables, fingerprint)
+        logger.info("resuming after epoch %d from %s", state.epoch, checkpoint)
 
-    elapsed = time.time() - started
-    last = history[-1]
+    started = time.time()
+    interrupted = False
+    try:
+        for epoch in range(state.epoch + 1, settings.epochs + 1):
+            loss = _fit_one_epoch(
+                model,
+                optimiser,
+                criterion,
+                _batches(x_train, y_train, settings.batch_size, generator),
+            )
+            schedule.step()
+            mae, skill = _skill(_predict(model, x_test, settings.batch_size), y_test)
+            state.record(epoch, loss, mae, skill, model)
+            if epoch % 5 == 0 or epoch == 1:
+                logger.info(
+                    "epoch %2d: train loss %.4f, held-out MAE %.4f C, skill %+.3f",
+                    epoch,
+                    loss,
+                    mae,
+                    skill,
+                )
+            if checkpoint is not None:
+                state.save(checkpoint, trainables, fingerprint, time.time() - started)
+            if epoch - state.best_epoch >= settings.patience:
+                logger.info(
+                    "no better skill for %d epochs, stopping at %d", settings.patience, epoch
+                )
+                break
+    except KeyboardInterrupt:
+        # The epoch under way is lost; everything before it is on disk and the best weights
+        # so far are kept. The caller says how to resume.
+        if not state.history:
+            raise
+        interrupted = True
+        logger.warning("interrupted after epoch %d; keeping the best weights so far", state.epoch)
+
+    elapsed = state.elapsed_before + (time.time() - started)
+    last = state.history[-1]
     if out_path is not None:
         out_path = Path(out_path)
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save({"state_dict": best_state, "in_channels": patches.channels}, out_path)
+        torch.save({"state_dict": state.best_state, "in_channels": patches.channels}, out_path)
+    if checkpoint is not None and not interrupted:
+        checkpoint.unlink(missing_ok=True)
 
     return {
         "device": str(device),
         "settings": settings.as_dict(),
         "epochs": settings.epochs,
         "last_epoch": int(last["epoch"]),
-        "stopped_early": int(last["epoch"]) < settings.epochs,
+        "stopped_early": int(last["epoch"]) < settings.epochs and not interrupted,
+        "interrupted": interrupted,
+        "resumed_from_epoch": state.resumed_from_epoch,
         "patience": settings.patience,
         "selection": "best held-out skill",
-        "best_epoch": best_epoch,
-        "best_skill": round(best_skill, 4),
+        "best_epoch": state.best_epoch,
+        "best_skill": round(state.best_skill, 4),
         "train_patches": int(train_mask.sum()),
         "test_patches": int(test_mask.sum()),
         "held_out_designs": held_designs,
@@ -248,10 +277,10 @@ def train(patches: PatchSet, settings: TrainingSettings, out_path: Path | None =
         "holdout_city": settings.holdout_city,
         "final_test_mae_C": last["test_mae_C"],
         "zero_baseline_mae_C": round(float(np.abs(patches.targets[test_mask]).mean()), 5),
-        "final_skill": round(best_skill, 4),
-        "beats_predicting_nothing": bool(best_skill > 0),
+        "final_skill": round(state.best_skill, 4),
+        "beats_predicting_nothing": bool(state.best_skill > 0),
         "train_seconds": round(elapsed, 1),
-        "history": history,
+        "history": state.history,
         "checkpoint": str(out_path) if out_path else None,
     }
 

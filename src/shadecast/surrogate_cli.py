@@ -30,6 +30,7 @@ from .surrogate.patch_settings import PatchSettings
 from .surrogate.patches import crop_batch, crop_cities, tile_key
 from .surrogate.training import save_report, train
 from .surrogate.training_settings import TrainingSettings
+from .surrogate.training_state import CHECKPOINT_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -258,6 +259,12 @@ def generate_data(
         try:
             with progress:
                 summary = generate(bundle, destination, settings, progress)
+        except KeyboardInterrupt:
+            console.print(
+                f"\n[bold]stopped[/] with {progress.completed()} of {progress.total} designs on "
+                f"disk. Resume with: [cyan]{progress.resume_command}[/]"
+            )
+            raise typer.Exit(code=130) from None
         except RuntimeError as error:
             error_console.print(f"[red]{error}[/]")
             failures.append(str(tile_id or bundle))
@@ -298,6 +305,44 @@ def training_pairs(
     return pairs
 
 
+def unfinished_model(root: Path) -> Path | None:
+    """The newest model directory with a checkpoint and no manifest, else None."""
+    if not root.is_dir():
+        return None
+    candidates = [
+        child
+        for child in root.iterdir()
+        if (child / CHECKPOINT_NAME).exists() and not (child / "manifest.json").exists()
+    ]
+    return max(candidates, key=model_created) if candidates else None
+
+
+def train_resume_command(
+    target: str | None,
+    bundle: Path | None,
+    pair: list[str] | None,
+    tiles: str | None,
+    holdout_city: str | None,
+    channels: str,
+) -> str:
+    """The exact command that continues an interrupted training run. Six inputs, one string."""
+    parts = ["sdc surrogate train"]
+    if target:
+        parts.append(target)
+    if bundle:
+        parts.append(str(bundle))
+    for item in pair or []:
+        parts += ["--pair", item]
+    if tiles is not None:
+        parts += ["--tiles", tiles]
+    if holdout_city:
+        parts += ["--holdout-city", holdout_city]
+    if channels != "engine":
+        parts += ["--channels", channels]
+    parts.append("--resume")
+    return " ".join(parts)
+
+
 @app.command("train")
 def train_model(
     target: Annotated[
@@ -336,6 +381,10 @@ def train_model(
             "--channels", help="Channel set: engine (all eleven) or base (the first seven)."
         ),
     ] = "engine",
+    resume: Annotated[
+        bool,
+        typer.Option("--resume", help="Continue the newest unfinished run from its checkpoint."),
+    ] = False,
 ) -> None:
     """Fit the response model.
 
@@ -370,10 +419,23 @@ def train_model(
     created = manifest.now()
     model_id = manifest.new_model_id(pairs, created)
     destination = models_root(pairs) / model_id
+    if resume:
+        unfinished = unfinished_model(models_root(pairs))
+        if unfinished is None:
+            error_console.print(f"nothing to resume under {models_root(pairs)}")
+            raise typer.Exit(code=1)
+        destination, model_id = unfinished, unfinished.name
+        console.print(f"[dim]resuming {destination}[/]")
     destination.mkdir(parents=True, exist_ok=True)
 
     settings = TrainingSettings(epochs=epochs, holdout_city=holdout_city, channels=channels)
-    report = train(PatchSet(inputs, targets, origins), settings, out_path=destination / "model.pt")
+    try:
+        report = train(
+            PatchSet(inputs, targets, origins), settings, out_path=destination / "model.pt"
+        )
+    except KeyboardInterrupt:
+        console.print("\n[bold]stopped[/] before the first epoch finished; nothing was saved.")
+        raise typer.Exit(code=130) from None
     report["patch_px"] = patch
     report["cities"] = [str(b) for _, b in pairs]
     report["target_stats"] = {
@@ -393,6 +455,14 @@ def train_model(
         )
     )
     manifest.write(destination, built)
+    if report.get("interrupted"):
+        again = train_resume_command(target, bundle, pair, tiles, holdout_city, channels)
+        console.print(
+            f"\n[bold]stopped[/] after epoch {report['last_epoch']}; the best weights, epoch "
+            f"{report['best_epoch']}, are saved in {destination}.\n"
+            f"Continue with: [cyan]{again}[/]"
+        )
+        raise typer.Exit(code=130)
     verdict = "green" if report["beats_predicting_nothing"] else "red"
     console.print(
         f"[{verdict}]skill {report['final_skill']:+.3f}[/]  "

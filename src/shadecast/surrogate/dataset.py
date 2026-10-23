@@ -29,7 +29,7 @@ import rasterio
 from ..data.landcover import to_umep
 from ..interventions import apply, feasibility_mask
 from ..pipeline import BUNDLE_FILES, daylight_mean, read_band
-from ..sim.runner import run
+from ..sim.runner import run, stop_running_engines
 from . import designs
 from .generation_progress import GenerationProgress
 from .generation_settings import GenerationSettings
@@ -268,9 +268,12 @@ def run_designs(
         try:
             collect_results(futures, progress, results, failures)
         except KeyboardInterrupt:
-            # Ctrl-C reaches the engine processes too, so the running designs end on their
-            # own; what must not happen is the queued ones starting after the interrupt.
-            logger.warning("interrupted: cancelling the designs not yet started")
+            # Stop the engines that are running and never start the queued designs. The
+            # finished ones are on disk; a rerun of the same command continues from them.
+            stopped = stop_running_engines()
+            logger.warning(
+                "interrupted: stopped %d running engine run(s), cancelled the rest", stopped
+            )
             pool.shutdown(wait=False, cancel_futures=True)
             raise
     return failures

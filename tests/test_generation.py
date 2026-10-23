@@ -199,10 +199,13 @@ def test_an_interrupt_cancels_the_designs_not_yet_started(bundle, tmp_path, monk
         raise KeyboardInterrupt
 
     monkeypatch.setattr(dataset, "collect_results", interrupt)
+    stopped = {"n": 0}
+    monkeypatch.setattr(dataset, "stop_running_engines", lambda: stopped.__setitem__("n", 1) or 0)
     with pytest.raises(KeyboardInterrupt):
         dataset.generate(bundle, tmp_path / "surrogate", GenerationSettings(plan=PLAN, jobs=1))
     # The baseline ran, and at most the one design that had already started.
     assert len(engine.calls) <= 2
+    assert stopped["n"] == 1
     assert not (tmp_path / "surrogate" / ".generating.lock").exists()
 
 
