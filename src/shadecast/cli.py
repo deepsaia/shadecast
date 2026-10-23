@@ -18,7 +18,7 @@ from typing import Annotated
 
 import typer
 
-from . import cities
+from . import cities, repair
 from .build import build_city
 from .console import add_build_row, build_table, console, corpus_table, error_console, result_table
 from .dash_cli import app as dash_app
@@ -142,6 +142,32 @@ def plan(
         f"[dim]engine {result['engine_seconds']['baseline']:.0f}s baseline, "
         f"{result['engine_seconds']['plan']:.0f}s plan, tier {result['tier']}.[/]"
     )
+
+
+@app.command("repair")
+def repair_bundles(
+    bundles: Annotated[list[Path], typer.Argument(help="Built city bundle directories.")],
+) -> None:
+    """Backfill what older bundles predate: provenance strata and citations, missing layers.
+
+    Nothing moves. The grid stays exactly as the physics was run on it.
+    """
+    corpus = cities.corpus()
+    failed: list[str] = []
+    for bundle in bundles:
+        city = corpus.get(bundle.name)
+        if city is None:
+            error_console.print(f"[red]{bundle.name}[/] is not in the selection, skipping")
+            failed.append(bundle.name)
+            continue
+        touched = repair.backfill_provenance(bundle, city)
+        if (bundle / "Building_DSM.tif").exists():
+            touched += repair.backfill(bundle)
+        console.print(
+            f"[cyan]{bundle.name}[/]: {', '.join(touched) if touched else 'nothing to do'}"
+        )
+    if failed:
+        raise typer.Exit(code=1)
 
 
 @app.command()
