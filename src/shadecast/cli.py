@@ -28,6 +28,7 @@ from .logging_setup import configure
 from .pipeline import evaluate
 from .sim.runner import run as run_engine
 from .surrogate_cli import app as surrogate_app
+from .tile_cli import app as tile_app
 
 logger = logging.getLogger("shadecast")
 
@@ -43,6 +44,7 @@ app = typer.Typer(
 
 
 app.add_typer(corpus_app, name="corpus")
+app.add_typer(tile_app, name="tile")
 app.add_typer(surrogate_app, name="surrogate")
 app.add_typer(dash_app, name="dash")
 app.add_typer(experiments_app, name="experiments")

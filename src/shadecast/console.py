@@ -88,6 +88,26 @@ def centre_details(centre: UrbanCentre) -> Table:
     return table
 
 
+def tiles_table(rows: list[dict]) -> Table:
+    """Render described tiles, one row each."""
+    table = Table(header_style="dim")
+    table.add_column("tile", style="cyan", no_wrap=True)
+    table.add_column("people", justify="right", no_wrap=True)
+    table.add_column("built", justify="right", no_wrap=True)
+    table.add_column("height", justify="right", no_wrap=True)
+    table.add_column("centre", style="dim", no_wrap=True)
+    for row in rows:
+        centre = row.get("centre") or [float("nan"), float("nan")]
+        table.add_row(
+            str(row.get("id")),
+            f"{float(row.get('population', 0.0)):,.0f}",
+            f"{float(row.get('built_fraction', 0.0)):.0%}",
+            f"{float(row.get('mean_height_m', 0.0)):.1f} m",
+            f"{centre[0]:.4f}, {centre[1]:.4f}",
+        )
+    return table
+
+
 def build_table() -> Table:
     """An empty table ready to accept one row per built bundle."""
     table = Table(header_style="dim")
