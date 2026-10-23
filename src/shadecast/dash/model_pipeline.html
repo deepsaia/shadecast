@@ -76,6 +76,9 @@ table{border-collapse:collapse;width:100%;margin:0;font-size:.92rem}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule);vertical-align:top}
 th{font-weight:600;color:var(--ink-2)}
 td.n,th.n{text-align:right;font-family:var(--f-m);font-size:.85rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+td.done,td.part{white-space:nowrap}
+td.done b,td.part b{color:var(--accent);font-weight:700;margin-right:4px}
+td.part{color:var(--ink-2)}
 code,.mono{font-family:var(--f-m);font-size:.85em;background:var(--card-2);padding:1px 4px;border-radius:4px}
 pre{font-family:var(--f-m);font-size:.8rem;line-height:1.5;background:var(--card-2);border:1px solid var(--rule);border-radius:8px;padding:12px;overflow:auto;max-width:720px}
 .note{border-left:3px solid var(--accent);padding:8px 12px;background:var(--accent-wash);border-radius:0 8px 8px 0;max-width:72ch}
@@ -198,7 +201,21 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
   </figure>
   <h3>The seven channels</h3>
   <p>Each channel is divided by a fixed number, so every city uses the same scale. The numbers are not fitted. This is what lets a model trained in one city read another.</p>
-  <p>Since 2026-10-23 four more channels exist, and training chooses the set: the engine's own sky view factor and the share of daylight hours the sun reaches each pixel, both read from the baseline run, and two constants for the noon sun on the design day, its elevation over 90 and which side it stands on. The model documented on this page was trained on the seven below. The comparison is issue 100.</p>
+  <p>Since 2026-10-23 four more channels exist, and training chooses the set: the engine's own sky view factor and the share of daylight hours the sun reaches each pixel, both read from the baseline run, and two constants for the noon sun on the design day, its elevation over 90 and which side it stands on. The model documented on this page was trained on the seven below.</p>
+  <h3>Seven channels against eleven, measured once</h3>
+  <p>Two runs on 2026-10-23 on the same Ahmedabad tile, the same seed, the same four held-out designs and the same 30 epoch budget. The eleven-channel model is a little better on every measure that was not already perfect. One seed and four designs do not settle it, and both runs sit below the 2026-08-26 model above, which trained for 40 epochs: the seven-channel run was still improving at its last epoch, so 30 was too few. Issue 101 sets the budget and the folds.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Measure, 4 held-out designs</th><th class="n">7 channels</th><th class="n">11 channels</th></tr></thead>
+    <tbody>
+      <tr><td>skill against predicting nothing</td><td class="n">0.73</td><td class="n">0.73</td></tr>
+      <tr><td>error in the population-weighted plan score</td><td class="n">4.7 %</td><td class="n">3.0 %</td></tr>
+      <tr><td>rank correlation over the 4 designs</td><td class="n">1.0</td><td class="n">1.0</td></tr>
+      <tr><td>best epoch of 30</td><td class="n">30</td><td class="n">24</td></tr>
+      <tr><td>held-out error at the best epoch</td><td class="n">0.50 C</td><td class="n">0.50 C</td></tr>
+      <tr><td>training time, Apple GPU</td><td class="n">298 s</td><td class="n">301 s</td></tr>
+      <tr><td>mean cooling predicted at 41 to 80 m, truth 0.005 C</td><td class="n">0.030 C</td><td class="n">0.026 C</td></tr>
+    </tbody>
+  </table></div>
   <div class="scroll"><table>
     <thead><tr><th>Channel</th><th>Source</th><th class="n">Scale</th></tr></thead>
     <tbody>
@@ -506,23 +523,26 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
 
 <section id="gaps">
   <h2><i>09</i>Where it falls short, and what to do</h2>
-  <p>These are the things that physics time did not allow, each with its remedy and the issue that tracks it. They are recorded so that nobody mistakes an untested case for a tested one. Three remedies are already done: the best epoch is kept and training stops early (issue 99), every model carries a manifest (issue 98), and the receptive field is probed rather than estimated (issue 114).</p>
+  <p>These are the things that physics time did not allow, each with its remedy, the issue that tracks it, and whether the gap is closed. They are recorded so that nobody mistakes an untested case for a tested one. A tick means the remedy is merged; "built" means it is merged but its effect is not yet measured.</p>
   <div class="scroll"><table>
-    <thead><tr><th>Gap</th><th>Why it matters</th><th>Remedy</th><th class="n">Issue</th></tr></thead>
+    <thead><tr><th>Gap</th><th>Why it matters</th><th>Remedy</th><th class="n">Issue</th><th>Status</th></tr></thead>
     <tbody>
-      <tr><td>One design day per city</td><td>the model has seen one sun path and one season</td><td>a sun-path channel from the date and latitude; then several days per city</td><td class="n">100, 44</td></tr>
-      <tr><td>Trees only</td><td>shade structures, de-paving and cool surfaces have no input channel</td><td>one placement channel per intervention kind, and mixed designs</td><td class="n">47</td></tr>
-      <tr><td>17 runs and 4 held-out designs per city</td><td>a ranking over 4 items proves little</td><td>a validation protocol: folds by design, more held-out designs, reported per data-quality tier</td><td class="n">101</td></tr>
-      <tr><td>A transfer curve with two points</td><td>one held-out city</td><td>a held-out-city curve over every tile with physics</td><td class="n">101</td></tr>
-      <tr><td>Sky openness is a proxy</td><td>the engine computes the real sky view factor for every baseline run and nobody reads it</td><td>read the sky view factor and the shadow fraction from the baseline run</td><td class="n">100</td></tr>
-      <tr><td>No augmentation</td><td>a flip or a rotation mirrors the sun and puts shadows on the wrong side</td><td>a sun-direction channel first, then flips that rotate the sun with the map</td><td class="n">100</td></tr>
-      <tr><td>One learning rate, one width, one seed</td><td>nothing says these settings are good</td><td>a small sweep, every run with its own manifest, ranked under the protocol</td><td class="n">115</td></tr>
-      <tr><td>Batch normalization with a batch of 8</td><td>the statistics of 8 patches are noisy</td><td>group normalization or a larger batch, inside the sweep</td><td class="n">115</td></tr>
-      <tr><td>No uncertainty</td><td>one network cannot say where it is guessing</td><td>an ensemble of five seeds; report where the spread is wide</td><td class="n">102</td></tr>
-      <tr><td>Patches favor ground near trees</td><td>the far field is under-represented despite the floor</td><td>tune the floor inside the protocol</td><td class="n">101</td></tr>
-      <tr><td>No engine verification of a search</td><td>no search uses the surrogate yet</td><td>a surrogate-backed search whose front the engine verifies</td><td class="n">34, 49</td></tr>
-      <tr><td>The checkpoint is a pickle</td><td>one metadata field, no integrity check</td><td>safetensors with the manifest, through the model store</td><td class="n">103</td></tr>
-      <tr><td>Models retrained before these fixes</td><td>the two 2026-08-26 models predate best-epoch selection</td><td>regenerate and retrain every selected tile with the revised pipeline</td><td class="n">105</td></tr>
+      <tr><td>Last-epoch weights</td><td>a model depended on where the training curve happened to end</td><td>keep the best epoch by held-out skill and stop early</td><td class="n">99</td><td class="done"><b>&#10003;</b> done</td></tr>
+      <tr><td>No record of what a model is</td><td>a checkpoint was a pickle with one metadata field</td><td>a manifest beside every model</td><td class="n">98</td><td class="done"><b>&#10003;</b> done</td></tr>
+      <tr><td>Receptive field was an estimate</td><td>the code said 152 m, the measurement says 188 to 204 m</td><td>probe it on a one-dimensional analog and record both ends</td><td class="n">114</td><td class="done"><b>&#10003;</b> done</td></tr>
+      <tr><td>Sky openness is a proxy</td><td>the engine computes the real sky view factor for every baseline run and nobody read it</td><td>read the sky view factor and the sunlit fraction from the baseline run</td><td class="n">100</td><td class="done"><b>&#10003;</b> built; measured once, see section 02</td></tr>
+      <tr><td>One design day per city</td><td>the model has seen one sun path and one season</td><td>a sun-path channel from the date and latitude; then several days per city</td><td class="n">100, 44</td><td class="part"><b>&#10003;</b> channel built; days open</td></tr>
+      <tr><td>No augmentation</td><td>a flip or a rotation mirrors the sun and puts shadows on the wrong side</td><td>a sun-side channel first, then flips that turn the sun with the map</td><td class="n">100</td><td class="part"><b>&#10003;</b> channel built; flips open</td></tr>
+      <tr><td>Trees only</td><td>shade structures, de-paving and cool surfaces have no input channel</td><td>one placement channel per intervention kind, and mixed designs</td><td class="n">47</td><td>open</td></tr>
+      <tr><td>17 runs and 4 held-out designs per city</td><td>a ranking over 4 items proves little</td><td>a validation protocol: folds by design, more held-out designs, reported per data-quality tier</td><td class="n">101</td><td>open</td></tr>
+      <tr><td>A transfer curve with two points</td><td>one held-out city</td><td>a held-out-city curve over every tile with physics</td><td class="n">101</td><td>open</td></tr>
+      <tr><td>One learning rate, one width, one seed</td><td>nothing says these settings are good</td><td>a small sweep, every run with its own manifest, ranked under the protocol</td><td class="n">115</td><td>open</td></tr>
+      <tr><td>Batch normalization with a batch of 8</td><td>the statistics of 8 patches are noisy</td><td>group normalization or a larger batch, inside the sweep</td><td class="n">115</td><td>open</td></tr>
+      <tr><td>No uncertainty</td><td>one network cannot say where it is guessing</td><td>an ensemble of five seeds; report where the spread is wide</td><td class="n">102</td><td>open</td></tr>
+      <tr><td>Patches favor ground near trees</td><td>the far field is under-represented despite the floor</td><td>tune the floor inside the protocol</td><td class="n">101</td><td>open</td></tr>
+      <tr><td>No engine verification of a search</td><td>no search uses the surrogate yet</td><td>a surrogate-backed search whose front the engine verifies</td><td class="n">34, 49</td><td>open</td></tr>
+      <tr><td>The checkpoint is a pickle</td><td>no integrity check beyond the manifest's digest</td><td>safetensors with the manifest, through the model store</td><td class="n">103</td><td>open</td></tr>
+      <tr><td>Models trained before these fixes</td><td>the two 2026-08-26 models predate best-epoch selection and the new channels</td><td>regenerate and retrain every selected tile with the revised pipeline</td><td class="n">105</td><td>open</td></tr>
     </tbody>
   </table></div>
 </section>
