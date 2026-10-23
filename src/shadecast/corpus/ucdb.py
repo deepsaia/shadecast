@@ -45,16 +45,15 @@ CHECKSUMS: dict[str, str] = {
 ENCODINGS: dict[str, str] = {GENERAL: "utf-8", CLIMATE: "latin-1"}
 
 ID = "ID_UC_G0"
-GENERAL_COLUMNS = (
-    ID,
-    "GC_UCN_MAI_2025",  # main name
-    "GC_UCN_LIS_2025",  # every name the centre is known by
-    "GC_CNT_GAD_2025",  # country
-    "GC_UCA_KM2_2025",  # area in km2, which is also the number of 1 km tiles
-    "GC_POP_TOT_2025",  # population
-    "GC_DEV_WIG_2025",  # World Bank income group
-)
-CLIMATE_COLUMNS = (ID, "CL_KOP_CUR_2025")
+NAME = "GC_UCN_MAI_2025"  # main name
+NAMES = "GC_UCN_LIS_2025"  # every name the centre is known by, separated by semicolons
+COUNTRY = "GC_CNT_GAD_2025"
+AREA = "GC_UCA_KM2_2025"  # km2, which is also the number of 1 km tiles
+POPULATION = "GC_POP_TOT_2025"
+INCOME_GROUP = "GC_DEV_WIG_2025"  # World Bank income group
+KOPPEN_CODE = "CL_KOP_CUR_2025"  # Beck et al. code of the majority of the surface
+GENERAL_COLUMNS = (ID, NAME, NAMES, COUNTRY, AREA, POPULATION, INCOME_GROUP)
+CLIMATE_COLUMNS = (ID, KOPPEN_CODE)
 COLUMNS: dict[str, tuple[str, ...]] = {GENERAL: GENERAL_COLUMNS, CLIMATE: CLIMATE_COLUMNS}
 CENTROID_LAYER = "UC_centroids"
 LON = "lon"
