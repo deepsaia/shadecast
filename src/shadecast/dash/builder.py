@@ -37,6 +37,21 @@ COOL_PX = 512
 ARRANGEMENT = {"clustered": "clustered", "random": "scattered", "corridor": "corridor"}
 
 
+def urban_centre_summary(provenance: dict) -> dict | None:
+    """The strata the page shows for a city, or None for a bundle built before the database."""
+    record = provenance.get("urban_centre")
+    if not isinstance(record, dict):
+        return None
+    return {
+        "id": record.get("id"),
+        "name": record.get("name"),
+        "koppen": record.get("koppen"),
+        "income": record.get("income"),
+        "population": record.get("population"),
+        "tiles": record.get("tiles"),
+    }
+
+
 def read(path: Path, band: int = 1) -> np.ndarray:
     with rasterio.open(path) as src:
         return src.read(band)
@@ -150,6 +165,7 @@ def build_city(city: str, bundle: Path, surrogate_dir: Path, out_dir: Path) -> d
             "population": provenance.get("population", {}).get("total"),
             "lat": provenance["aoi"]["lat"],
             "lon": provenance["aoi"]["lon"],
+            "urban_centre": urban_centre_summary(provenance),
             "sources": {
                 "buildings": provenance["buildings"]["source"],
                 "terrain": provenance["dem"]["source"],
