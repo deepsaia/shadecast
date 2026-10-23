@@ -234,3 +234,21 @@ def test_status_reports_k_of_n_per_stage(tmp_path):
 def test_status_of_an_untouched_centre_is_zero_of_n(tmp_path):
     status = json.loads(runner.invoke(app, ["tile", "status", "ahmedabad", "--json"]).stdout)
     assert status["totals"]["bundle"] == 0 and status["tiles"] == 6
+
+
+def test_path_without_a_tile_lists_every_tile_on_disk(tmp_path, monkeypatch):
+    bundle = tmp_path / "6143" / "t43N_249_2547" / "bundle"
+    bundle.mkdir(parents=True)
+    (bundle / "provenance.json").write_text("{}")
+    (tmp_path / "6143" / "t43N_250_2547").mkdir()
+    result = runner.invoke(app, ["tile", "path", "6143", "--json"])
+    assert result.exit_code == 0, result.output
+    listed = json.loads(result.stdout)
+    assert [item["tile"] for item in listed] == ["t43N_249_2547", "t43N_250_2547"]
+    assert listed[0]["stages"]["bundle"] is True and listed[1]["stages"]["bundle"] is False
+    table = runner.invoke(app, ["tile", "path", "6143"])
+    assert "t43N_249_2547" in table.stdout and "bundle" in table.stdout
+    monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path / "empty")
+    empty = runner.invoke(app, ["tile", "path", "6143"])
+    assert empty.exit_code == 0, empty.output
+    assert "sdc build 6143" in empty.output

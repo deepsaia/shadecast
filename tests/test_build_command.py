@@ -42,7 +42,8 @@ def test_build_without_a_tile_takes_the_densest_and_says_so():
     result = runner.invoke(app, ["build", "ahmedabad"])
     assert result.exit_code == 0, result.output
     assert [call[1] for call in CALLS] == ["t43N_249_2547"]
-    assert "densest" in result.stdout
+    assert "bundle at" in result.stdout and "6143/t43N_249_2547/bundle" in result.stdout
+    assert "next: sdc surrogate generate ahmedabad --jobs 4" in result.stdout
 
 
 def test_build_all_takes_the_densest_tile_of_every_selected_city():
