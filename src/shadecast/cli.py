@@ -18,8 +18,8 @@ from typing import Annotated
 
 import typer
 
+from . import cities
 from .build import build_city
-from .cities import CORPUS, summary
 from .console import add_build_row, build_table, console, corpus_table, error_console, result_table
 from .dash_cli import app as dash_app
 from .experiments_cli import app as experiments_app
@@ -59,13 +59,17 @@ def list_cities(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """Show the city corpus and how it is stratified."""
+    corpus = cities.corpus()
     if as_json:
-        payload = {"summary": summary(), "cities": [vars(c) for c in CORPUS.values()]}
+        payload = {
+            "summary": cities.summary(corpus.values()),
+            "cities": [vars(c) for c in corpus.values()],
+        }
         console.print_json(json.dumps(payload))
         return
 
-    stats = summary()
-    console.print(corpus_table(list(CORPUS.values())))
+    stats = cities.summary(corpus.values())
+    console.print(corpus_table(list(corpus.values())))
     console.print(
         f"\n[dim]{stats['cities']} cities, {stats['global_south']} Global South, "
         f"{stats['tropical_A']} tropical, {stats['southern_hemisphere']} southern hemisphere, "
@@ -85,8 +89,9 @@ def build(
     if not build_all and city is None:
         raise typer.BadParameter("give a city key or use --all")
 
-    keys = list(CORPUS) if build_all else [str(city)]
-    unknown = [key for key in keys if key not in CORPUS]
+    corpus = cities.corpus()
+    keys = list(corpus) if build_all else [str(city)]
+    unknown = [key for key in keys if key not in corpus]
     if unknown:
         raise typer.BadParameter(f"unknown city keys {unknown}, try 'shadecast list'")
 
@@ -98,8 +103,11 @@ def build(
         for key in keys:
             status.update(f"[cyan]{key}[/]: pulling open layers")
             started = time.time()
+            selected = corpus.get(key)
+            if selected is None:
+                continue
             try:
-                provenance = build_city(CORPUS[key], root / key, side_m=side, res_m=res)
+                provenance = build_city(selected, root / key, side_m=side, res_m=res)
             # One unreachable source must not abandon the remaining cities. The
             # failure is logged with its type and never swallowed, and the command
             # exits non-zero.
