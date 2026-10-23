@@ -302,7 +302,7 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
   <p>The bars are scaled to the bottleneck, which holds 3,540,992 parameters, 46 percent of the total, and works on a map of 16 by 16 pixels. Encoder 4, the bottleneck, up 1 and decoder 1 together hold 87 percent and never see a map finer than 8 m per pixel. The stages that touch every pixel of the output, encoder 1, decoder 4 and the head, hold half a percent. Most of what the network learns is coarse.</p>
   <h3>The receptive field</h3>
   <p>The receptive field is the area of the input that one output pixel can see. A change outside that area cannot change the pixel. The field grows with each 3 by 3 convolution and doubles with each pool.</p>
-  <p>Measured on 2026-10-23 by back-propagating one output pixel to the input with every path open, the field is 188 to 204 pixels across, which is 188 to 204 m. It varies because the four pools divide the map into 16 pixel cells, and a pixel at the edge of a cell sees a little further than one at the center. The manifest records 152 m, which is the rounded estimate the code makes from the depth alone. Issue 114 replaces the estimate with the measurement.</p>
+  <p>Measured on 2026-10-23 by back-propagating one output pixel to the input with every path open, the field is 188 to 204 pixels across, which is 188 to 204 m. It varies because the four pools divide the map into 16 pixel cells, and a pixel at the edge of a cell sees a little further than one at the center. The code now probes the field the same way, on a one-dimensional analog of the network, and the manifest records both ends and the method. Manifests written before 2026-10-23 recorded 152 m, an estimate from the depth alone; the two that exist were corrected by hand and say so.</p>
   <p>A tree changes the temperature up to 71 m away (section 05). For an output pixel to see every tree that affects it, the field must be at least 142 m across. Every figure here is above that.</p>
 </section>
 
@@ -505,7 +505,7 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
 
 <section id="gaps">
   <h2><i>09</i>Where it falls short, and what to do</h2>
-  <p>These are the things that physics time did not allow, each with its remedy and the issue that tracks it. They are recorded so that nobody mistakes an untested case for a tested one. Two remedies are already done: the best epoch is kept and training stops early (issue 99), and every model carries a manifest (issue 98).</p>
+  <p>These are the things that physics time did not allow, each with its remedy and the issue that tracks it. They are recorded so that nobody mistakes an untested case for a tested one. Three remedies are already done: the best epoch is kept and training stops early (issue 99), every model carries a manifest (issue 98), and the receptive field is probed rather than estimated (issue 114).</p>
   <div class="scroll"><table>
     <thead><tr><th>Gap</th><th>Why it matters</th><th>Remedy</th><th class="n">Issue</th></tr></thead>
     <tbody>
@@ -520,7 +520,6 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
       <tr><td>No uncertainty</td><td>one network cannot say where it is guessing</td><td>an ensemble of five seeds; report where the spread is wide</td><td class="n">102</td></tr>
       <tr><td>Patches favor ground near trees</td><td>the far field is under-represented despite the floor</td><td>tune the floor inside the protocol</td><td class="n">101</td></tr>
       <tr><td>No engine verification of a search</td><td>no search uses the surrogate yet</td><td>a surrogate-backed search whose front the engine verifies</td><td class="n">34, 49</td></tr>
-      <tr><td>Receptive field is an estimate</td><td>the code says 152 m, the measurement says 188 to 204 m</td><td>compute it exactly and record the method in the manifest</td><td class="n">114</td></tr>
       <tr><td>The checkpoint is a pickle</td><td>one metadata field, no integrity check</td><td>safetensors with the manifest, through the model store</td><td class="n">103</td></tr>
       <tr><td>Models retrained before these fixes</td><td>the two 2026-08-26 models predate best-epoch selection</td><td>regenerate and retrain every selected tile with the revised pipeline</td><td class="n">105</td></tr>
     </tbody>
@@ -550,7 +549,8 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
   <pre>{
   "model_id": "response-unet-ahmedabad-20260826T143800",
   "architecture": {"class": "ResponseUNet", "depth": 4, "widths": [32, 64, 128, 256],
-                   "bottleneck": 512, "parameters": 7764193, "receptive_field_m": 152},
+                   "bottleneck": 512, "parameters": 7764193, "receptive_field_m": 204,
+                   "receptive_field_min_m": 188},
   "data": {"tiles": [{"city": "ahmedabad", "tile": "t43N_249_2547", "urban_centre": 6143, "designs": 17}],
            "held_out_designs": ["clustered_0105", "clustered_0110", "random_uniform_0205", "random_uniform_0210"],
            "patch_px": 256, "patches_per_design": 32, "train_patches": 416, "test_patches": 128},
@@ -559,7 +559,7 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
   "provenance": {"engine": "solweig_gpu 2.0.0"},
   "weights": {"file": "model.pt", "format": "torch state_dict, pickle"}
 }</pre>
-  <div class="note"><p>The two models trained on 2026-08-26 predate the manifest. Their manifests were rebuilt from their training reports and say so in a note. Their weights are the last epoch, not the best. Their patches-per-design figure was corrected to 32 on 2026-10-23 from the recorded patch counts.</p></div>
+  <div class="note"><p>The two models trained on 2026-08-26 predate the manifest. Their manifests were rebuilt from their training reports and say so in a note. Their weights are the last epoch, not the best. Their patches-per-design figure was corrected to 32 on 2026-10-23 from the recorded patch counts, and their receptive field from the estimate of 152 m to the probed 188 to 204 m.</p></div>
 </section>
 
 <section id="storage">

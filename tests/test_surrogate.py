@@ -125,9 +125,16 @@ def test_model_can_express_warming():
     assert torch.isfinite(out).all()
 
 
+def test_receptive_field_is_probed_not_estimated():
+    """Measured in two dimensions on 2026-10-23: 188 to 204 pixels across one pooling cell."""
+    model = ResponseUNet()
+    assert model.receptive_field_px() == (188, 204)
+    assert model.receptive_field_m() == 204.0
+
+
 def test_receptive_field_spans_the_measured_reach():
-    """Reach was measured at 26 m in Ahmedabad and 71 m in Lagos."""
-    assert ResponseUNet().receptive_field_m() > 71.0
+    """Reach was measured at 26 m in Ahmedabad and 71 m in Lagos, so twice that is the floor."""
+    assert ResponseUNet().receptive_field_px()[0] >= 2 * 71
 
 
 # --- splitting and metrics ------------------------------------------------

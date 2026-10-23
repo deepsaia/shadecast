@@ -88,7 +88,9 @@ def test_manifest_describes_the_architecture_and_inputs(tmp_path):
     assert built["architecture"]["class"] == "ResponseUNet"
     assert built["architecture"]["parameters"] == 7_764_193
     assert built["architecture"]["widths"] == [32, 64, 128, 256]
-    assert built["architecture"]["receptive_field_m"] == 152
+    assert built["architecture"]["receptive_field_m"] == 204
+    assert built["architecture"]["receptive_field_min_m"] == 188
+    assert "pooling cell" in built["architecture"]["receptive_field_method"]
     assert [channel["name"] for channel in built["inputs"]["channels"]][:2] == [
         "placement",
         "baseline_tmrt",
@@ -150,3 +152,10 @@ def test_new_model_id_names_cities_and_the_time(tmp_path):
     assert manifest.new_model_id([(surrogate, bundle)], created) == (
         "response-unet-ahmedabad-20261023T120000"
     )
+
+
+def test_describe_shows_the_receptive_field_as_a_range():
+    assert manifest.receptive_field_text(
+        {"receptive_field_m": 204, "receptive_field_min_m": 188}
+    ) == ("188 to 204 m")
+    assert manifest.receptive_field_text({"receptive_field_m": 152}) == "152 m"

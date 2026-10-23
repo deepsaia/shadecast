@@ -47,6 +47,11 @@ LAND_COVER_FLAGS = {
     "is_water": {"worldcover_classes": [features.WATER_CLASS]},
     "is_vegetated": {"worldcover_classes": list(features.VEGETATED_CLASSES)},
 }
+RESOLUTION_M = 1.0
+RECEPTIVE_FIELD_METHOD = (
+    "gradient probe of a one-dimensional analog over one pooling cell, every path open; "
+    "the field varies with the output pixel's place in the cell"
+)
 SCALES = {
     "baseline_tmrt": features.TMRT_SCALE,
     "building_height": features.HEIGHT_SCALE,
@@ -62,7 +67,9 @@ def architecture() -> dict:
         "widths": [model.width * 2**level for level in range(model.depth)],
         "bottleneck": model.width * 2**model.depth,
         "parameters": sum(parameter.numel() for parameter in model.parameters()),
-        "receptive_field_m": round(model.receptive_field_m()),
+        "receptive_field_m": round(model.receptive_field_m(RESOLUTION_M)),
+        "receptive_field_min_m": round(model.receptive_field_px()[0] * RESOLUTION_M),
+        "receptive_field_method": RECEPTIVE_FIELD_METHOD,
         "output_constraint": "none, warming near a new tree is a measured effect",
     }
 
@@ -78,7 +85,7 @@ def inputs() -> dict:
                 f"over {features.HEIGHT_SCALE:.0f} m, clipped to 0 to 1"
             )
         channels.append(channel)
-    return {"resolution_m": 1.0, "channels": channels}
+    return {"resolution_m": RESOLUTION_M, "channels": channels}
 
 
 def output() -> dict:
@@ -242,6 +249,15 @@ def read(model_dir: Path) -> dict:
     return manifest
 
 
+def receptive_field_text(architecture: dict) -> str:
+    """The field as a range when the manifest has both ends, else the one figure it has."""
+    largest = architecture.get("receptive_field_m")
+    smallest = architecture.get("receptive_field_min_m")
+    if smallest is None or smallest == largest:
+        return f"{largest} m"
+    return f"{smallest} to {largest} m"
+
+
 def summary(manifest: dict) -> dict:
     """The dozen facts a reader wants first, for a table."""
     architecture = manifest.get("architecture", {})
@@ -251,7 +267,7 @@ def summary(manifest: dict) -> dict:
         "created": manifest.get("created"),
         "architecture": architecture.get("class"),
         "parameters": architecture.get("parameters"),
-        "receptive field": f"{architecture.get('receptive_field_m')} m",
+        "receptive field": receptive_field_text(architecture),
         "inputs": ", ".join(
             c.get("name", "") for c in manifest.get("inputs", {}).get("channels", [])
         ),

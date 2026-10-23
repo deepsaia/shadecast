@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import torch
 from torch import nn
+from torch.nn import functional
 
 # placement, baseline Tmrt, building height, canopy height, sky openness,
 # is_water, is_vegetated
@@ -86,9 +87,58 @@ class ResponseUNet(nn.Module):
         # Rare, but a model that structurally cannot express it is simply wrong.
         return self.head(x)
 
+    def receptive_field_px(self) -> tuple[int, int]:
+        """Smallest and largest receptive field over one pooling cycle, in pixels.
+
+        Probed on a one-dimensional analog of this network with every weight positive and
+        average pooling in place of max pooling, so gradient reaches every input pixel. One
+        output pixel is back-propagated to the input and the span of nonzero gradient is the
+        field. The span varies with the pixel's place inside the 2**depth pixel pooling cell.
+        Supports are separable, so the two-dimensional field is this span squared.
+        """
+        return probe_field(self.depth)
+
     def receptive_field_m(self, res_m: float = 1.0) -> float:
-        """Approximate receptive field, for checking it spans the measured reach."""
-        field = 1.0
-        for _ in range(self.depth):
-            field = field * 2 + 4
-        return field * 2 * res_m
+        """Largest receptive field in metres, for checking it spans the measured reach."""
+        return self.receptive_field_px()[1] * res_m
+
+
+def probe_field(depth: int) -> tuple[int, int]:
+    """Minimum and maximum span of input a single output pixel can see, over one pooling cell."""
+    cell = 2**depth
+    length = cell * 64
+    spans = []
+    for offset in range(cell):
+        line = torch.ones(1, 1, length, requires_grad=True)
+        out = line_forward(line, depth)
+        out[0, 0, length // 2 + offset].backward()
+        if line.grad is None:
+            raise RuntimeError("the probe line received no gradient")
+        hit = torch.nonzero(line.grad[0, 0]).flatten()
+        spans.append(int(hit.max() - hit.min() + 1))
+    return min(spans), max(spans)
+
+
+def line_forward(line: torch.Tensor, depth: int) -> torch.Tensor:
+    """The network's geometry on a line: positive weights, average pooling, summed skips.
+
+    Values only grow, so the ReLUs would pass everything and are left out. Only the
+    pattern of connections matters for the receptive field, not the values.
+    """
+    kernel3 = torch.ones(1, 1, 3)
+    kernel2 = torch.ones(1, 1, 2)
+    skips = []
+    for _ in range(depth):
+        line = two_convs(line, kernel3)
+        skips.append(line)
+        line = functional.avg_pool1d(line, 2)
+    line = two_convs(line, kernel3)
+    for skip in reversed(skips):
+        line = functional.conv_transpose1d(line, kernel2, stride=2) + skip
+        line = two_convs(line, kernel3)
+    return line
+
+
+def two_convs(line: torch.Tensor, kernel3: torch.Tensor) -> torch.Tensor:
+    line = functional.conv1d(line, kernel3, padding=1)
+    return functional.conv1d(line, kernel3, padding=1)
