@@ -172,14 +172,14 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
   <p>Prediction uses whole tiles. The network applies the same small filters at every position, so it accepts a map of any size. One tile is predicted in one pass. An area wider than 1,400 pixels is predicted in 512 pixel squares that overlap by 64 pixels and are blended with a cosine window, so no seam shows.</p>
   <figure>
     <svg viewBox="0 0 720 448" role="img" aria-labelledby="f2t f2d">
-      <title id="f2t">The tile, a training patch, the receptive field and one pixel, to scale</title>
-      <desc id="f2d">A large square for the tile. Inside it a smaller square for a 256 pixel patch, and inside that a square for the 173 pixel receptive field. One pixel at the center is too small to see and is magnified in a box on the right.</desc>
+      <title id="f2t">The tile, a training patch, the largest receptive field and one pixel, to scale</title>
+      <desc id="f2d">A large square for the tile. Inside it a smaller square for a 256 pixel patch, and inside that a square for the 204 pixel receptive field. One pixel at the center is too small to see and is magnified in a box on the right.</desc>
       <rect class="box" x="24" y="24" width="400" height="400" rx="2"/>
       <text class="label" x="36" y="44">tile</text><text class="sub" x="36" y="58">1,000 by 1,000 px, 1 km</text>
       <rect class="box" x="200" y="160" width="102" height="102" rx="2"/>
       <text class="label" x="200" y="152">patch</text><text class="sub" x="244" y="152">256 by 256 px</text>
-      <rect class="reach" x="217" y="177" width="69" height="69"/>
-      <text class="sub" x="251" y="272" text-anchor="middle">receptive field, 173 px</text>
+      <rect class="reach" x="210" y="170" width="82" height="82"/>
+      <text class="sub" x="251" y="274" text-anchor="middle">receptive field, up to 204 px</text>
       <rect class="tree" x="250" y="210" width="3" height="3"/>
       <path class="leader" d="M253 211 C330 150 420 130 500 136"/>
       <rect class="box" x="500" y="104" width="160" height="160" rx="2"/>
@@ -191,7 +191,7 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
       <text class="sub" x="500" y="324">7 numbers in, 1 number out</text>
       <text class="sub" x="500" y="360">tile: 1,000,000 pixels</text>
       <text class="sub" x="500" y="378">patch: 65,536 pixels</text>
-      <text class="sub" x="500" y="396">receptive field: 29,929 pixels</text>
+      <text class="sub" x="500" y="396">receptive field: up to 41,616 pixels</text>
       <text class="sub" x="500" y="414">pixel: 1</text>
     </svg>
     <figcaption>Drawn to scale: the tile, one training patch and the receptive field around one output pixel. The pixel itself is a fifth of a point wide at this scale, so it is magnified on the right.</figcaption>
@@ -302,8 +302,8 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
   <p>The bars are scaled to the bottleneck, which holds 3,540,992 parameters, 46 percent of the total, and works on a map of 16 by 16 pixels. Encoder 4, the bottleneck, up 1 and decoder 1 together hold 87 percent and never see a map finer than 8 m per pixel. The stages that touch every pixel of the output, encoder 1, decoder 4 and the head, hold half a percent. Most of what the network learns is coarse.</p>
   <h3>The receptive field</h3>
   <p>The receptive field is the area of the input that one output pixel can see. A change outside that area cannot change the pixel. The field grows with each 3 by 3 convolution and doubles with each pool.</p>
-  <p>Measured on 2026-10-23 by back-propagating one output pixel to the input, the field is 173 pixels across, which is 173 m. The manifest records 152 m, which is the rounded estimate the code makes from the depth alone. Issue 114 replaces the estimate with the measurement.</p>
-  <p>A tree changes the temperature up to 71 m away (section 05). For an output pixel to see every tree that affects it, the field must be at least 142 m across. Both figures are above that.</p>
+  <p>Measured on 2026-10-23 by back-propagating one output pixel to the input with every path open, the field is 188 to 204 pixels across, which is 188 to 204 m. It varies because the four pools divide the map into 16 pixel cells, and a pixel at the edge of a cell sees a little further than one at the center. The manifest records 152 m, which is the rounded estimate the code makes from the depth alone. Issue 114 replaces the estimate with the measurement.</p>
+  <p>A tree changes the temperature up to 71 m away (section 05). For an output pixel to see every tree that affects it, the field must be at least 142 m across. Every figure here is above that.</p>
 </section>
 
 <section id="output">
@@ -520,7 +520,7 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
       <tr><td>No uncertainty</td><td>one network cannot say where it is guessing</td><td>an ensemble of five seeds; report where the spread is wide</td><td class="n">102</td></tr>
       <tr><td>Patches favor ground near trees</td><td>the far field is under-represented despite the floor</td><td>tune the floor inside the protocol</td><td class="n">101</td></tr>
       <tr><td>No engine verification of a search</td><td>no search uses the surrogate yet</td><td>a surrogate-backed search whose front the engine verifies</td><td class="n">34, 49</td></tr>
-      <tr><td>Receptive field is an estimate</td><td>the code says 152 m, the measurement says 173 m</td><td>compute it exactly and record the method in the manifest</td><td class="n">114</td></tr>
+      <tr><td>Receptive field is an estimate</td><td>the code says 152 m, the measurement says 188 to 204 m</td><td>compute it exactly and record the method in the manifest</td><td class="n">114</td></tr>
       <tr><td>The checkpoint is a pickle</td><td>one metadata field, no integrity check</td><td>safetensors with the manifest, through the model store</td><td class="n">103</td></tr>
       <tr><td>Models retrained before these fixes</td><td>the two 2026-08-26 models predate best-epoch selection</td><td>regenerate and retrain every selected tile with the revised pipeline</td><td class="n">105</td></tr>
     </tbody>
