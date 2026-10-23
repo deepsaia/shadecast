@@ -14,7 +14,6 @@ so that a reader never has to rediscover it.
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import zipfile
 from pathlib import Path
@@ -22,6 +21,8 @@ from pathlib import Path
 import geopandas as gpd
 import pandas as pd
 import requests
+
+from ..data.checksum import verify as verify_digest
 
 logger = logging.getLogger(__name__)
 
@@ -81,27 +82,12 @@ def geopackage_path(theme: str, cache_dir: Path) -> Path:
     return Path(cache_dir) / theme / f"GHS_UCDB_THEME_{theme}_GLOBE_{RELEASE}.gpkg"
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as handle:
-        chunk = handle.read(CHUNK_BYTES)
-        while chunk:
-            digest.update(chunk)
-            chunk = handle.read(CHUNK_BYTES)
-    return digest.hexdigest()
-
-
 def verify(archive: Path, theme: str) -> None:
     """Refuse an archive whose checksum is not the recorded one, naming the file."""
     expected = CHECKSUMS.get(theme)
     if expected is None:
         raise ValueError(f"no checksum recorded for theme {theme!r}")
-    actual = sha256(archive)
-    if actual != expected:
-        raise ValueError(
-            f"{Path(archive).name} does not match the recorded checksum "
-            f"(expected {expected[:12]}..., got {actual[:12]}...); delete it and fetch again"
-        )
+    verify_digest(archive, expected)
 
 
 def download(theme: str, cache_dir: Path) -> Path:
