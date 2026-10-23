@@ -1,12 +1,33 @@
 {
   "groups": [
-    {"key": "radiation", "title": "The radiation model"},
-    {"key": "reflective", "title": "Reflective surfaces, and why those arms are quarantined"},
-    {"key": "routing", "title": "Shaded routing, the forward problem this inverts"},
-    {"key": "prior", "title": "Prior systems this builds on and compares against"},
-    {"key": "data", "title": "Data, every source unauthenticated"},
-    {"key": "validation", "title": "Validation, the one source outside the credential-free path"},
-    {"key": "method", "title": "Method"}
+    {
+      "key": "radiation",
+      "title": "The radiation model"
+    },
+    {
+      "key": "reflective",
+      "title": "Reflective surfaces, and why those arms are quarantined"
+    },
+    {
+      "key": "routing",
+      "title": "Shaded routing, the forward problem this inverts"
+    },
+    {
+      "key": "prior",
+      "title": "Prior systems this builds on and compares against"
+    },
+    {
+      "key": "data",
+      "title": "Data, every source unauthenticated"
+    },
+    {
+      "key": "validation",
+      "title": "Validation, the one source outside the credential-free path"
+    },
+    {
+      "key": "method",
+      "title": "Method"
+    }
   ],
   "sources": [
     {
@@ -240,6 +261,34 @@
       "access": "anonymous",
       "short": "GHS-POP R2023A 100 m, JRC",
       "used_for": "Population, redistributed across building volume, and the density scan that chooses study areas. Chosen over WorldPop, whose server refuses HTTP range requests and forces a whole-country download."
+    },
+    {
+      "key": "ghs_built_s",
+      "group": "data",
+      "title": "GHS-BUILT-S built-up surface grid, 100 m, epoch 2020",
+      "authors_or_publisher": "European Commission, Joint Research Centre",
+      "year": 2023,
+      "release": "R2023A, E2020, 100 m, World Mollweide",
+      "licence": "CC BY 4.0",
+      "url": "https://human-settlement.emergency.copernicus.eu/ghs_buS2023.php",
+      "endpoint": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_BUILT_S_GLOBE_R2023A/GHS_BUILT_S_E2020_GLOBE_R2023A_54009_100/V1-0/tiles/GHS_BUILT_S_E2020_GLOBE_R2023A_54009_100_V1_0_R{row}_C{col}.zip",
+      "access": "anonymous",
+      "short": "GHS-BUILT-S R2023A 100 m, JRC",
+      "used_for": "Built-up square metres per 100 m cell, summed per 1 km tile into the built fraction that stratifies tile selection."
+    },
+    {
+      "key": "ghs_built_h",
+      "group": "data",
+      "title": "GHS-BUILT-H average net building height grid, 100 m, epoch 2018",
+      "authors_or_publisher": "European Commission, Joint Research Centre",
+      "year": 2023,
+      "release": "R2023A, ANBH E2018, 100 m, World Mollweide",
+      "licence": "CC BY 4.0",
+      "url": "https://human-settlement.emergency.copernicus.eu/ghs_buH2023.php",
+      "endpoint": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_BUILT_H_GLOBE_R2023A/GHS_BUILT_H_ANBH_E2018_GLOBE_R2023A_54009_100/V1-0/tiles/GHS_BUILT_H_ANBH_E2018_GLOBE_R2023A_54009_100_V1_0_R{row}_C{col}.zip",
+      "access": "anonymous",
+      "short": "GHS-BUILT-H R2023A 100 m, JRC",
+      "used_for": "Average net building height per 100 m cell, averaged over built cells per tile to describe a tile's morphology before it is built."
     },
     {
       "key": "open_meteo_era5",
