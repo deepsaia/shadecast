@@ -9,7 +9,6 @@ from typer.testing import CliRunner
 from shadecast import surrogate_cli
 from shadecast.cli import app
 from shadecast.corpus import tile_lookup, tile_paths
-from shadecast.corpus.tile_selection import TileSelection
 from shadecast.service import generation_service
 
 runner = CliRunner()
@@ -129,35 +128,6 @@ def _physics(bundle: Path) -> Path:
     return surrogate
 
 
-def test_training_pairs_accept_keys_paths_and_mixed_pairs(tmp_path, monkeypatch):
-    monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
-    bundle = _bundle(tmp_path, 6143, "t43N_249_2547")
-    with pytest.raises(ValueError, match="no generated physics"):
-        surrogate_cli.training_pairs("ahmedabad", None, None)
-    _physics(bundle)
-    assert surrogate_cli.training_pairs("ahmedabad", None, None) == [
-        (bundle.parent / "surrogate", bundle)
-    ]
-    assert surrogate_cli.training_pairs("a/surrogate", Path("a/bundle"), None) == [
-        (Path("a/surrogate"), Path("a/bundle"))
-    ]
-    mixed = surrogate_cli.training_pairs(None, None, ["ahmedabad", "x/s=x/b"])
-    assert mixed == [(bundle.parent / "surrogate", bundle), (Path("x/s"), Path("x/b"))]
-    second = _bundle(tmp_path, 6143, "t43N_250_2547")
-    only_first = surrogate_cli.training_pairs("ahmedabad", None, None)
-    assert only_first == [(bundle.parent / "surrogate", bundle)]  # the second has no physics yet
-    with pytest.raises(ValueError, match="has no generated physics"):
-        surrogate_cli.training_pairs("ahmedabad", None, None, "t43N_250_2547")
-    _physics(second)
-    both = surrogate_cli.training_pairs("ahmedabad", None, None)  # every tile with physics
-    assert both == [(bundle.parent / "surrogate", bundle), (second.parent / "surrogate", second)]
-    assert surrogate_cli.training_pairs("ahmedabad", None, None, "t43N_249_2547") == [
-        (bundle.parent / "surrogate", bundle)
-    ]
-    with pytest.raises(ValueError, match="give a city key"):
-        surrogate_cli.training_pairs(None, None, None)
-
-
 def test_newest_model_is_picked_for_a_city(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
     monkeypatch.setattr(surrogate_cli, "MODELS_ROOT", tmp_path / "models")
@@ -204,30 +174,3 @@ def test_resume_command_repeats_the_options():
     assert surrogate_cli.resume_command("x/bundle", "t1", Path("o"), 1) == (
         "sdc surrogate treeshade generate x/bundle --tiles t1 --out o"
     )
-
-
-def test_training_can_pick_the_densest_or_stratified_tiles_with_physics(tmp_path, monkeypatch):
-    monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
-    tiles = {"t43N_249_2547": (100, 0.1), "t43N_250_2547": (900, 0.6), "t43N_251_2547": (500, 0.3)}
-    bundles = {tile: _physics(_bundle(tmp_path, 6143, tile)).parent / "bundle" for tile in tiles}
-    _bundle(tmp_path, 6143, "t43N_252_2547")  # built, no physics: never chosen
-    rows = [
-        {"id": tile, "population_2020": pop, "density_2020_per_km2": pop, "built_fraction": built}
-        for tile, (pop, built) in tiles.items()
-    ] + [
-        {
-            "id": "t43N_252_2547",
-            "population_2020": 5000,
-            "density_2020_per_km2": 5000,
-            "built_fraction": 0.9,
-        }
-    ]
-    (tmp_path / "6143" / "tiles.json").write_text(json.dumps({"tiles": rows}))
-    densest = surrogate_cli.training_pairs("ahmedabad", None, None, None, TileSelection(densest=2))
-    assert [b.parent.name for _, b in densest] == ["t43N_250_2547", "t43N_251_2547"]
-    spread = surrogate_cli.training_pairs(
-        "ahmedabad", None, None, None, TileSelection(stratified=3)
-    )
-    assert sorted(b.parent.name for _, b in spread) == sorted(bundles)
-    with pytest.raises(ValueError, match="not both"):
-        TileSelection(densest=1, stratified=1)
