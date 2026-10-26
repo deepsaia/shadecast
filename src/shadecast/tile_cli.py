@@ -15,23 +15,15 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
-from shapely.geometry.base import BaseGeometry
 
 from .console import console, error_console, pairs_table, records_table, tiles_table
 from .corpus import tile_paths, ucdb
 from .corpus.statistics import tile_stats
 from .corpus.tile import Tile
+from .corpus.tile_description import describe
 from .corpus.tile_paths import TilePaths
-from .corpus.tile_rasters import TileRasters
 from .corpus.tile_status import summary_line, tile_status
-from .corpus.tiling import (
-    attributes,
-    select_densest,
-    select_ids,
-    select_random,
-    select_stratified,
-    tiles_of,
-)
+from .corpus.tiling import select_densest, select_ids, select_random, select_stratified
 from .corpus.urban_centre import UrbanCentre
 from .corpus.urban_centres import UrbanCentres
 
@@ -47,24 +39,6 @@ app = typer.Typer(
 
 def load_centres() -> UrbanCentres:
     return UrbanCentres.load()
-
-
-def boundary(centre: UrbanCentre) -> BaseGeometry:
-    """The urban centre polygon in World Mollweide, an exact union of 1 km cells."""
-    polygons = ucdb.polygons()
-    match = polygons.loc[polygons[ucdb.ID] == centre.id, "geometry"]
-    if match.empty:
-        raise KeyError(f"no boundary for urban centre {centre.id}")
-    return match.iloc[0]
-
-
-def describe(centre: UrbanCentre) -> list[dict]:
-    """Every tile of the centre with population, density, built fraction and height."""
-    polygon = boundary(centre)
-    tiles = tiles_of(polygon)
-    rows = attributes(tiles, TileRasters.read(polygon.bounds))
-    logger.info("%s: %d tiles described", centre.slug, len(tiles))
-    return rows
 
 
 def tiles_path(centre: UrbanCentre) -> Path:
@@ -234,7 +208,7 @@ def path(
     centre_id = _resolve(centre).id
     if tile is None:
         listed = [
-            {**paths.as_dict(), "stages": paths.stages()}
+            {**paths.as_dict(), "stages": paths.stages().model_dump()}
             for paths in TilePaths.existing(tile_paths.TILES_ROOT, centre_id)
         ]
         if as_json:
@@ -263,12 +237,12 @@ def path(
         )
         return
     paths = TilePaths(tile_paths.TILES_ROOT, centre_id, _tile(tile))
-    listed_one = {**paths.as_dict(), "stages": paths.stages()}
+    listed_one = {**paths.as_dict(), "stages": paths.stages().model_dump()}
     if as_json:
         console.print_json(json.dumps(listed_one))
         return
     console.print(pairs_table(f"{paths.urban_centre} {paths.tile.id}", paths.as_dict()))
-    console.print(pairs_table("stages", paths.stages()))
+    console.print(pairs_table("stages", paths.stages().model_dump()))
 
 
 def densest_tile(centre: UrbanCentre) -> Tile:

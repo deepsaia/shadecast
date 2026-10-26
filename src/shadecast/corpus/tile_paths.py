@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .tile import Tile
+from .tile_stages import TileStages
 
 TILES_ROOT = Path("data/tiles")
 
@@ -61,15 +62,15 @@ class TilePaths:
     def tiles_json(self) -> Path:
         return Path(self.tiles_root) / str(self.urban_centre) / "tiles.json"
 
-    def stages(self) -> dict[str, bool]:
+    def stages(self) -> TileStages:
         """Which stages have run, from the files that prove it."""
-        return {
-            "bundle": (self.bundle / "provenance.json").exists(),
-            "baseline": (self.baseline / "tmrt_daylight.npy").exists(),
-            "surrogate": (self.surrogate / "manifest.json").exists(),
-            "model": bool(self.model_dirs()),
-            "results": self.results.exists(),
-        }
+        return TileStages(
+            bundle=(self.bundle / "provenance.json").exists(),
+            baseline=(self.baseline / "tmrt_daylight.npy").exists(),
+            physics=(self.surrogate / "manifest.json").exists(),
+            model=bool(self.model_dirs()),
+            results=self.results.exists(),
+        )
 
     def as_dict(self) -> dict:
         return {

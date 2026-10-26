@@ -7,13 +7,13 @@ from pathlib import Path
 from .tile_paths import TilePaths
 from .urban_centre import UrbanCentre
 
-STAGES = ("bundle", "baseline", "surrogate", "model", "results")
+STAGES = ("bundle", "baseline", "physics", "model", "results")
 
 
 def tile_status(centre: UrbanCentre, tiles_root: Path) -> dict:
     """Per-tile stage flags and the k of N totals for one urban centre."""
     rows = [
-        {"tile": paths.tile.id, **paths.stages()}
+        {"tile": paths.tile.id, **paths.stages().model_dump()}
         for paths in TilePaths.existing(tiles_root, centre.id)
     ]
     totals = {stage: sum(1 for row in rows if row.get(stage)) for stage in STAGES}
