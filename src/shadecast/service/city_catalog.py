@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from functools import cached_property
+from functools import cached_property, partial
 from pathlib import Path
 
-from .. import cities
 from ..cities import City
 from ..corpus import tile_description
 from ..corpus.statistics import tile_stats
@@ -17,6 +16,7 @@ from ..corpus.urban_centre import UrbanCentre
 from ..corpus.urban_centres import UrbanCentres
 from .city_summary import CitySummary
 from .missing_stage import MissingStage
+from .selection import Selection
 from .stage_counting import count_stages
 from .stage_counts import StageCounts
 from .tile_index import TileIndex
@@ -41,7 +41,7 @@ class CityCatalog:
     # listing the selection and reading what is on disk stay fast and offline.
     def __init__(
         self,
-        selection: dict[str, City],
+        selection: Selection,
         load_centres: Callable[[], UrbanCentres],
         index: TileIndex,
     ) -> None:
@@ -52,25 +52,31 @@ class CityCatalog:
     @classmethod
     def open(cls, tiles_root: Path) -> CityCatalog:
         """The catalog over the real selection, the real database and a tiles root."""
-        return cls.over(cities.corpus(), tiles_root)
+        index = TileIndex(tiles_root, tile_description.describe)
+        return cls(Selection.read(), UrbanCentres.load, index)
 
     @classmethod
-    def over(cls, selection: dict[str, City], tiles_root: Path) -> CityCatalog:
-        """The catalog over a selection already in hand, the real database and a tiles root."""
-        return cls(selection, UrbanCentres.load, TileIndex(tiles_root, tile_description.describe))
+    def over(cls, listed: dict[str, City], tiles_root: Path) -> CityCatalog:
+        """The catalog over city records already in hand, the real database and a tiles root."""
+        index = TileIndex(tiles_root, tile_description.describe)
+        return cls(Selection.resolved(listed), UrbanCentres.load, index)
 
     @cached_property
     def _centres(self) -> UrbanCentres:
         return self._load_centres()
 
+    @cached_property
+    def _records(self) -> dict[str, City]:
+        return self._selection.cities(self._load_centres)
+
     def cities(self) -> list[CitySummary]:
         """Every selected city with how many of its tiles have reached each stage."""
-        return [self._summary(city) for city in self._selection.values()]
+        return [self._summary(city) for city in self._records.values()]
 
     def city(self, text: str) -> CitySummary:
         """One selected city; an urban centre outside the selection is unknown here."""
         urban_centre = self.urban_centre_id(text)
-        for city in self._selection.values():
+        for city in self._records.values():
             if city.ucdb_id == urban_centre:
                 return self._summary(city)
         raise UnknownCity(text, "it is an urban centre but not a selected city")
@@ -126,6 +132,19 @@ class CityCatalog:
         found = TilePaths.existing(self._index.tiles_root, self.urban_centre_id(text))
         return [self._location(paths) for paths in found]
 
+    def ranked_on_disk(self, text: str) -> list[TileLocation]:
+        """The tiles present, densest first by the tiles file when it exists; no database needed."""
+        urban_centre = self.urban_centre_id(text)
+        rows = self._index.rows_if_present(urban_centre)
+        ranked = {
+            str(row.get("id")): index for index, row in enumerate(select_densest(rows, len(rows)))
+        }
+        found = [
+            self._location(paths)
+            for paths in TilePaths.existing(self._index.tiles_root, urban_centre)
+        ]
+        return sorted(found, key=partial(_rank_then_id, ranked))
+
     def statistics(self, text: str) -> TileStatistics:
         """Counts, people and spreads over the centre's tiles, with the stage counts."""
         centre = self.centre(text)
@@ -145,17 +164,16 @@ class CityCatalog:
         return self._counts(urban_centre, self._tile_count(text, urban_centre))
 
     def _resolve_id(self, query: str) -> int:
-        selected = self._selection.get(query)
+        selected = self._selection.ucdb_id(query)
         if selected is not None:
-            return selected.ucdb_id
+            return selected
         if query.isdigit():
             return int(query)
         return self._centres.resolve(query).id
 
     def _tile_count(self, text: str, urban_centre: int) -> int:
-        for city in self._selection.values():
-            if city.ucdb_id == urban_centre:
-                return city.tiles
+        if urban_centre in {city.ucdb_id for city in self._records.values()}:
+            return next(c.tiles for c in self._records.values() if c.ucdb_id == urban_centre)
         try:
             return self._centres.by_id(urban_centre).tiles
         except KeyError as exc:
@@ -196,3 +214,7 @@ class CityCatalog:
 
     def _location(self, paths: TilePaths) -> TileLocation:
         return TileLocation.model_validate({**paths.as_dict(), "stages": paths.stages()})
+
+
+def _rank_then_id(ranked: dict[str, int], tile: TileLocation) -> tuple[int, str]:
+    return (ranked.get(tile.tile, len(ranked)), tile.tile)

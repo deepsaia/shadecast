@@ -34,6 +34,7 @@ from .corpus.urban_centre import UrbanCentre
 from .corpus.urban_centres import UrbanCentres
 from .service.city_catalog import CityCatalog
 from .service.missing_stage import MissingStage
+from .service.selection import Selection
 from .service.tile_index import TileIndex
 from .service.tile_report import TileReport
 from .service.tile_reporter import TileReporter
@@ -61,7 +62,7 @@ def catalog() -> CityCatalog:
     """
     centres = load_centres()
     selection = cities.corpus(centres=centres)
-    return CityCatalog(selection, partial(_loaded, centres), _index())
+    return CityCatalog(Selection.resolved(selection), partial(_loaded, centres), _index())
 
 
 def _loaded(centres: UrbanCentres) -> UrbanCentres:
