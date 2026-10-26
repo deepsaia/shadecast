@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
 
+from shadecast.corpus.tile_stages import TileStages
 from shadecast.corpus.urban_centres import UrbanCentres
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.missing_stage import MissingStage
@@ -177,9 +178,9 @@ def test_the_furthest_tile_prefers_physics_over_baseline_over_bundle(root, catal
     _prove(root, DENSEST, "bundle")
     _prove(root, "t43N_250_2546", "bundle", "baseline")
     _prove(root, SPARSEST, "bundle", "baseline", "physics")
-    assert catalog.furthest_tile("ahmedabad").id == SPARSEST
+    assert catalog.furthest_tile("ahmedabad").tile == SPARSEST
     (root / "6143" / SPARSEST / "surrogate" / "manifest.json").unlink()
-    assert catalog.furthest_tile("ahmedabad").id == "t43N_250_2546"
+    assert catalog.furthest_tile("ahmedabad").tile == "t43N_250_2546"
 
 
 def test_a_city_with_nothing_built_has_no_furthest_tile(catalog):
@@ -202,3 +203,24 @@ def test_tiles_on_disk_rank_by_the_tiles_file_when_it_exists(root, catalog):
         "t43N_249_2546",
         "t43N_999_9999",
     ]
+
+
+def test_a_tiles_file_from_an_older_build_with_old_ids_lists_without_failing(root):
+    index = TileIndex(
+        root, lambda centre: [{"id": "t6908_2818", "x_km": 6908, "population_2020": 5.0}]
+    )
+    catalog = CityCatalog(Selection.resolved(fixture_corpus()), fixture_centres, index)
+    [tile] = catalog.tiles("ahmedabad")
+    assert tile.id == "t6908_2818" and tile.stages == TileStages()
+
+
+def test_the_furthest_tile_needs_no_tiles_file(root):
+    _prove(root, "t43N_250_2547", "bundle", "baseline")
+    _prove(root, "t43N_249_2547", "bundle")
+    index = TileIndex(root, _refuse_describe)
+    catalog = CityCatalog(Selection.resolved(fixture_corpus()), _no_database, index)
+    assert catalog.furthest_tile("ahmedabad").tile == "t43N_250_2547"
+
+
+def _refuse_describe(centre: object) -> list[dict]:
+    raise AssertionError("tiles were described")
