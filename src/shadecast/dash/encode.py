@@ -22,6 +22,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from ..service.resample import downsample
+
 logger = logging.getLogger(__name__)
 
 NODATA = 0
@@ -34,22 +36,6 @@ def quantise(field: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
     scaled = (np.asarray(field, dtype=np.float64) - vmin) / span
     bytes_ = np.clip(np.round(scaled * (LEVELS - 1)), 0, LEVELS - 1).astype(np.uint8) + 1
     return np.where(np.isfinite(field), bytes_, NODATA).astype(np.uint8)
-
-
-def downsample(field: np.ndarray, size: int) -> np.ndarray:
-    """Area-average to exactly `size` on the long side.
-
-    Area averaging rather than nearest: these fields are noisy at pixel scale, and
-    nearest sampling keeps that noise, which costs real bytes because PNG cannot
-    compress it. It also aliases thin shade into speckle.
-    """
-    height, width = field.shape
-    if max(height, width) <= size:
-        return field
-    scale = size / max(height, width)
-    target = (max(1, round(width * scale)), max(1, round(height * scale)))
-    image = Image.fromarray(np.asarray(field, dtype=np.float32), mode="F")
-    return np.asarray(image.resize(target, Image.Resampling.BOX), dtype=np.float64)
 
 
 def atlas(fields: list[np.ndarray], path: Path, *, size: int = 400, columns: int = 6) -> dict:

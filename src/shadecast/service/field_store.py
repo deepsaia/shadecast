@@ -30,7 +30,11 @@ class FieldStore:
     """
 
     def __init__(self, paths: TilePaths) -> None:
-        self._paths = paths
+        self.paths = paths
+
+    @property
+    def _paths(self) -> TilePaths:
+        return self.paths
 
     def heights(self) -> np.ndarray:
         """Building height above ground in metres, never negative."""
