@@ -4,6 +4,7 @@ from pathlib import Path
 
 from shadecast.corpus.tile import Tile
 from shadecast.corpus.tile_paths import TilePaths
+from shadecast.corpus.tile_stages import TileStages
 from shadecast.corpus.utm_zone import UtmZone
 
 TILE = Tile(UtmZone(43, False), 249, 2546)
@@ -22,13 +23,7 @@ def test_paths_are_keyed_by_urban_centre_and_tile(tmp_path):
 
 def test_stage_presence_is_read_from_the_files_that_prove_it(tmp_path):
     paths = TilePaths(tmp_path, 6143, TILE)
-    assert paths.stages() == {
-        "bundle": False,
-        "baseline": False,
-        "surrogate": False,
-        "model": False,
-        "results": False,
-    }
+    assert paths.stages() == TileStages()
     assert paths.models == tmp_path / "6143" / "t43N_249_2546" / "models"
     (paths.bundle).mkdir(parents=True)
     (paths.bundle / "provenance.json").write_text("{}")
@@ -38,13 +33,7 @@ def test_stage_presence_is_read_from_the_files_that_prove_it(tmp_path):
     (paths.models / "response-unet-x").mkdir(parents=True)
     (paths.models / "response-unet-x" / "model.pt").write_bytes(b"")
     assert [path.name for path in paths.model_dirs()] == ["response-unet-x"]
-    assert paths.stages() == {
-        "bundle": True,
-        "baseline": True,
-        "surrogate": True,
-        "model": True,
-        "results": False,
-    }
+    assert paths.stages() == TileStages(bundle=True, baseline=True, physics=True, model=True)
 
 
 def test_as_dict_lists_every_path_as_text(tmp_path):

@@ -222,7 +222,7 @@ def test_status_reports_k_of_n_per_stage(tmp_path):
     assert status["totals"] == {
         "bundle": 2,
         "baseline": 1,
-        "surrogate": 0,
+        "physics": 0,
         "model": 0,
         "results": 0,
     }

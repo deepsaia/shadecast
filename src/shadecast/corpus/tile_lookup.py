@@ -35,7 +35,7 @@ def centre_id(text: str) -> int:
 def built_tiles(text: str, tiles_root: Path) -> list[TilePaths]:
     """Every tile of the centre that has a bundle, in tile id order."""
     found = TilePaths.existing(tiles_root, centre_id(text))
-    return [paths for paths in found if paths.stages().get("bundle")]
+    return [paths for paths in found if paths.stages().bundle]
 
 
 def one_built_tile(text: str, tile: str | None, tiles_root: Path) -> TilePaths:
@@ -83,9 +83,7 @@ def generated_tiles(
     centre's tiles file.
     """
     with_physics = [
-        paths
-        for paths in TilePaths.existing(tiles_root, centre_id(text))
-        if paths.stages().get("surrogate")
+        paths for paths in TilePaths.existing(tiles_root, centre_id(text)) if paths.stages().physics
     ]
     if not with_physics:
         raise ValueError(

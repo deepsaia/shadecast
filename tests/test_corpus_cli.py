@@ -199,7 +199,7 @@ def test_show_reports_how_many_tiles_are_built(tmp_path):
     assert centre["status"] == {
         "bundle": 1,
         "baseline": 0,
-        "surrogate": 0,
+        "physics": 0,
         "model": 0,
         "results": 0,
     }

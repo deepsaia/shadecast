@@ -35,7 +35,7 @@ def tile_entries(key: str, urban_centre: int) -> list[tuple[str, Path, Path]]:
     ready = [
         paths
         for paths in TilePaths.existing(tile_paths.TILES_ROOT, urban_centre)
-        if paths.stages().get("bundle") and paths.stages().get("baseline")
+        if paths.stages().bundle and paths.stages().baseline
     ]
     if len(ready) == 1:
         return [(key, ready[0].bundle, ready[0].surrogate)]
