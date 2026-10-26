@@ -30,6 +30,7 @@ bundle, offline, forever. A benchmark that requires three accounts is not a benc
 uv sync
 sdc cities                        # the selected cities, their strata and what each has; sdc is short for shadecast
 sdc build savannah                # assemble the densest tile's bundle, about a minute
+sdc run savannah                  # the baseline physics for that tile, kept beside its bundle
 sdc tile show savannah            # where its tiles live and which stages have run; reads disk only
 sdc tile report savannah          # the tile's baseline, its physics run and every scored plan
 sdc surrogate treeshade generate savannah --jobs 4   # physics for the 17 tree designs, 4 at a time
