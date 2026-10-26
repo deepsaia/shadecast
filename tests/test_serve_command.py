@@ -1,7 +1,9 @@
 """Settings resolve once, from the constant, the environment, then the flags, and reach uvicorn."""
 
+import socket
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from shadecast import serve_cli
@@ -46,3 +48,19 @@ def test_serve_exports_the_settings_and_runs_the_factory(monkeypatch):
     assert seen["port"] == 9000 and seen["host"] == "127.0.0.1" and seen["reload"] is False
     assert serve_cli.os.environ.get("SDC_PORT") == "9000"
     assert "http://127.0.0.1:9000/" in result.stdout
+
+
+def test_a_port_already_in_use_is_named_before_anything_starts(monkeypatch):
+    holder = socket.socket()
+    holder.bind(("127.0.0.1", 0))
+    holder.listen(1)
+    port = holder.getsockname()[1]
+    try:
+        monkeypatch.setattr(
+            serve_cli.uvicorn, "run", lambda *args, **kwargs: pytest.fail("uvicorn ran")
+        )
+        result = runner.invoke(app, ["serve", "--port", str(port), "--no-open"])
+    finally:
+        holder.close()
+    assert result.exit_code == 1
+    assert f"port {port} is already in use" in result.output and "--port" in result.output
