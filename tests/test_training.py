@@ -138,3 +138,49 @@ def test_a_checkpoint_for_other_data_is_refused(tmp_path, monkeypatch):
     monkeypatch.setattr(training, "_fit_one_epoch", real)
     with pytest.raises(ValueError, match="different data"):
         train(_patches(), _settings(epochs=9, patience=10), out_path=out)
+
+
+class Recording:
+    """A listener that keeps every event, for asserting what training reports."""
+
+    def __init__(self) -> None:
+        self.events: list[tuple] = []
+
+    def started(self, label, total, done):
+        self.events.append(("started", label, total, done))
+
+    def phase(self, name):
+        self.events.append(("phase", name))
+
+    def step_started(self, name, detail):
+        self.events.append(("step_started", name))
+
+    def step_done(self, name, seconds, detail):
+        self.events.append(("step_done", name, dict(detail)))
+
+    def step_skipped(self, name, reason):
+        self.events.append(("step_skipped", name, reason))
+
+    def step_failed(self, name, error):
+        self.events.append(("step_failed", name, error))
+
+    def warning(self, message):
+        self.events.append(("warning", message))
+
+    def finished(self, summary):
+        self.events.append(("finished", dict(summary)))
+
+
+def test_every_epoch_is_reported_through_the_listener(tmp_path):
+    listener = Recording()
+    report = train(_patches(), _settings(epochs=3, patience=10), tmp_path / "model.pt", listener)
+    kinds = [event[0] for event in listener.events]
+    assert kinds[0] == "started" and listener.events[0][2:] == (3, 0)
+    assert [event[1] for event in listener.events if event[0] == "step_done"] == [
+        "epoch 1",
+        "epoch 2",
+        "epoch 3",
+    ]
+    detail = next(event[2] for event in listener.events if event[0] == "step_done")
+    assert {"epoch", "train_loss", "test_mae_C", "skill"} <= set(detail)
+    assert kinds[-1] == "finished" and listener.events[-1][1]["best_epoch"] == report["best_epoch"]
