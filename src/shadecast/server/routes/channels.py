@@ -25,10 +25,13 @@ def channels() -> list[ChannelSummary]:
 
 @router.get("/channels/{channel}/models", response_model=list[ModelSummary])
 def models(
-    channel: str, city: City, found: Annotated[Services, Depends(services)]
+    channel: str, found: Annotated[Services, Depends(services)], city: City | None = None
 ) -> list[ModelSummary]:
+    """The channel's models for one city, or for every selected city when none is named."""
     channel_of(channel)
-    return found.models.models(found.catalog.urban_centre_id(city))
+    if city is not None:
+        return found.models.models(found.catalog.urban_centre_id(city))
+    return found.models.models_across(found.catalog.urban_centre_ids())
 
 
 @router.get("/channels/{channel}/models/{model}", response_model=ModelSummary)

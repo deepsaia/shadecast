@@ -29,6 +29,8 @@ def test_no_assessed_model_means_a_pending_summary(tmp_path):
         findings.targeting.get("status") == "pending"
         and findings.channel.get("status") == "pending"
     )
+    assert findings.targeting.get("command") == "sdc experiments targeting <city> [<city> ...]"
+    assert findings.surrogate.get("command") == "sdc surrogate treeshade assess <city>"
 
 
 def test_factorial_rows_are_summarized_when_present(tmp_path):

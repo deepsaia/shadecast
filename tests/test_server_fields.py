@@ -118,6 +118,9 @@ def test_channels_and_models(client, data_root):
     named = client.get(f"/api/v1/channels/treeshade/models/{model.name}?city=ahmedabad").json()
     assert named["id"] == model.name
     assert client.get("/api/v1/channels/albedo/models?city=ahmedabad").status_code == 404
+    everyone = client.get("/api/v1/channels/treeshade/models").json()
+    assert [entry["id"] for entry in everyone] == [model.name]
+    assert everyone[0].get("urban_centres") == [6143]
     assert client.get("/api/v1/channels/treeshade/models/nope?city=ahmedabad").status_code == 404
 
 

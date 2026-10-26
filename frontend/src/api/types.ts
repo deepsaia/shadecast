@@ -28,7 +28,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Models */
+        /**
+         * Models
+         * @description The channel's models for one city, or for every selected city when none is named.
+         */
         get: operations["models_api_v1_channels__channel__models_get"];
         put?: never;
         post?: never;
@@ -419,6 +422,8 @@ export interface components {
             tile: string | null;
             /** Tiles Trained */
             tiles_trained: number;
+            /** Urban Centres */
+            urban_centres: number[];
         };
         /** PhysicsFacts */
         PhysicsFacts: {
@@ -783,9 +788,8 @@ export interface operations {
     };
     models_api_v1_channels__channel__models_get: {
         parameters: {
-            query: {
-                /** @description A city key, an id, a slug or a name. */
-                city: string;
+            query?: {
+                city?: string | null;
             };
             header?: never;
             path: {
