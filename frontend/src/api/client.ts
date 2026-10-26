@@ -3,9 +3,20 @@
  * body surfaced as the message. Paths are built here and nowhere else.
  */
 
-import type { CitySummary, Health, Results, TileReport, TileStatistics, TileSummary } from "./models";
+import {
+  tileReport,
+  type CitySummary,
+  type Health,
+  type Results,
+  type TileReport,
+  type TileStatistics,
+  type TileSummary,
+} from "./models";
+import type { components } from "./types";
 
 export const API = "/api/v1";
+
+type RawTileReport = components["schemas"]["TileReport"];
 
 export class ApiError extends Error {
   constructor(
@@ -50,7 +61,9 @@ export const api = {
   cities: () => getJson<CitySummary[]>(paths.cities()),
   city: (city: string) => getJson<TileStatistics>(paths.city(city)),
   tiles: (city: string) => getJson<TileSummary[]>(paths.tiles(city)),
-  report: (city: string, tile: string) => getJson<TileReport>(paths.report(city, tile)),
-  cityReport: (city: string) => getJson<TileReport>(paths.cityReport(city)),
+  report: async (city: string, tile: string): Promise<TileReport> =>
+    tileReport(await getJson<RawTileReport>(paths.report(city, tile))),
+  cityReport: async (city: string): Promise<TileReport> =>
+    tileReport(await getJson<RawTileReport>(paths.cityReport(city))),
   results: () => getJson<Results>(paths.results()),
 };
