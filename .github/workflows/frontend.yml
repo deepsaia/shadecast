@@ -1,7 +1,7 @@
 name: Client
 
-# Lints, type-checks, tests and builds the client, and checks that its API types match the
-# server's schema. Nothing is published: the build is what make frontend produces locally.
+# Lints, type-checks, tests and builds the client, checks that its API types match the server's
+# schema, and builds the wheel to check it carries the client. Nothing is published.
 on:
   push:
     branches: [main]
@@ -27,3 +27,6 @@ jobs:
         run: git diff --exit-code -- frontend/src/api/types.ts
       - run: make frontend-test
       - run: pnpm --dir frontend build
+      - run: uv build --wheel
+      - name: The wheel carries the built client
+        run: uv run python -c "import glob, zipfile; names = zipfile.ZipFile(glob.glob('dist/*.whl')[0]).namelist(); assert 'shadecast/server/static/index.html' in names, names"

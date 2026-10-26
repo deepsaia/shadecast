@@ -68,6 +68,9 @@ make frontend                     # install the client's packages and build it i
 sdc serve                         # http://127.0.0.1:8765/ with the API at /api/docs
 ```
 
+An installed copy needs no Node. `make wheel` builds the client and then a wheel that carries it, so
+`sdc serve` from a `pip install dist/shadecast-*.whl` serves the dashboard too.
+
 Developing the client: `sdc serve --reload` in one terminal and `pnpm --dir frontend dev` in another; Vite
 proxies `/api` and `/pages` to the server. `make types` regenerates the client's API types from the server's
 schema, which is the one contract between them; CI fails when the committed types drift.
