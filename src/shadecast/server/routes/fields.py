@@ -37,7 +37,10 @@ def field(
     store = FieldStore(paths)
     array = _array(store, field, design)
     if size is not None:
-        array = downsample_stack(array, size) if array.ndim == 3 else downsample(array, size)
+        # Area averaging promotes to float64 and turns a mask into a planted fraction; float32 is
+        # all the client draws from, and half the bytes.
+        shrunk = downsample_stack(array, size) if array.ndim == 3 else downsample(array, size)
+        array = np.asarray(shrunk, dtype=np.float32)
     return npy_response(array)
 
 

@@ -11,6 +11,7 @@ from ..corpus import tile_description
 from ..corpus.statistics import tile_stats
 from ..corpus.tile import Tile
 from ..corpus.tile_paths import TilePaths
+from ..corpus.tile_stages import TileStages
 from ..corpus.tiling import select_densest
 from ..corpus.urban_centre import UrbanCentre
 from ..corpus.urban_centres import UrbanCentres
@@ -137,9 +138,13 @@ class CityCatalog:
         """The on-disk record of one tile, for services that read its files."""
         return self._paths(self.urban_centre_id(text), tile_id)
 
-    def furthest_tile(self, text: str) -> TileSummary:
-        """The densest tile that came furthest: with physics, else with a baseline, else built."""
-        tiles = self.tiles(text)
+    def furthest_tile(self, text: str) -> TileLocation:
+        """The densest tile that came furthest: with physics, else with a baseline, else built.
+
+        Read from disk alone, ranked by the tiles file when there is one, so it needs no database
+        and no description.
+        """
+        tiles = self.ranked_on_disk(text)
         for reached in ("physics", "baseline", "bundle"):
             candidates = [tile for tile in tiles if tile.stages.model_dump().get(reached)]
             if candidates:
@@ -219,10 +224,21 @@ class CityCatalog:
         rows = payload.get("tiles", [])
         return [
             TileSummary.model_validate(
-                {**row, "stages": self._paths(centre.id, str(row.get("id"))).stages()}
+                {**row, "stages": self._stages_of(centre.id, str(row.get("id")))}
             )
             for row in select_densest(rows, len(rows))
         ]
+
+    def _stages_of(self, urban_centre: int, tile_id: str) -> TileStages:
+        """The stages of a listed tile; a row whose id is not a tile id has none on disk.
+
+        Older files listed tiles under a scheme the layout no longer uses.
+        """
+        try:
+            tile = Tile.from_id(tile_id)
+        except ValueError:
+            return TileStages()
+        return TilePaths(self._index.tiles_root, urban_centre, tile).stages()
 
     def _paths(self, urban_centre: int, tile_id: str) -> TilePaths:
         try:

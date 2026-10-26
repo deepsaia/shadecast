@@ -66,7 +66,8 @@ def test_the_hourly_field_is_hours_first_and_shrinks_to_the_requested_size(clien
     assert hours.shape == (24, 16, 16) and hours.dtype == np.float32
     assert float(hours[5].max()) == 35.0
     small = _array(client, f"/api/v1/cities/ahmedabad/tiles/{TILE}/fields/hours?size=8")
-    assert small.shape == (24, 8, 8) and float(small[5].max()) == 35.0
+    assert small.shape == (24, 8, 8) and small.dtype == np.float32
+    assert float(small[5].max()) == 35.0
 
 
 def test_context_cooling_and_placement_read_back(client):
@@ -84,6 +85,12 @@ def test_context_cooling_and_placement_read_back(client):
         client, f"/api/v1/cities/ahmedabad/tiles/{TILE}/fields/placement?design=clustered_0101"
     )
     assert placement.dtype == np.bool_ and int(placement.sum()) == 16
+    fraction = _array(
+        client,
+        f"/api/v1/cities/ahmedabad/tiles/{TILE}/fields/placement?design=clustered_0101&size=8",
+    )
+    assert fraction.dtype == np.float32 and 0.0 <= float(fraction.max()) <= 1.0
+    assert float(fraction.sum()) > 0
 
 
 def test_an_unknown_field_is_refused_and_a_missing_stage_is_named(client, tmp_path):

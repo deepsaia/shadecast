@@ -29,7 +29,7 @@ class TileReporter:
     def report_furthest(self, text: str) -> TileReport:
         """The report of the city's densest tile with physics, else with a baseline, else built."""
         furthest = self._catalog.furthest_tile(text)
-        return report_of(self._catalog.tile_paths(text, furthest.id))
+        return report_of(self._catalog.tile_paths(text, furthest.tile))
 
 
 def report_of(paths: TilePaths) -> TileReport:

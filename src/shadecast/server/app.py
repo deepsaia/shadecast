@@ -7,7 +7,6 @@ error handlers turn service failures into responses that name what was missing.
 from __future__ import annotations
 
 from fastapi import FastAPI
-from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from . import errors, pages, spa
@@ -35,7 +34,6 @@ def build_app(settings: ServerSettings, services: Services) -> FastAPI:
     )
     app.state.settings = settings
     app.state.services = services
-    app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.add_middleware(RequestIdMiddleware)
     # A browser lured to a rebound name must not reach a server bound to this machine.
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_hosts(settings))
