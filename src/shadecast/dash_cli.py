@@ -23,11 +23,9 @@ from .dash.server import serve
 
 logger = logging.getLogger(__name__)
 
-# The same directory that gets published. Serving the walkthrough locally from one
-# bundle and publishing another is how the two quietly drift apart, which is exactly
-# what happened once: `shadecast dash` kept showing a build from hours earlier while
-# the public page had moved on.
-DEFAULT_OUT = Path("docs")
+# Outside the tracked tree. The bundle is reproducible from the data and is never
+# committed; GitHub Pages publishes only the hand-written pages.
+DEFAULT_OUT = Path("out/dash")
 
 app = typer.Typer(name="dash", help="Interactive local walkthrough of what we do to a city.")
 
@@ -138,9 +136,8 @@ def build(
 ) -> None:
     """Build the static bundle without serving it.
 
-    Point --out at docs/ to publish the walkthrough on GitHub Pages, which serves the
-    bundle exactly as it is: the page is static files and does all its work in the
-    browser, so nothing here needs a Python process at view time.
+    The bundle is plain files that do all their work in the browser, so the directory
+    can be zipped, archived beside a paper or served by any web server.
     """
     build_bundle(out)
     console.print(f"[green]built[/] into {out}")
