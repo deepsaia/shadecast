@@ -8,47 +8,33 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 from pathlib import Path
 from typing import Annotated
 
-import numpy as np
 import typer
 
 from .console import console, error_console, pairs_table
 from .corpus import tile_lookup, tile_paths
 from .corpus.tile_paths import TilePaths
-from .corpus.tile_selection import TileSelection
 from .service.city_catalog import CityCatalog
 from .service.generation_request import GenerationRequest
 from .service.generation_service import GenerationService, settings_for
 from .service.json_file import read_object
 from .service.missing_stage import MissingStage
-from .service.model_catalog import MODELS_ROOT, ModelCatalog, model_created
+from .service.model_catalog import MODELS_ROOT, ModelCatalog
 from .service.model_summary import ModelSummary
+from .service.training_request import TrainingRequest
+from .service.training_service import TrainingService
 from .service.unknown_city import UnknownCity
 from .surrogate import manifest
 from .surrogate.assessment import assess
 from .surrogate.assessment_inputs import AssessmentInputs
 from .surrogate.dataset import engine_threads
-from .surrogate.features import CHANNEL_SETS
 from .surrogate.generation_progress import GenerationProgress
-from .surrogate.manifest_inputs import ManifestInputs
-from .surrogate.patch_set import PatchSet
-from .surrogate.patch_settings import PatchSettings
-from .surrogate.patches import crop_batch, crop_cities, tile_key
-from .surrogate.training import save_report, train
-from .surrogate.training_settings import TrainingSettings
-from .surrogate.training_state import CHECKPOINT_NAME
+from .surrogate.patches import tile_key
+from .surrogate.training_progress import TrainingProgress
 
 logger = logging.getLogger(__name__)
-
-
-def models_root(pairs: list[tuple[Path, Path]]) -> Path:
-    """One tile's models live beside its surrogate directory; multi-tile models at the root."""
-    if len(pairs) == 1:
-        return Path(pairs[0][0]).parent / "models"
-    return MODELS_ROOT
 
 
 app = typer.Typer(
@@ -189,67 +175,21 @@ def generate_data(
         raise typer.Exit(code=1)
 
 
-def training_pairs(
-    target: str | None,
-    bundle: Path | None,
-    pair: list[str] | None,
-    tiles: str | None = None,
-    selection: TileSelection | None = None,
-) -> list[tuple[Path, Path]]:
-    """(surrogate dir, bundle) pairs: a city's densest tile with physics, named or all tiles pooled,
-    a path pair, or --pair values."""
-    pairs: list[tuple[Path, Path]] = []
-    for item in pair or []:
-        if "=" in item:
-            left, right = item.split("=", 1)
-            pairs.append((Path(left), Path(right)))
-        else:
-            for found in tile_lookup.generated_tiles(item, None, tile_paths.TILES_ROOT):
-                pairs.append((found.surrogate, found.bundle))
-    if target is not None and bundle is not None:
-        pairs.append((Path(target), bundle))
-    elif target is not None:
-        found_tiles = tile_lookup.generated_tiles(target, tiles, tile_paths.TILES_ROOT, selection)
-        pairs.extend((paths.surrogate, paths.bundle) for paths in found_tiles)
-    if not pairs:
-        raise ValueError("give a city key, SURROGATE_DIR and BUNDLE, or one or more --pair")
-    return pairs
-
-
-def unfinished_model(root: Path) -> Path | None:
-    """The newest model directory with a checkpoint and no manifest, else None."""
-    if not root.is_dir():
-        return None
-    candidates = [
-        child
-        for child in root.iterdir()
-        if (child / CHECKPOINT_NAME).exists() and not (child / "manifest.json").exists()
-    ]
-    return max(candidates, key=model_created) if candidates else None
-
-
-def train_resume_command(
-    target: str | None,
-    bundle: Path | None,
-    pair: list[str] | None,
-    tiles: str | None,
-    holdout_city: str | None,
-    channels: str,
-) -> str:
-    """The exact command that continues an interrupted training run. Six inputs, one string."""
+def train_resume_command(request: TrainingRequest) -> str:
+    """The exact command that continues an interrupted training run."""
     parts = ["sdc surrogate treeshade train"]
-    if target:
-        parts.append(target)
-    if bundle:
-        parts.append(str(bundle))
-    for item in pair or []:
+    if request.target:
+        parts.append(request.target)
+    if request.bundle:
+        parts.append(str(request.bundle))
+    for item in request.pair:
         parts += ["--pair", item]
-    if tiles is not None:
-        parts += ["--tiles", tiles]
-    if holdout_city:
-        parts += ["--holdout-city", holdout_city]
-    if channels != "engine":
-        parts += ["--channels", channels]
+    if request.tiles is not None:
+        parts += ["--tiles", request.tiles]
+    if request.holdout_city:
+        parts += ["--holdout-city", request.holdout_city]
+    if request.channels != "engine":
+        parts += ["--channels", request.channels]
     parts.append("--resume")
     return " ".join(parts)
 
@@ -313,85 +253,43 @@ def train_model(
     intervention pattern. With --holdout-city a whole city is held out instead, which
     measures transfer to unseen geometry. Those are different questions.
     """
+    request = TrainingRequest(
+        target=target,
+        bundle=bundle,
+        pair=pair or [],
+        tiles=tiles,
+        holdout_city=holdout_city,
+        epochs=epochs,
+        patch=patch,
+        per_entry=per_entry,
+        channels=channels,
+        densest=densest,
+        stratified=stratified,
+        resume=resume,
+    )
+    service = TrainingService(tile_paths.TILES_ROOT, MODELS_ROOT)
     try:
-        pairs = training_pairs(target, bundle, pair, tiles, TileSelection(densest, stratified))
+        outcome = service.train(request, TrainingProgress(console))
     except ValueError as exc:
         error_console.print(str(exc), style="red", markup=False)
         raise typer.Exit(code=1) from exc
-
-    if holdout_city and len(pairs) < 2:
-        raise typer.BadParameter("--holdout-city needs at least two cities")
-
-    if channels not in CHANNEL_SETS:
-        raise typer.BadParameter(f"--channels must be one of {sorted(CHANNEL_SETS)}")
-    patch_settings = PatchSettings(size=patch, per_entry=per_entry, channels=channels)
-    started = time.time()
-    with console.status("[cyan]cropping patches[/]"):
-        if len(pairs) == 1:
-            inputs, targets, origins = crop_batch(pairs[0][0], pairs[0][1], patch_settings)
-        else:
-            inputs, targets, origins = crop_cities(pairs, patch_settings)
-
-    console.print(
-        f"{len(inputs):,} patches of {patch}px from {len(set(origins))} designs "
-        f"across {len(pairs)} cities in {time.time() - started:.1f}s"
-    )
-
-    created = manifest.now()
-    model_id = manifest.new_model_id(pairs, created)
-    destination = models_root(pairs) / model_id
-    if resume:
-        unfinished = unfinished_model(models_root(pairs))
-        if unfinished is None:
-            error_console.print(f"nothing to resume under {models_root(pairs)}")
-            raise typer.Exit(code=1)
-        destination, model_id = unfinished, unfinished.name
-        console.print(f"[dim]resuming {destination}[/]")
-    destination.mkdir(parents=True, exist_ok=True)
-
-    settings = TrainingSettings(epochs=epochs, holdout_city=holdout_city, channels=channels)
-    try:
-        report = train(
-            PatchSet(inputs, targets, origins), settings, out_path=destination / "model.pt"
-        )
     except KeyboardInterrupt:
         console.print("\n[bold]stopped[/] before the first epoch finished; nothing was saved.")
         raise typer.Exit(code=130) from None
-    report["patch_px"] = patch
-    report["cities"] = [str(b) for _, b in pairs]
-    report["target_stats"] = {
-        "mean_C": round(float(np.mean(targets)), 4),
-        "max_C": round(float(np.max(targets)), 3),
-    }
-    save_report(report, destination / "training_report.json")
-    built = manifest.build(
-        ManifestInputs(
-            model_id=model_id,
-            created=created.isoformat(timespec="seconds"),
-            pairs=pairs,
-            report=report,
-            patch_px=patch,
-            per_entry=per_entry,
-            model_path=destination / "model.pt",
-        )
-    )
-    manifest.write(destination, built)
-    if report.get("interrupted"):
-        again = train_resume_command(target, bundle, pair, tiles, holdout_city, channels)
+    if outcome.interrupted:
         console.print(
-            f"\n[bold]stopped[/] after epoch {report['last_epoch']}; the best weights, epoch "
-            f"{report['best_epoch']}, are saved in {destination}.\n"
-            f"Continue with: [cyan]{again}[/]"
+            f"\n[bold]stopped[/] after epoch {outcome.last_epoch}; the best weights, epoch "
+            f"{outcome.best_epoch}, are saved in {outcome.destination}.\n"
+            f"Continue with: [cyan]{train_resume_command(request)}[/]"
         )
         raise typer.Exit(code=130)
-    verdict = "green" if report["beats_predicting_nothing"] else "red"
+    verdict = "green" if outcome.beats_nothing else "red"
     console.print(
-        f"[{verdict}]skill {report['final_skill']:+.3f}[/]  "
-        f"MAE {report['final_test_mae_C']:.4f} C against a zero baseline of "
-        f"{report['zero_baseline_mae_C']:.4f} C  "
-        f"(holdout: {report['holdout_mode']})"
+        f"[{verdict}]skill {outcome.skill:+.3f}[/]  "
+        f"MAE {outcome.mae_c:.4f} C against a zero baseline of {outcome.zero_mae_c:.4f} C  "
+        f"(holdout: {outcome.holdout_mode})"
     )
-    console.print(f"[dim]model and report written to {destination}[/]")
+    console.print(f"[dim]model and report written to {outcome.destination}[/]")
 
 
 @treeshade.command("assess")

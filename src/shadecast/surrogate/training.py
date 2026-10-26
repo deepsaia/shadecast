@@ -28,6 +28,8 @@ import numpy as np
 import torch
 from torch import nn
 
+from ..service.null_progress import NullProgress
+from ..service.progress_listener import ProgressListener
 from .model import ResponseUNet
 from .patch_set import PatchSet
 from .trainables import Trainables
@@ -168,12 +170,18 @@ def _batches(
     ]
 
 
-def train(patches: PatchSet, settings: TrainingSettings, out_path: Path | None = None) -> dict:
+def train(
+    patches: PatchSet,
+    settings: TrainingSettings,
+    out_path: Path | None = None,
+    progress: ProgressListener | None = None,
+) -> dict:
     """Fit the surrogate, keep the best epoch by held-out skill, and report how it went.
 
-    Three arguments: the data, the settings, and where to save; the first two are objects so
-    the manifest can record both whole.
+    Four arguments: the data, the settings, where to save, and who to tell; the first two are
+    objects so the manifest can record both whole.
     """
+    listener = progress if progress is not None else NullProgress()
     device = pick_device(settings.device)
     torch.manual_seed(settings.seed)
     generator = torch.Generator().manual_seed(settings.seed)
@@ -207,11 +215,13 @@ def train(patches: PatchSet, settings: TrainingSettings, out_path: Path | None =
     }
     trainables = Trainables(model, optimiser, schedule, generator)
     state = _fresh_or_resumed(checkpoint, trainables, fingerprint)
+    listener.started(f"{settings.epochs} epochs", settings.epochs, state.epoch)
 
     started = time.time()
     interrupted = False
     try:
         for epoch in range(state.epoch + 1, settings.epochs + 1):
+            epoch_started = time.time()
             loss = _fit_one_epoch(
                 model,
                 optimiser,
@@ -221,7 +231,11 @@ def train(patches: PatchSet, settings: TrainingSettings, out_path: Path | None =
             schedule.step()
             mae, skill = _skill(_predict(model, x_test, settings.batch_size), y_test)
             state.record(epoch, loss, mae, skill, model)
-            _log_epoch(epoch, loss, mae, skill)
+            listener.step_done(
+                f"epoch {epoch}",
+                round(time.time() - epoch_started, 1),
+                {"epoch": epoch, "train_loss": loss, "test_mae_C": mae, "skill": skill},
+            )
             if checkpoint is not None:
                 state.save(checkpoint, trainables, fingerprint, time.time() - started)
             if epoch - state.best_epoch >= settings.patience:
@@ -236,6 +250,7 @@ def train(patches: PatchSet, settings: TrainingSettings, out_path: Path | None =
             raise
         interrupted = True
         logger.warning("interrupted after epoch %d; keeping the best weights so far", state.epoch)
+        listener.warning(f"interrupted after epoch {state.epoch}; keeping the best weights so far")
 
     elapsed = state.elapsed_before + (time.time() - started)
     last = state.history[-1]
@@ -243,7 +258,7 @@ def train(patches: PatchSet, settings: TrainingSettings, out_path: Path | None =
     if checkpoint is not None and not interrupted:
         checkpoint.unlink(missing_ok=True)
 
-    return {
+    report = {
         "device": str(device),
         "settings": settings.as_dict(),
         "epochs": settings.epochs,
@@ -268,6 +283,8 @@ def train(patches: PatchSet, settings: TrainingSettings, out_path: Path | None =
         "history": state.history,
         "checkpoint": str(out_path) if out_path else None,
     }
+    listener.finished(report)
+    return report
 
 
 def _fresh_or_resumed(
@@ -282,13 +299,6 @@ def _fresh_or_resumed(
     state = TrainingState.load(checkpoint, trainables, fingerprint)
     logger.info("resuming after epoch %d from %s", state.epoch, checkpoint)
     return state
-
-
-def _log_epoch(epoch: int, loss: float, mae: float, skill: float) -> None:
-    if epoch % 5 == 0 or epoch == 1:
-        logger.info(
-            "epoch %2d: train loss %.4f, held-out MAE %.4f C, skill %+.3f", epoch, loss, mae, skill
-        )
 
 
 def _save_best(out_path: Path | None, state: TrainingState, channels: int) -> None:

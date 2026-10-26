@@ -10,8 +10,8 @@ from shadecast import cli, surrogate_cli
 from shadecast.cli import app
 from shadecast.corpus import tile_paths
 from shadecast.service import generation_service
+from shadecast.service.training_request import TrainingRequest
 from shadecast.sim import runner
-from shadecast.surrogate.training_state import CHECKPOINT_NAME
 
 cli_runner = CliRunner()
 
@@ -78,23 +78,11 @@ def test_generate_stops_with_the_resume_line(tmp_path, monkeypatch):
     assert "sdc surrogate treeshade generate ahmedabad --jobs 4" in result.output
 
 
-def test_unfinished_model_is_the_newest_with_a_checkpoint(tmp_path):
-    assert surrogate_cli.unfinished_model(tmp_path / "none") is None
-    older = tmp_path / "response-unet-x-20261023T100000"
-    newer = tmp_path / "response-unet-x-20261023T110000"
-    done = tmp_path / "response-unet-x-20261023T120000"
-    for folder in (older, newer, done):
-        folder.mkdir()
-        (folder / CHECKPOINT_NAME).write_bytes(b"c")
-    (done / "manifest.json").write_text("{}")
-    assert surrogate_cli.unfinished_model(tmp_path) == newer
-
-
 def test_train_resume_command_repeats_the_options():
-    plain = surrogate_cli.train_resume_command("savannah", None, None, None, None, "engine")
+    plain = surrogate_cli.train_resume_command(TrainingRequest(target="savannah"))
     assert plain == "sdc surrogate treeshade train savannah --resume"
     pooled = surrogate_cli.train_resume_command(
-        None, None, ["ahmedabad", "x/s=x/b"], None, "rio", "base"
+        TrainingRequest(pair=["ahmedabad", "x/s=x/b"], holdout_city="rio", channels="base")
     )
     assert pooled == (
         "sdc surrogate treeshade train --pair ahmedabad --pair x/s=x/b "
