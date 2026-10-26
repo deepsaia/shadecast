@@ -38,6 +38,7 @@ sdc surrogate treeshade train savannah      # fit the tree shade surrogate on th
 sdc surrogate treeshade assess savannah     # judge the newest model against the engine
 sdc results                       # the measured results across every tile with physics
 sdc runs                          # what is generating or training right now, and whether it is alive
+sdc serve                         # the API and the dashboard for whatever data is on disk
 ```
 
 Every command takes the city name and means its densest tile unless told otherwise. One
