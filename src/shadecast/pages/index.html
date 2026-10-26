@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>shadecast</title>
+<meta name="description" content="Given a city and a budget, which cooling measures should you build, and where?">
+<style>
+  :root {
+    --bg: #fbfaf7; --ink: #1d1d1b; --muted: #5d5b55; --rule: #e3e0d8; --link: #0b5fa5; --card: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #16171a; --ink: #ecebe6; --muted: #a7a59d; --rule: #2d2f34; --link: #7fb6ec; --card: #1e2024; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.55 Georgia, "Iowan Old Style", "Times New Roman", serif;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 3rem 1rem 4rem; }
+  h1 { font-size: 2.4rem; margin: 0 0 .25rem; letter-spacing: -.01em; }
+  .tagline { font-size: 1.25rem; color: var(--muted); margin: 0 0 2rem; }
+  p { margin: 0 0 1rem; }
+  a { color: var(--link); }
+  .pages { display: grid; gap: 1rem; margin: 2rem 0; padding: 0; list-style: none; }
+  .pages li { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 1rem 1.2rem; }
+  .pages a { font-weight: 700; text-decoration: none; }
+  .pages span { display: block; color: var(--muted); font-size: .95rem; margin-top: .2rem; }
+  h2 { font-size: 1.15rem; margin: 2.5rem 0 .6rem; }
+  code, pre {
+    font: 15px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--card); border: 1px solid var(--rule); border-radius: 6px;
+  }
+  code { padding: .1rem .35rem; }
+  pre { padding: .8rem 1rem; overflow-x: auto; }
+  pre code { border: 0; padding: 0; background: none; }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: .95rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>shadecast</h1>
+  <p class="tagline">Given a city and a budget, which cooling measures should you build, and where?</p>
+
+  <p>shadecast is an open, credential-free pipeline that turns any city into an urban heat decision problem.
+  It assembles a city from open data, runs the SOLWEIG radiation physics over it, learns a surrogate of the
+  response so that search becomes affordable, and then asks the inverse question: not how much cooler a given
+  intervention makes a place, but which interventions a given budget should buy, and where.</p>
+
+  <ul class="pages">
+    <li><a href="proposal.html">Proposal</a>
+      <span>The research proposal: hypotheses, pre-registered experiments and how each is judged.</span></li>
+    <li><a href="model_pipeline.html">The tree shade surrogate pipeline</a>
+      <span>How the surrogate is built, trained and judged, with every number taken from a model manifest or
+      a recorded run.</span></li>
+    <li><a href="https://github.com/deepsaia/shadecast">Source and issues</a>
+      <span>The code, the design in its issues, and the command line that runs the whole pipeline.</span></li>
+  </ul>
+
+  <h2>The interactive walkthrough</h2>
+  <p>The walkthrough draws maps and charts from physics output in the browser, so hovering a pixel reads its
+  temperature. That output is gigabytes of local data, so the walkthrough runs on the machine that holds it,
+  from a checkout of the repository:</p>
+  <pre><code>uv run sdc dash</code></pre>
+
+  <footer>Apache-2.0. Physics by SOLWEIG, run as a separate process under its own license.</footer>
+</main>
+</body>
+</html>

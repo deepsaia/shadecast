@@ -53,17 +53,22 @@ def discover() -> list[tuple[str, Path, Path]]:
 
 
 ASSETS = ("app.html", "app.js")
-# Self-contained pages published beside the walkthrough, copied as they are.
-PAGES = ("model_pipeline.html", "result.html", "result.js", "proposal.html")
+# The results page is part of the walkthrough and ships beside it.
+RESULT_FILES = ("result.html", "result.js")
+# The hand-written pages GitHub Pages publishes. The walkthrough links them, so the bundle
+# carries a copy and the links work from a local build too.
+PAGES = ("model_pipeline.html", "proposal.html")
+PAGES_DIR = Path(__file__).parent / "pages"
 
 
 def publish_pages(destination: Path) -> list[Path]:
-    """Copy every standalone page into the bundle. Returns the paths written."""
-    here = Path(__file__).parent / "dash"
+    """Copy the result files and the pages into the bundle. Returns the paths written."""
+    dash = Path(__file__).parent / "dash"
+    sources = [dash / name for name in RESULT_FILES] + [PAGES_DIR / name for name in PAGES]
     written = []
-    for name in PAGES:
-        target = destination / name
-        target.write_text((here / name).read_text())
+    for source in sources:
+        target = destination / source.name
+        target.write_text(source.read_text())
         written.append(target)
     return written
 
