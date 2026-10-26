@@ -167,9 +167,11 @@ def test_thread_environment_caps_every_pool():
 def test_quiet_progress_counts_and_renders_nothing():
     progress = GenerationProgress.quiet()
     with progress:
-        progress.start("testville t43N_249_2547", total=3, done=1)
-        progress.design_started("a")
-        progress.design_done(
+        progress.started("testville t43N_249_2547", total=3, done=1)
+        progress.step_started("a", {})
+        progress.step_done(
+            "a",
+            10.0,
             {
                 "id": "a",
                 "engine_seconds": 10.0,
@@ -177,12 +179,12 @@ def test_quiet_progress_counts_and_renders_nothing():
                 "family": "clustered",
                 "coverage": 0.1,
                 "placed_px": 5,
-            }
+            },
         )
-        progress.design_skipped("b", "empty placement")
+        progress.step_skipped("b", "empty placement")
     assert progress.completed() == 3
     assert progress.mean_seconds() == 10.0
-    assert progress.phase == "done"
+    assert progress.state == "done"
     assert progress.live is None
 
 
@@ -251,8 +253,8 @@ def test_running_designs_show_their_engine_phase_from_disk(tmp_path):
     assert phase_bar(2) == "▰ inputs  ▰ sky view  ▰ radiation  ▱ outputs"
     console = Console(file=StringIO(), width=120, force_terminal=False, color_system=None)
     progress = GenerationProgress(console, jobs=2)
-    progress.start("x", total=3, done=0)
-    progress.design_started("clustered_0105", design)
+    progress.started("x", total=3, done=0)
+    progress.step_started("clustered_0105", {"target": design})
     shown = progress._running_now().plain
     assert "clustered_0105" in shown and "▰ outputs" in shown
     assert "left" not in shown

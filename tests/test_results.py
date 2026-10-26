@@ -13,6 +13,7 @@ from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.physics_facts import PhysicsFacts
 from shadecast.service.plan import Plan
 from shadecast.service.results_report import ResultsReport
+from shadecast.service.selection import Selection
 from shadecast.service.tile_facts import TileFacts
 from shadecast.service.tile_index import TileIndex
 from shadecast.service.tile_report import TileReport
@@ -86,7 +87,9 @@ def _reports() -> list[TileReport]:
 
 def _service(tmp_path: Path) -> ResultsReport:
     catalog = CityCatalog(
-        fixture_corpus(), fixture_centres, TileIndex(tmp_path / "tiles", fixture_tiles)
+        Selection.resolved(fixture_corpus()),
+        fixture_centres,
+        TileIndex(tmp_path / "tiles", fixture_tiles),
     )
     return ResultsReport(catalog, tmp_path)
 

@@ -29,9 +29,11 @@ import rasterio
 from ..data.landcover import to_umep
 from ..interventions import apply, feasibility_mask
 from ..pipeline import BUNDLE_FILES, daylight_mean, read_band
+from ..service.null_progress import NullProgress
+from ..service.progress_listener import ProgressListener
 from ..sim.runner import run, stop_running_engines
 from . import designs
-from .generation_progress import GenerationProgress
+from .generation_events import BASELINE, BASELINE_PHASE
 from .generation_settings import GenerationSettings
 from .tile_context import TileContext
 
@@ -94,7 +96,7 @@ def generate(
     bundle: Path,
     out_dir: Path,
     settings: GenerationSettings | None = None,
-    progress: GenerationProgress | None = None,
+    progress: ProgressListener | None = None,
 ) -> dict:
     """Run every design in the plan and store the resulting response fields.
 
@@ -105,7 +107,7 @@ def generate(
     """
     bundle, out_dir = Path(bundle), Path(out_dir)
     settings = settings if settings is not None else GenerationSettings()
-    progress = progress if progress is not None else GenerationProgress.quiet()
+    progress = progress if progress is not None else NullProgress()
     out_dir.mkdir(parents=True, exist_ok=True)
 
     lock = out_dir / GENERATION_LOCK
@@ -178,7 +180,7 @@ def engine_threads(settings: GenerationSettings) -> int | None:
 
 
 def _generate(
-    bundle: Path, out_dir: Path, settings: GenerationSettings, progress: GenerationProgress
+    bundle: Path, out_dir: Path, settings: GenerationSettings, progress: ProgressListener
 ) -> dict:
     """Body of :func:`generate`, run while the directory lock is held."""
     provenance = json.loads((bundle / "provenance.json").read_text())
@@ -203,7 +205,7 @@ def _generate(
             logger.debug("%s already generated, skipping", name)
         else:
             pending.append(spec)
-    progress.start(tile_label(bundle, provenance), total=len(plan), done=len(results))
+    progress.started(tile_label(bundle, provenance), total=len(plan), done=len(results))
 
     baseline_tmrt = ensure_baseline(bundle, out_dir, design_day, progress)
     context = TileContext(
@@ -238,7 +240,7 @@ def _generate(
 
 
 def ensure_baseline(
-    bundle: Path, out_dir: Path, design_day: str, progress: GenerationProgress
+    bundle: Path, out_dir: Path, design_day: str, progress: ProgressListener
 ) -> np.ndarray:
     """The untouched tile's daylight mean Tmrt, run through the engine once and kept."""
     baseline_dir = out_dir / "baseline"
@@ -247,12 +249,12 @@ def ensure_baseline(
         for name in BUNDLE_FILES:
             shutil.copy(bundle / name, baseline_dir / name)
         logger.debug("%s: baseline physics", bundle.name)
-        progress.baseline_started()
+        progress.phase(BASELINE_PHASE)
         baseline_run = run(baseline_dir, design_day)
         np.save(baseline_dir / "tmrt_daylight.npy", daylight_mean(baseline_run.tmrt_path))
-        progress.baseline_done(baseline_run.seconds)
+        progress.step_done(BASELINE, baseline_run.seconds, {})
     else:
-        progress.baseline_kept_from_disk()
+        progress.step_skipped(BASELINE, "kept from disk")
     return np.load(baseline_dir / "tmrt_daylight.npy")
 
 
@@ -260,7 +262,7 @@ def run_designs(
     context: TileContext,
     pending: list[dict],
     jobs: int,
-    progress: GenerationProgress,
+    progress: ProgressListener,
     results: dict[str, dict],
 ) -> list[str]:
     """Run the pending designs ``jobs`` at a time. Returns the ids that failed."""
@@ -282,7 +284,7 @@ def run_designs(
 
 
 def collect_results(
-    futures: dict, progress: GenerationProgress, results: dict[str, dict], failures: list[str]
+    futures: dict, progress: ProgressListener, results: dict[str, dict], failures: list[str]
 ) -> None:
     """Gather each design as it finishes, recording failures instead of stopping."""
     for future in as_completed(futures):
@@ -293,24 +295,24 @@ def collect_results(
         except (RuntimeError, OSError, subprocess.TimeoutExpired) as error:
             # One failed engine run must not throw away the others still running.
             logger.error("design %s failed: %s", name, error)
-            progress.design_failed(name, str(error).splitlines()[0])
+            progress.step_failed(name, str(error).splitlines()[0])
             failures.append(name)
             continue
         if meta is not None:
             results[name] = meta
 
 
-def run_design(context: TileContext, spec: dict, progress: GenerationProgress) -> dict | None:
+def run_design(context: TileContext, spec: dict, progress: ProgressListener) -> dict | None:
     """One design through the engine: edit the canopy, run, keep the response, prune."""
     name = entry_id(spec["family"], spec["seed"])
     target = context.out_dir / name
     placement = make_placement(spec["family"], context.feasible, spec["seed"], spec["params"])
     if not placement.any():
         logger.warning("design %s produced an empty placement, skipping", name)
-        progress.design_skipped(name, "empty placement")
+        progress.step_skipped(name, "empty placement")
         return None
 
-    progress.design_started(name, target)
+    progress.step_started(name, {"target": target})
     target.mkdir(parents=True, exist_ok=True)
     for fname in BUNDLE_FILES:
         shutil.copy(context.bundle / fname, target / fname)
@@ -351,5 +353,5 @@ def run_design(context: TileContext, spec: dict, progress: GenerationProgress) -
     # surrogate needs so a full generation does not fill the disk.
     shutil.rmtree(target / "output_folder", ignore_errors=True)
     shutil.rmtree(target / "processed_inputs", ignore_errors=True)
-    progress.design_done(meta)
+    progress.step_done(name, float(meta["engine_seconds"]), meta)
     return meta

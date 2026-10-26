@@ -14,6 +14,7 @@ from shadecast.console import build_table, corpus_table, result_table
 from shadecast.corpus import tile_paths
 from shadecast.corpus.urban_centres import UrbanCentres
 from shadecast.service.city_catalog import CityCatalog
+from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
 
 runner = CliRunner()
@@ -113,7 +114,9 @@ def test_build_rejects_an_unknown_city():
 
 
 def test_corpus_table_has_a_row_per_city(tmp_path):
-    catalog = CityCatalog(dict(FIXTURE), _no_database, TileIndex(tmp_path, _no_tiles))
+    catalog = CityCatalog(
+        Selection.resolved(dict(FIXTURE)), _no_database, TileIndex(tmp_path, _no_tiles)
+    )
     table = corpus_table(catalog.cities())
     assert table.row_count == len(FIXTURE)
 

@@ -29,6 +29,13 @@ class TileIndex:
     def path(self, centre: UrbanCentre) -> Path:
         return self.tiles_root / str(centre.id) / TILES_FILE
 
+    def rows_if_present(self, urban_centre: int) -> list[dict]:
+        """The described tiles when the file exists, else nothing; never describes."""
+        path = self.tiles_root / str(urban_centre) / TILES_FILE
+        if not path.exists():
+            return []
+        return json.loads(path.read_text()).get("tiles", [])
+
     def read_or_describe(self, centre: UrbanCentre) -> dict:
         """The file's payload, describing and writing it first when it does not exist yet."""
         path = self.path(centre)

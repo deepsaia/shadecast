@@ -9,13 +9,16 @@ from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
 from shadecast.corpus.tile_paths import TilePaths
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.missing_stage import MissingStage
+from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
 from shadecast.service.tile_reporter import TileReporter, report_of
 
 
 @pytest.fixture
 def catalog(tmp_path) -> CityCatalog:
-    return CityCatalog(fixture_corpus(), fixture_centres, TileIndex(tmp_path, fixture_tiles))
+    return CityCatalog(
+        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(tmp_path, fixture_tiles)
+    )
 
 
 def test_a_bundle_only_tile_reports_its_facts_and_nothing_it_lacks(tmp_path, catalog):

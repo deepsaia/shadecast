@@ -19,16 +19,20 @@ from .console import console, error_console, pairs_table
 from .corpus import tile_lookup, tile_paths
 from .corpus.tile_paths import TilePaths
 from .corpus.tile_selection import TileSelection
+from .service.city_catalog import CityCatalog
+from .service.generation_request import GenerationRequest
+from .service.generation_service import GenerationService, settings_for
 from .service.json_file import read_object
+from .service.missing_stage import MissingStage
 from .service.model_catalog import MODELS_ROOT, ModelCatalog, model_created
 from .service.model_summary import ModelSummary
+from .service.unknown_city import UnknownCity
 from .surrogate import manifest
 from .surrogate.assessment import assess
 from .surrogate.assessment_inputs import AssessmentInputs
-from .surrogate.dataset import default_plan, engine_threads, generate, tile_label
+from .surrogate.dataset import engine_threads
 from .surrogate.features import CHANNEL_SETS
 from .surrogate.generation_progress import GenerationProgress
-from .surrogate.generation_settings import GenerationSettings
 from .surrogate.manifest_inputs import ManifestInputs
 from .surrogate.patch_set import PatchSet
 from .surrogate.patch_settings import PatchSettings
@@ -39,30 +43,12 @@ from .surrogate.training_state import CHECKPOINT_NAME
 
 logger = logging.getLogger(__name__)
 
-# Models trained on several tiles belong to no tile and live here.
-
 
 def models_root(pairs: list[tuple[Path, Path]]) -> Path:
     """One tile's models live beside its surrogate directory; multi-tile models at the root."""
     if len(pairs) == 1:
         return Path(pairs[0][0]).parent / "models"
     return MODELS_ROOT
-
-
-def default_out(bundle: Path) -> Path:
-    """Where generated physics goes: the tile's surrogate directory, else data/surrogate/<name>.
-
-    Every bundle in the tile layout is a directory named ``bundle`` three levels under the
-    tiles root, so the old default of data/surrogate/<name> would send every tile to the same
-    place. A bundle anywhere else keeps the old default.
-    """
-    bundle = Path(bundle)
-    in_tile = bundle.name == "bundle" and bundle.resolve().parent.parent.parent == (
-        tile_paths.TILES_ROOT.resolve()
-    )
-    if in_tile:
-        return bundle.parent / "surrogate"
-    return Path("data/surrogate") / bundle.name
 
 
 app = typer.Typer(
@@ -79,39 +65,6 @@ app.add_typer(treeshade, name="treeshade")
 
 KIND = "tree"  # the engine's intervention kind this surrogate learns
 LABEL = "tree shade"  # how the dashboard and the pages name it
-
-
-ALL_TILES = "all"
-
-
-def built_pairs(target: str, tiles: str | None) -> list[tuple[Path, Path]]:
-    """(bundle, surrogate dir) for a bundle path, or for a city's built tiles.
-
-    No --tiles: the densest built tile. Ids separated by commas: those built tiles.
-    ``all`` or an empty value: every built tile of the city.
-    """
-    if Path(target).is_dir():
-        return [(Path(target), default_out(Path(target)))]
-    root = tile_paths.TILES_ROOT
-    if tiles is None:
-        found = [tile_lookup.densest_built_tile(target, root)]
-    elif tiles.strip().lower() in ("", ALL_TILES):
-        found = tile_lookup.built_tiles(target, root)
-        if not found:
-            raise ValueError(f"{target} has no built tile yet; run 'sdc build {target}' first")
-    else:
-        ids = [part.strip() for part in tiles.split(",") if part.strip()]
-        found = [tile_lookup.one_built_tile(target, tile_id, root) for tile_id in ids]
-    return [(paths.bundle, paths.surrogate) for paths in found]
-
-
-def resolve_pairs(target: str, tiles: str | None) -> list[tuple[Path, Path]]:
-    """``built_pairs`` for the command line: a clear message and exit code 1 on a bad target."""
-    try:
-        return built_pairs(target, tiles)
-    except ValueError as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
 
 
 def newest_model(
@@ -167,9 +120,7 @@ def resume_command(target: str, tile: str | None, out: Path | None, jobs: int) -
 
 @treeshade.command("generate")
 def generate_data(
-    target: Annotated[
-        str, typer.Argument(help="A city key such as savannah, or a bundle directory.")
-    ],
+    target: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
     tiles: Annotated[
         str | None,
         typer.Option(
@@ -193,34 +144,28 @@ def generate_data(
     its engine time, how to stop and how to resume. Designs already on disk are skipped, so
     an interrupted run resumes where it stopped. Put -v before the command for debug logging.
     """
-    pairs = resolve_pairs(target, tiles)
-    if out is not None and len(pairs) > 1:
-        raise typer.BadParameter("--out applies to one tile")
-    plan = default_plan()
+    request = GenerationRequest(target=target, tiles=tiles, out=out, jobs=jobs, kind=KIND)
+    service = GenerationService(CityCatalog.open(tile_paths.TILES_ROOT))
+    try:
+        chosen = service.tiles_for(request)
+    except (UnknownCity, MissingStage, ValueError) as exc:
+        error_console.print(str(exc), style="red", markup=False)
+        raise typer.Exit(code=1) from exc
     failures: list[str] = []
-    for index, (bundle, tile_surrogate) in enumerate(pairs, start=1):
-        destination = out if out else tile_surrogate
-        provenance = json.loads((bundle / "provenance.json").read_text())
-        tile_id = provenance.get("tile", {}).get("id")
-        picked = tile_id if (tiles is not None and tile_id) else None
-        if len(pairs) > 1:
-            console.print(f"[bold]tile {index} of {len(pairs)}[/]")
-        console.print(
-            f"[cyan]{tile_label(bundle, provenance)}[/]: {len(plan)} designs, {jobs} at a time, "
-            f"into {destination}"
-        )
-        settings = GenerationSettings(plan=plan, kind=KIND, jobs=jobs)
-        started = time.time()
+    for index, paths in enumerate(chosen, start=1):
+        if len(chosen) > 1:
+            console.print(f"[bold]tile {index} of {len(chosen)}[/]")
+        picked = paths.tile.id if tiles is not None else None
         progress = GenerationProgress(
             console,
             jobs=jobs,
-            threads=engine_threads(settings),
+            threads=engine_threads(settings_for(request)),
             kind=LABEL,
             resume_command=resume_command(target, picked, out, jobs),
         )
         try:
             with progress:
-                summary = generate(bundle, destination, settings, progress)
+                outcome = service.generate(paths, request, progress)
         except KeyboardInterrupt:
             console.print(
                 f"\n[bold]stopped[/] with {progress.completed()} of {progress.total} designs on "
@@ -229,13 +174,13 @@ def generate_data(
             raise typer.Exit(code=130) from None
         except RuntimeError as error:
             error_console.print(f"[red]{error}[/]")
-            failures.append(str(tile_id or bundle))
+            failures.append(paths.tile.id)
             continue
         mean = progress.mean_seconds()
         pace = f", {mean:.0f} s a design" if mean else ""
         console.print(
-            f"[green]{summary['entries']}[/] responses in {destination}  "
-            f"({(time.time() - started) / 60:.0f} min{pace})"
+            f"[green]{outcome.entries}[/] responses in {outcome.destination}  "
+            f"({outcome.seconds / 60:.0f} min{pace})"
         )
     if failures:
         error_console.print(

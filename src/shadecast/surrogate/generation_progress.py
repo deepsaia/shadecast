@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -25,11 +26,14 @@ from rich.table import Table
 from rich.text import Text
 
 from ..hardware import Hardware
+from ..surrogate.generation_events import BASELINE, BASELINE_PHASE
 from .engine_phase import design_phase, phase_bar
 from .log_tail import LogTail
 
 BLOCKS = "▁▂▃▄▅▆▇█"
 LAST_ROWS = 10
+logger = logging.getLogger(__name__)
+
 LOG_LINES = 10
 
 
@@ -70,10 +74,10 @@ class GenerationProgress:
     baseline_seconds: float | None = None
     baseline_kept: bool = False
     running: dict[str, tuple[float, Path | None]] = field(default_factory=dict)
-    finished: list[dict] = field(default_factory=list)
+    done_designs: list[dict] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
     failed: list[str] = field(default_factory=list)
-    phase: str = "starting"
+    state: str = "starting"
     live: Live | None = None
     bar: Progress | None = None
     task: TaskID | None = None
@@ -113,9 +117,9 @@ class GenerationProgress:
 
     def __exit__(self, exc_type: object, *exc: object) -> None:
         if exc_type is KeyboardInterrupt:
-            self.phase = "stopped"
+            self.state = "stopped"
         else:
-            self.phase = "failed" if exc_type else "done"
+            self.state = "failed" if exc_type else "done"
         if self.live is not None:
             self.live.refresh()
             self.live.stop()
@@ -128,52 +132,59 @@ class GenerationProgress:
 
     # --- events from the generator -------------------------------------------------------
 
-    def start(self, label: str, total: int, done: int) -> None:
+    def started(self, label: str, total: int, done: int) -> None:
         """Open the display: ``done`` designs already exist on disk and count as finished."""
         self.label, self.total, self.done_at_start = label, total, done
-        self.phase = "running"
+        self.state = "running"
         if self.bar is not None:
             self.task = self.bar.add_task("designs", total=total, completed=done, pace="")
 
-    def baseline_started(self) -> None:
-        self.phase = "baseline physics"
+    def phase(self, name: str) -> None:
+        self.state = name
 
-    def baseline_done(self, seconds: float) -> None:
-        self.baseline_seconds = seconds
-        self.phase = "running"
-
-    def baseline_kept_from_disk(self) -> None:
-        self.baseline_kept = True
-
-    def design_started(self, name: str, target: Path | None = None) -> None:
+    def step_started(self, name: str, detail: Mapping[str, object]) -> None:
+        target = detail.get("target")
         with self.lock:
-            self.running[name] = (time.time(), target)
+            self.running[name] = (time.time(), Path(str(target)) if target else None)
 
-    def design_done(self, meta: dict) -> None:
+    def step_done(self, name: str, seconds: float, detail: Mapping[str, object]) -> None:
+        if name == BASELINE:
+            self.baseline_seconds = seconds
+            self.state = "running"
+            return
         with self.lock:
-            self.running.pop(meta["id"], None)
-            self.finished.append(meta)
+            self.running.pop(name, None)
+            self.done_designs.append(dict(detail))
         self._advance()
 
-    def design_skipped(self, name: str, reason: str) -> None:
+    def step_skipped(self, name: str, reason: str) -> None:
+        if name == BASELINE:
+            self.baseline_kept = True
+            return
         with self.lock:
             self.running.pop(name, None)
             self.skipped.append(f"{name} ({reason})")
         self._advance()
 
-    def design_failed(self, name: str, error: str) -> None:
+    def step_failed(self, name: str, error: str) -> None:
         with self.lock:
             self.running.pop(name, None)
             self.failed.append(f"{name}: {error}")
 
+    def warning(self, message: str) -> None:
+        logger.warning(message)
+
+    def finished(self, summary: Mapping[str, object]) -> None:  # noqa: ARG002
+        return None
+
     # --- readings ---------------------------------------------------------------------
 
     def mean_seconds(self) -> float | None:
-        seconds = [float(m["engine_seconds"]) for m in self.finished]
+        seconds = [float(m["engine_seconds"]) for m in self.done_designs]
         return sum(seconds) / len(seconds) if seconds else None
 
     def completed(self) -> int:
-        return self.done_at_start + len(self.finished) + len(self.skipped)
+        return self.done_at_start + len(self.done_designs) + len(self.skipped)
 
     def remaining_seconds(self) -> float | None:
         mean = self.mean_seconds()
@@ -221,7 +232,7 @@ class GenerationProgress:
     def _status_line(self) -> Text:
         started = datetime.fromtimestamp(self.started_at).strftime("%Y-%m-%d %H:%M")
         text = Text()
-        text.append(f"{self.phase:<8}", style="bold green" if self.phase == "done" else "bold")
+        text.append(f"{self.state:<8}", style="bold green" if self.state == "done" else "bold")
         text.append(f" elapsed {clock(time.time() - self.started_at)}   started {started}")
         if self.done_at_start:
             text.append(
@@ -237,8 +248,8 @@ class GenerationProgress:
         return f"{clock(mean)} per design   about {clock(left or 0)} left"
 
     def _metrics(self) -> Text:
-        seconds = [float(m["engine_seconds"]) for m in self.finished]
-        cooling = [float(m["mean_response_C"]) for m in self.finished]
+        seconds = [float(m["engine_seconds"]) for m in self.done_designs]
+        cooling = [float(m["mean_response_C"]) for m in self.done_designs]
         text = Text()
         if seconds:
             text.append("engine seconds    ", style="bold")
@@ -257,7 +268,7 @@ class GenerationProgress:
             else f"{self.baseline_seconds:.0f} s"
             if self.baseline_seconds is not None
             else "running"
-            if self.phase == "baseline physics"
+            if self.state == BASELINE_PHASE
             else "pending"
         )
         text.append("baseline          ", style="bold")
@@ -286,7 +297,7 @@ class GenerationProgress:
         with self.lock:
             items = sorted(self.running.items(), key=lambda item: item[1][0])
         if not items:
-            idle = "nothing" if self.phase in ("done", "failed", "stopped") else "waiting"
+            idle = "nothing" if self.state in ("done", "failed", "stopped") else "waiting"
             text.append(f"  {idle}", style="dim")
             return text
         for name, (since, target) in items:
@@ -308,7 +319,7 @@ class GenerationProgress:
         ):
             table.add_column(column, justify=justify)  # type: ignore[arg-type]
         with self.lock:
-            rows = list(self.finished[-LAST_ROWS:])
+            rows = list(self.done_designs[-LAST_ROWS:])
         for meta in rows:
             table.add_row(
                 str(meta["id"]),

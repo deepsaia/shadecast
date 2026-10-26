@@ -8,6 +8,7 @@ from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
 from shadecast.corpus.urban_centres import UrbanCentres
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.missing_stage import MissingStage
+from shadecast.service.selection import Selection
 from shadecast.service.stage_counts import StageCounts
 from shadecast.service.tile_index import TileIndex
 from shadecast.service.unknown_city import UnknownCity
@@ -25,7 +26,9 @@ def root(tmp_path) -> Path:
 
 @pytest.fixture
 def catalog(root) -> CityCatalog:
-    return CityCatalog(fixture_corpus(), fixture_centres, TileIndex(root, fixture_tiles))
+    return CityCatalog(
+        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(root, fixture_tiles)
+    )
 
 
 def _prove(root: Path, tile_id: str, *stages: str, urban_centre: int = 6143) -> Path:
@@ -89,7 +92,7 @@ def test_tiles_come_densest_first_with_their_stages(root, catalog):
 
 def test_a_tiles_file_from_an_older_build_is_read_for_what_it_has(root):
     index = TileIndex(root, lambda centre: [{"id": "t43N_249_2547", "x_km": 6897, "people": 1}])
-    catalog = CityCatalog(fixture_corpus(), fixture_centres, index)
+    catalog = CityCatalog(Selection.resolved(fixture_corpus()), fixture_centres, index)
     tiles = catalog.tiles("ahmedabad")
     assert [tile.id for tile in tiles] == ["t43N_249_2547"]
     assert tiles[0].population_2020 == 0.0
@@ -120,7 +123,9 @@ def _no_database() -> UrbanCentres:
 
 
 def test_keys_and_ids_never_load_the_database(root):
-    catalog = CityCatalog(fixture_corpus(), _no_database, TileIndex(root, fixture_tiles))
+    catalog = CityCatalog(
+        Selection.resolved(fixture_corpus()), _no_database, TileIndex(root, fixture_tiles)
+    )
     _prove(root, "t43N_249_2547", "bundle")
     assert [city.key for city in catalog.cities()] == ["ahmedabad", "london"]
     assert catalog.city("ahmedabad").stages.bundle == 1
@@ -154,7 +159,9 @@ def test_refresh_describes_the_tiles_again(root):
         calls.append(1)
         return fixture_tiles(centre)
 
-    catalog = CityCatalog(fixture_corpus(), fixture_centres, TileIndex(root, describe))
+    catalog = CityCatalog(
+        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(root, describe)
+    )
     catalog.tiles("ahmedabad")
     catalog.tiles("ahmedabad")
     catalog.refresh("ahmedabad")
@@ -178,3 +185,20 @@ def test_the_furthest_tile_prefers_physics_over_baseline_over_bundle(root, catal
 def test_a_city_with_nothing_built_has_no_furthest_tile(catalog):
     with pytest.raises(MissingStage, match="sdc build ahmedabad"):
         catalog.furthest_tile("ahmedabad")
+
+
+def test_tiles_on_disk_rank_by_the_tiles_file_when_it_exists(root, catalog):
+    _prove(root, "t43N_249_2546", "bundle")
+    _prove(root, DENSEST, "bundle")
+    _prove(root, "t43N_999_9999", "bundle")
+    assert [tile.tile for tile in catalog.ranked_on_disk("ahmedabad")] == [
+        "t43N_249_2546",
+        DENSEST,
+        "t43N_999_9999",
+    ]
+    catalog.tiles("ahmedabad")
+    assert [tile.tile for tile in catalog.ranked_on_disk("ahmedabad")] == [
+        DENSEST,
+        "t43N_249_2546",
+        "t43N_999_9999",
+    ]

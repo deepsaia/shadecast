@@ -10,6 +10,7 @@ from shadecast import surrogate_cli
 from shadecast.cli import app
 from shadecast.corpus import tile_lookup, tile_paths
 from shadecast.corpus.tile_selection import TileSelection
+from shadecast.service import generation_service
 
 runner = CliRunner()
 
@@ -58,10 +59,10 @@ def test_generate_takes_a_city_name_and_writes_beside_its_bundle(tmp_path, monke
 
     def fake_generate(bundle_dir, destination, settings, progress):
         seen.update(bundle=Path(bundle_dir), destination=Path(destination), jobs=settings.jobs)
-        progress.start("ahmedabad t43N_249_2547", total=1, done=1)
+        progress.started("ahmedabad t43N_249_2547", total=1, done=1)
         return {"entries": 1, "manifest": []}
 
-    monkeypatch.setattr(surrogate_cli, "generate", fake_generate)
+    monkeypatch.setattr(generation_service, "generate", fake_generate)
     result = runner.invoke(app, ["surrogate", "treeshade", "generate", "ahmedabad", "--jobs", "3"])
     assert result.exit_code == 0, result.output
     assert seen["bundle"] == bundle
@@ -77,10 +78,10 @@ def test_generate_runs_each_listed_tile_or_all_of_them(tmp_path, monkeypatch):
 
     def fake_generate(bundle_dir, destination, settings, progress):
         seen.append(Path(bundle_dir))
-        progress.start("x", total=1, done=1)
+        progress.started("x", total=1, done=1)
         return {"entries": 1, "manifest": []}
 
-    monkeypatch.setattr(surrogate_cli, "generate", fake_generate)
+    monkeypatch.setattr(generation_service, "generate", fake_generate)
     result = runner.invoke(
         app, ["surrogate", "treeshade", "generate", "ahmedabad", "--tiles", "t43N_250_2547"]
     )

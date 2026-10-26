@@ -6,6 +6,7 @@ from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
 
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.run_status import RunStatus
+from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
 from shadecast.surrogate.dataset import GENERATION_LOCK
 from shadecast.surrogate.training_state import CHECKPOINT_NAME
@@ -14,7 +15,9 @@ TILE = "t43N_249_2547"
 
 
 def _status(root) -> RunStatus:
-    catalog = CityCatalog(fixture_corpus(), fixture_centres, TileIndex(root, fixture_tiles))
+    catalog = CityCatalog(
+        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(root, fixture_tiles)
+    )
     return RunStatus(catalog, root / "models")
 
 
