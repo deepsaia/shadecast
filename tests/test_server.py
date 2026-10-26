@@ -12,6 +12,7 @@ from shadecast.server.services import Services
 from shadecast.server.settings import ServerSettings
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.findings_report import FindingsReport
+from shadecast.service.missing_stage import MissingStage
 from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.results_report import ResultsReport
 from shadecast.service.run_status import RunStatus
@@ -52,8 +53,8 @@ def client(tmp_path, data_root) -> TestClient:
 
 def test_health_says_alive_and_ready_with_the_selection_size(client, data_root):
     payload = client.get("/api/v1/health").json()
-    assert payload["ready"] is True and payload["cities"] == 2
-    assert payload["data_root"] == str(data_root) and payload["version"]
+    assert payload["ready"] is True and payload["cities"] == 2 and payload["version"]
+    assert "data_root" not in payload
 
 
 def test_health_is_not_ready_without_a_data_root(tmp_path):
@@ -149,6 +150,18 @@ def test_a_built_client_is_served_for_every_page_route_with_its_assets(tmp_path,
     assert client.get("/../secret.txt").status_code in (200, 404)
     assert client.get("/../secret.txt").text != "no"
     assert client.get("/api/v1/nope").status_code == 404
+
+
+def test_a_request_for_another_host_name_is_refused(client):
+    assert client.get("/api/v1/health", headers={"Host": "evil.example"}).status_code == 400
+
+
+def test_the_server_never_describes_tiles_on_a_request(tmp_path):
+    settings = ServerSettings(data_root=tmp_path / "data", static_dir=tmp_path / "static")
+    (tmp_path / "data" / "tiles").mkdir(parents=True)
+    services = Services.open(settings)
+    with pytest.raises(MissingStage, match="sdc tile list"):
+        services.catalog.tiles("ahmedabad")
 
 
 def test_the_openapi_schema_is_served(client):

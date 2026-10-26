@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from ..service.missing_stage import MissingStage
+from ..service.unknown_channel import UnknownChannel
 from ..service.unknown_city import UnknownCity
 from ..service.unknown_model import UnknownModel
 from ..service.unknown_tile import UnknownTile
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def install(app: FastAPI) -> None:
-    for unknown in (UnknownCity, UnknownTile, UnknownModel):
+    for unknown in (UnknownCity, UnknownTile, UnknownModel, UnknownChannel):
         app.add_exception_handler(unknown, _not_found)
     app.add_exception_handler(MissingStage, _missing_stage)
     app.add_exception_handler(Exception, _unexpected)

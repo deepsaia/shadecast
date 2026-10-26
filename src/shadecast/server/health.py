@@ -8,5 +8,4 @@ from pydantic import BaseModel
 class Health(BaseModel):
     version: str
     ready: bool
-    data_root: str
     cities: int
