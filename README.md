@@ -35,6 +35,8 @@ sdc tile report savannah          # the tile's baseline, its physics run and eve
 sdc surrogate treeshade generate savannah --jobs 4   # physics for the 17 tree designs, 4 at a time
 sdc surrogate treeshade train savannah      # fit the tree shade surrogate on that tile
 sdc surrogate treeshade assess savannah     # judge the newest model against the engine
+sdc results                       # the measured results across every tile with physics
+sdc runs                          # what is generating or training right now, and whether it is alive
 ```
 
 Every command takes the city name and means its densest tile unless told otherwise. One
