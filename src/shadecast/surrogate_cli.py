@@ -14,24 +14,21 @@ from typing import Annotated
 import typer
 
 from .console import console, error_console, pairs_table
-from .corpus import tile_lookup, tile_paths
-from .corpus.tile_paths import TilePaths
+from .corpus import tile_paths
+from .service.assessment_request import AssessmentRequest
+from .service.assessment_service import AssessmentService
 from .service.city_catalog import CityCatalog
 from .service.generation_request import GenerationRequest
 from .service.generation_service import GenerationService, settings_for
-from .service.json_file import read_object
 from .service.missing_stage import MissingStage
-from .service.model_catalog import MODELS_ROOT, ModelCatalog
-from .service.model_summary import ModelSummary
+from .service.model_catalog import MODELS_ROOT
+from .service.null_progress import NullProgress
 from .service.training_request import TrainingRequest
 from .service.training_service import TrainingService
 from .service.unknown_city import UnknownCity
 from .surrogate import manifest
-from .surrogate.assessment import assess
-from .surrogate.assessment_inputs import AssessmentInputs
 from .surrogate.dataset import engine_threads
 from .surrogate.generation_progress import GenerationProgress
-from .surrogate.patches import tile_key
 from .surrogate.training_progress import TrainingProgress
 
 logger = logging.getLogger(__name__)
@@ -51,45 +48,6 @@ app.add_typer(treeshade, name="treeshade")
 
 KIND = "tree"  # the engine's intervention kind this surrogate learns
 LABEL = "tree shade"  # how the dashboard and the pages name it
-
-
-def newest_model(
-    target: str, model: str | None, tile: str | None = None
-) -> tuple[Path, Path, Path]:
-    """For a city key: (model dir, surrogate dir, bundle), the newest model unless one is named."""
-    try:
-        paths = assessment_tile(target, tile)
-        found = chosen_model(target, model)
-    except (ValueError, LookupError) as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
-    return Path(found.path), paths.surrogate, paths.bundle
-
-
-def assessment_tile(target: str, tile: str | None) -> TilePaths:
-    """The tile to assess a model on: the named one, else the densest with physics."""
-    if tile is None:
-        return tile_lookup.densest_generated_tile(target, tile_paths.TILES_ROOT)
-    found = tile_lookup.generated_tiles(target, None, tile_paths.TILES_ROOT)
-    chosen = [paths for paths in found if paths.tile.id == tile]
-    if not chosen:
-        raise ValueError(f"{target} tile {tile} has no generated physics")
-    return chosen[0]
-
-
-def chosen_model(target: str, model: str | None) -> ModelSummary:
-    """The named model of the city, or its newest."""
-    models = ModelCatalog(tile_paths.TILES_ROOT, MODELS_ROOT)
-    centre = tile_lookup.centre_id(target)
-    return models.named(centre, model) if model else models.newest(centre)
-
-
-def assessment_name(model_dir: Path, bundle: Path) -> str:
-    """assessment.json for a model of one tile; assessment-<tile>.json for a pooled model."""
-    tiles = read_object(Path(model_dir) / "manifest.json").get("data", {}).get("tiles", [])
-    if len(tiles) <= 1:
-        return "assessment.json"
-    return f"assessment-{tile_key(bundle).replace(':', '-')}.json"
 
 
 def resume_command(target: str, tile: str | None, out: Path | None, jobs: int) -> str:
@@ -322,30 +280,33 @@ def assess_model(
     error in the plan score, and how well plans are ordered. A city key assesses its
     newest model; a model directory needs the surrogate directory and bundle after it.
     """
-    if Path(target).is_dir():
-        if surrogate_dir is None or bundle is None:
-            raise typer.BadParameter("a model directory needs SURROGATE_DIR and BUNDLE after it")
-        model_dir = Path(target)
-    else:
-        model_dir, surrogate_dir, bundle = newest_model(target, model, tile)
-    console.print(f"[dim]assessing {model_dir}[/]")
-    with console.status("[cyan]comparing surrogate against engine truth[/]"):
-        report = assess(AssessmentInputs(model_dir, surrogate_dir, bundle, only=design))
-
-    headline = report["headline"]
-    verdict = "green" if headline["all_beat_predicting_nothing"] else "red"
+    request = AssessmentRequest(
+        target=target,
+        surrogate_dir=surrogate_dir,
+        bundle=bundle,
+        model=model,
+        tile=tile,
+        design=design,
+    )
+    service = AssessmentService(tile_paths.TILES_ROOT, MODELS_ROOT)
+    try:
+        with console.status("[cyan]comparing surrogate against engine truth[/]"):
+            outcome = service.assess(request, NullProgress())
+    except (ValueError, LookupError) as exc:
+        error_console.print(str(exc), style="red", markup=False)
+        raise typer.Exit(code=1) from exc
+    verdict = "green" if outcome.beats_nothing else "red"
+    console.print(f"[dim]assessed {outcome.model_dir}[/]")
     console.print(
-        f"[{verdict}]mean skill {headline['mean_skill']:+.3f}[/]  "
+        f"[{verdict}]mean skill {outcome.skill:+.3f}[/]  "
         f"(above zero means it beats predicting nothing)"
     )
+    speedup = f"{outcome.speedup:,.0f}x" if outcome.speedup is not None else "unknown"
     console.print(
-        f"plan score error {headline['mean_aggregate_relative_error']:.1%}, "
-        f"ranking spearman {report['ranking']['spearman']}, "
-        f"speedup {report['speed']['speedup']:,.0f}x"
+        f"plan score error {outcome.error:.1%}, ranking spearman {outcome.spearman}, "
+        f"speedup {speedup}"
     )
-    report_path = Path(model_dir) / assessment_name(Path(model_dir), bundle)
-    report_path.write_text(json.dumps(report, indent=2))
-    console.print(f"[dim]full report written to {report_path}[/]")
+    console.print(f"[dim]full report written to {outcome.report_path}[/]")
 
 
 @treeshade.command("describe")
@@ -357,16 +318,13 @@ def describe(
         str | None,
         typer.Option("--model", help="A model id under the tile's models/, else the newest."),
     ] = None,
-    tile: Annotated[
-        str | None, typer.Option("--tile", help="Which built tile, when the city has several.")
-    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Emit the manifest as JSON.")] = False,
 ) -> None:
     """Say what a trained model is, from its manifest alone."""
-    model_dir = Path(target) if Path(target).is_dir() else newest_model(target, model, tile)[0]
     try:
+        model_dir = Path(target) if Path(target).is_dir() else _model_dir(target, model)
         found = manifest.read(model_dir)
-    except (FileNotFoundError, ValueError) as exc:
+    except (FileNotFoundError, ValueError, LookupError) as exc:
         error_console.print(str(exc), style="red", markup=False)
         raise typer.Exit(code=1) from exc
     if as_json:
@@ -374,3 +332,8 @@ def describe(
         return
     console.print(pairs_table(found.get("model_id", "model"), manifest.summary(found)))
     console.print(f"[dim]{found.get('intended_use')}[/]")
+
+
+def _model_dir(target: str, model: str | None) -> Path:
+    service = AssessmentService(tile_paths.TILES_ROOT, MODELS_ROOT)
+    return Path(service.model_summary(target, model).path)
