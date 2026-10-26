@@ -27,10 +27,8 @@ from .console import (
     tiles_table,
 )
 from .corpus import tile_paths
-from .corpus.tile import Tile
 from .corpus.tile_description import describe
 from .corpus.tiling import select_densest, select_ids, select_random, select_stratified
-from .corpus.urban_centre import UrbanCentre
 from .corpus.urban_centres import UrbanCentres
 from .service.city_catalog import CityCatalog
 from .service.missing_stage import MissingStage
@@ -292,53 +290,3 @@ def _fact_rows(found: TileReport) -> dict:
         "people, 2020 epoch": facts.population_2020,
         "stages run": stages_reached(found.stages),
     }
-
-
-def _tile(text: str) -> Tile:
-    try:
-        return Tile.from_id(text)
-    except ValueError as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
-
-
-def _rows(centre: UrbanCentre) -> list[dict]:
-    return _index().read_or_describe(centre).get("tiles", [])
-
-
-def densest_tile(centre: UrbanCentre) -> Tile:
-    """The most populous tile of a centre, describing the centre first if needed."""
-    rows = select_densest(_rows(centre), 1)
-    if not rows:
-        raise ValueError(f"{centre.slug} has no tiles to build")
-    return Tile.from_id(str(rows[0].get("id")))
-
-
-ALL_TILES = "all"
-
-
-def tile_count(centre: UrbanCentre) -> int:
-    """How many 1 km tiles the centre has, from the tiles file or by describing it."""
-    return len(_rows(centre))
-
-
-def chosen_tiles(
-    centre: UrbanCentre, tiles: str | None, densest: int | None, stratified: int | None
-) -> list[Tile]:
-    """The tiles a command means.
-
-    Nothing given: the densest tile. ``--tiles`` with ids separated by commas: those tiles.
-    ``--tiles all``, or an empty value: every tile of the centre. ``--densest K`` or
-    ``--stratified K``: the corpus selections of that size, by residents or spread over
-    built-fraction terciles.
-    """
-    rows = _rows(centre)
-    if tiles is not None:
-        if tiles.strip().lower() in ("", ALL_TILES):
-            return [Tile.from_id(str(row.get("id"))) for row in rows]
-        return [_tile(part.strip()) for part in tiles.split(",") if part.strip()]
-    if densest:
-        return [Tile.from_id(str(row.get("id"))) for row in select_densest(rows, densest)]
-    if stratified:
-        return [Tile.from_id(str(row.get("id"))) for row in select_stratified(rows, stratified)]
-    return [densest_tile(centre)]

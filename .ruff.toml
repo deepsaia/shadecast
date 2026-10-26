@@ -14,6 +14,7 @@ ignore = [
 "src/shadecast/service/null_progress.py" = ["ARG002"]
 # Listeners hear every event and need only some of what each one carries.
 "src/shadecast/surrogate/training_progress.py" = ["ARG002"]
+"src/shadecast/build_progress.py" = ["ARG002"]
 # A Typer command signature IS the command line interface. Its parameter count is
 # set by what the command needs to expose, not by internal design.
 "src/shadecast/cli.py" = ["PLR0913", "PLR0917"]

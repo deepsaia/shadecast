@@ -31,6 +31,7 @@ from ..interventions import apply, feasibility_mask
 from ..pipeline import BUNDLE_FILES, daylight_mean, read_band
 from ..service.null_progress import NullProgress
 from ..service.progress_listener import ProgressListener
+from ..sim.result import RunResult
 from ..sim.runner import run, stop_running_engines
 from . import designs
 from .generation_events import BASELINE, BASELINE_PHASE
@@ -243,19 +244,31 @@ def ensure_baseline(
     bundle: Path, out_dir: Path, design_day: str, progress: ProgressListener
 ) -> np.ndarray:
     """The untouched tile's daylight mean Tmrt, run through the engine once and kept."""
+    run_baseline_once(bundle, out_dir, design_day, progress)
+    return np.load(out_dir / "baseline" / "tmrt_daylight.npy")
+
+
+def run_baseline_once(
+    bundle: Path, out_dir: Path, design_day: str, progress: ProgressListener
+) -> RunResult | None:
+    """The engine over the untouched tile, unless its daylight field is already on disk.
+
+    Four arguments: the bundle, where the baseline lives, the day, and who to tell. Returns
+    the engine run, or None when the field was kept and no engine ran.
+    """
     baseline_dir = out_dir / "baseline"
-    if not (baseline_dir / "tmrt_daylight.npy").exists():
-        baseline_dir.mkdir(parents=True, exist_ok=True)
-        for name in BUNDLE_FILES:
-            shutil.copy(bundle / name, baseline_dir / name)
-        logger.debug("%s: baseline physics", bundle.name)
-        progress.phase(BASELINE_PHASE)
-        baseline_run = run(baseline_dir, design_day)
-        np.save(baseline_dir / "tmrt_daylight.npy", daylight_mean(baseline_run.tmrt_path))
-        progress.step_done(BASELINE, baseline_run.seconds, {})
-    else:
+    if (baseline_dir / "tmrt_daylight.npy").exists():
         progress.step_skipped(BASELINE, "kept from disk")
-    return np.load(baseline_dir / "tmrt_daylight.npy")
+        return None
+    baseline_dir.mkdir(parents=True, exist_ok=True)
+    for name in BUNDLE_FILES:
+        shutil.copy(bundle / name, baseline_dir / name)
+    logger.debug("%s: baseline physics", bundle.name)
+    progress.phase(BASELINE_PHASE)
+    baseline_run = run(baseline_dir, design_day)
+    np.save(baseline_dir / "tmrt_daylight.npy", daylight_mean(baseline_run.tmrt_path))
+    progress.step_done(BASELINE, baseline_run.seconds, {})
+    return baseline_run
 
 
 def run_designs(

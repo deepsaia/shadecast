@@ -33,6 +33,7 @@ def write_bundle(root: Path) -> Path:
     _write_raster(bundle / "DEM.tif", dem)
     _write_raster(bundle / "Building_DSM.tif", dem + heights())
     _write_raster(bundle / "population.tif", np.full((SIZE, SIZE), 2.0, dtype="float32"))
+    _write_raster(bundle / "Trees.tif", np.zeros((SIZE, SIZE), dtype="float32"))
     (bundle / "met.txt").write_text(_met_text())
     (bundle / "provenance.json").write_text(json.dumps(provenance()))
     return tile
@@ -43,11 +44,16 @@ def write_baseline(tile: Path) -> Path:
     baseline = Path(tile) / "surrogate" / "baseline"
     baseline.mkdir(parents=True, exist_ok=True)
     np.save(baseline / "tmrt_daylight.npy", np.full((SIZE, SIZE), BASELINE_C, dtype="float32"))
-    hours = np.stack([np.full((SIZE, SIZE), 30.0 + hour, dtype="float32") for hour in range(24)])
-    out = baseline / "output_folder" / "0_0"
-    out.mkdir(parents=True, exist_ok=True)
-    _write_raster(out / "TMRT_0_0.tif", hours)
+    write_hourly_raster(baseline / "output_folder" / "0_0" / "TMRT_0_0.tif")
     return baseline
+
+
+def write_hourly_raster(path: Path) -> Path:
+    """The engine's 24 band radiant temperature raster: hour h is a flat field at 30 + h degrees."""
+    hours = np.stack([np.full((SIZE, SIZE), 30.0 + hour, dtype="float32") for hour in range(24)])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    _write_raster(path, hours)
+    return path
 
 
 def write_designs(tile: Path) -> Path:

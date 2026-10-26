@@ -69,6 +69,14 @@ class CityCatalog:
     def _records(self) -> dict[str, City]:
         return self._selection.cities(self._load_centres)
 
+    def records(self) -> dict[str, City]:
+        """The selected cities' records, keyed by selection key; loads the database when needed."""
+        return self._records
+
+    def tile_rows(self, text: str) -> list[dict]:
+        """The centre's described tiles as the tiles file holds them, described first if needed."""
+        return self._index.read_or_describe(self.centre(text)).get("tiles", [])
+
     def cities(self) -> list[CitySummary]:
         """Every selected city with how many of its tiles have reached each stage."""
         return [self._summary(city) for city in self._records.values()]
