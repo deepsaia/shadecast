@@ -3,6 +3,7 @@
 import json
 
 import pytest
+from support import synthetic_tile
 from typer.testing import CliRunner
 
 from shadecast import cities
@@ -135,3 +136,22 @@ def test_result_table_renders_a_scored_plan():
         "spillover_C": 1.5,
     }
     assert result_table(payload).row_count > 0
+
+
+def test_results_report_every_tile_with_physics(tmp_path):
+    tile = synthetic_tile.write_bundle(tmp_path)
+    synthetic_tile.write_baseline(tile)
+    synthetic_tile.write_designs(tile)
+    result = runner.invoke(app, ["results", "--json"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["totals"] == {"cities": 1, "plans": 3, "budget_min_m": 0.0, "budget_max_m": 0.0}
+    table = runner.invoke(app, ["results"])
+    assert table.exit_code == 0, table.output
+    assert "Ahmedabad" in table.stdout
+
+
+def test_results_with_nothing_generated_say_so():
+    result = runner.invoke(app, ["results"])
+    assert result.exit_code == 0, result.output
+    assert "no tile with physics" in result.stdout

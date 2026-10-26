@@ -13,6 +13,7 @@ from .corpus.tile_stages import STAGE_NAMES, TileStages
 from .corpus.urban_centre import UrbanCentre
 from .service.city_summary import CitySummary
 from .service.plan import Plan
+from .service.ranking_row import RankingRow
 from .service.stage_counts import StageCounts
 from .service.tile_summary import TileSummary
 
@@ -79,6 +80,31 @@ def plans_table(plans: list[Plan]) -> Table:
             f"{plan.efficiency:,.1f}",
         )
     return table
+
+
+def ranking_table(rows: list[RankingRow]) -> Table:
+    """Render tiles ranked by cooling per dollar of their scattered plans."""
+    table = Table(title="cooling per dollar", title_style="bold", header_style="dim")
+    table.add_column("tile", style="cyan")
+    table.add_column("canopy", justify="right", no_wrap=True)
+    table.add_column("built", justify="right", no_wrap=True)
+    table.add_column("clustered per $1k", justify="right", no_wrap=True)
+    table.add_column("scattered per $1k", justify="right", no_wrap=True)
+    table.add_column("gain", justify="right", no_wrap=True)
+    for row in rows:
+        table.add_row(
+            row.name,
+            _percent(row.canopy),
+            _percent(row.built_fraction),
+            _cell(row.clustered_per_1k),
+            _cell(row.scattered_per_1k),
+            f"{row.gain:.1f}x" if row.gain is not None else "",
+        )
+    return table
+
+
+def _percent(value: float | None) -> str:
+    return f"{value:.0%}" if value is not None else ""
 
 
 def stage_line(counts: StageCounts) -> str:

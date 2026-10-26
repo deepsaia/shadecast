@@ -1,5 +1,7 @@
 """The walkthrough builder packs a tile's report and its atlases; it computes no score itself."""
 
+import json
+
 from support import synthetic_tile
 
 from shadecast.dash import builder
@@ -35,3 +37,16 @@ def test_build_city_of_a_tile_without_designs_has_no_plans_and_no_physics(tmp_pa
     payload = builder.build_city("ahmedabad", tile, tmp_path / "out")
     assert payload["plans"] == {"list": [], "cooling": {}, "placement": {}}
     assert payload["physics"] == {}
+
+
+def test_build_index_writes_the_index_the_results_and_the_findings(tmp_path):
+    tile = synthetic_tile.write_bundle(tmp_path / "tiles")
+    synthetic_tile.write_baseline(tile)
+    synthetic_tile.write_designs(tile)
+    out = tmp_path / "out"
+    payload = builder.build_index([("ahmedabad", tile)], out, tmp_path)
+    assert [city["city"] for city in payload["cities"]] == ["ahmedabad"]
+    assert set(payload["findings"]) == {"surrogate", "factorial", "targeting", "channel"}
+    results = json.loads((out / "results.json").read_text())
+    assert results["totals"]["plans"] == 3 and results["as_of"]
+    assert json.loads((out / "index.json").read_text())["cities"][0]["physics"]["designs"] == 4
