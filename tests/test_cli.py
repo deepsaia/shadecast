@@ -2,12 +2,13 @@
 
 import json
 import os
+from pathlib import Path
 
 import pytest
 from support import synthetic_tile
 from typer.testing import CliRunner
 
-from shadecast import cities
+from shadecast import cities, tile_cli
 from shadecast.cities import City
 from shadecast.cli import app
 from shadecast.console import build_table, corpus_table, result_table
@@ -16,6 +17,8 @@ from shadecast.corpus.urban_centres import UrbanCentres
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
+from shadecast.sim.result import RunResult
+from shadecast.surrogate import dataset
 
 runner = CliRunner()
 
@@ -178,3 +181,20 @@ def test_runs_with_nothing_running_say_so():
     result = runner.invoke(app, ["runs"])
     assert result.exit_code == 0, result.output
     assert "nothing is running" in result.stdout
+
+
+def test_run_produces_the_baseline_physics_for_a_tile(tmp_path, monkeypatch):
+    def fake_run(base_path, date, **kwargs):
+        tmrt = Path(base_path) / "output_folder" / "0_0" / "TMRT_0_0.tif"
+        synthetic_tile.write_hourly_raster(tmrt)
+        return RunResult(base_path=Path(base_path), seconds=9.0, tmrt_path=tmrt, returncode=0)
+
+    monkeypatch.setattr(dataset, "run", fake_run)
+    monkeypatch.setattr(tile_cli, "load_centres", _no_database)
+    tile = synthetic_tile.write_bundle(tmp_path)
+    result = runner.invoke(app, ["run", "ahmedabad", "--json"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["kept"] is False
+    assert (tile / "surrogate" / "baseline" / "tmrt_daylight.npy").exists()
+    again = runner.invoke(app, ["run", "ahmedabad"])
+    assert again.exit_code == 0 and "kept" in again.stdout
