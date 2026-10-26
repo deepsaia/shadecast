@@ -1,0 +1,29 @@
+name: Client
+
+# Lints, type-checks, tests and builds the client, and checks that its API types match the
+# server's schema. Nothing is published: the build is what make frontend produces locally.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: make types
+      - name: The committed types match the server's schema
+        run: git diff --exit-code -- frontend/src/api/types.ts
+      - run: make frontend-test
+      - run: pnpm --dir frontend build

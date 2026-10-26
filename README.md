@@ -57,6 +57,21 @@ sdc surrogate treeshade train savannah --tiles all      # one model over every t
 A tile's directory is `data/tiles/<urban centre id>/<tile id>/`, and `sdc tile show <city>`
 prints it, so nobody needs to know the id.
 
+## The dashboard
+
+`sdc serve` serves the API and the dashboard for whatever data is on disk. The dashboard is a React client
+built once into the server's static directory; the server never builds it and never regenerates data.
+
+```bash
+fnm use                           # Node from .node-version
+make frontend                     # install the client's packages and build it into the server
+sdc serve                         # http://127.0.0.1:8765/ with the API at /api/docs
+```
+
+Developing the client: `sdc serve --reload` in one terminal and `pnpm --dir frontend dev` in another; Vite
+proxies `/api` and `/pages` to the server. `make types` regenerates the client's API types from the server's
+schema, which is the one contract between them; CI fails when the committed types drift.
+
 The physics engine is optional and lives in its own uv environment, which is what
 keeps its GPL licence off this project:
 
