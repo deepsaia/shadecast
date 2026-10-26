@@ -114,6 +114,13 @@ class CityCatalog:
         centre = self.centre(text)
         return self._summaries(centre, self._index.describe_and_write(centre))
 
+    def densest_built(self, text: str) -> TilePaths:
+        """The record of the city's densest built tile; nothing built names the build command."""
+        built = [tile for tile in self.ranked_on_disk(text) if tile.stages.bundle]
+        if not built:
+            raise MissingStage("bundle", text, f"sdc build {text}")
+        return self.tile_paths(text, built[0].tile)
+
     def tiles_file(self, text: str) -> Path:
         """Where the centre's tiles are described on disk."""
         return self._index.path(self.centre(text))

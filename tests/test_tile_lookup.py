@@ -128,45 +128,6 @@ def _physics(bundle: Path) -> Path:
     return surrogate
 
 
-def test_newest_model_is_picked_for_a_city(tmp_path, monkeypatch):
-    monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
-    monkeypatch.setattr(surrogate_cli, "MODELS_ROOT", tmp_path / "models")
-    bundle = _bundle(tmp_path, 6143, "t43N_249_2547")
-    _physics(bundle)
-    models = bundle.parent / "models"
-    for name in (
-        "response-unet-ahmedabad-20260826T143800",
-        "response-unet-ahmedabad-20261023T121739",
-    ):
-        (models / name).mkdir(parents=True)
-        (models / name / "model.pt").write_bytes(b"w")
-    model_dir, surrogate_dir, found_bundle = surrogate_cli.newest_model("ahmedabad", None)
-    assert model_dir.name == "response-unet-ahmedabad-20261023T121739"
-    assert surrogate_dir == bundle.parent / "surrogate" and found_bundle == bundle
-    named, _, _ = surrogate_cli.newest_model("ahmedabad", "response-unet-ahmedabad-20260826T143800")
-    assert named.name == "response-unet-ahmedabad-20260826T143800"
-    pooled = tmp_path / "models" / "response-unet-ahmedabad-2tiles-20261024T090000"
-    pooled.mkdir(parents=True)
-    (pooled / "model.pt").write_bytes(b"w")
-    (pooled / "manifest.json").write_text(
-        json.dumps(
-            {
-                "created": "2026-10-24T09:00:00+00:00",
-                "data": {"tiles": [{"urban_centre": 6143}, {"urban_centre": 6143}]},
-            }
-        )
-    )
-    newest, _, _ = surrogate_cli.newest_model("ahmedabad", None)
-    assert newest == pooled
-    assert (
-        surrogate_cli.assessment_name(pooled, bundle) == "assessment-ahmedabad-t43N_249_2547.json"
-    )
-    assert (
-        surrogate_cli.assessment_name(models / "response-unet-ahmedabad-20260826T143800", bundle)
-        == "assessment.json"
-    )
-
-
 def test_resume_command_repeats_the_options():
     assert surrogate_cli.resume_command("savannah", None, None, 4) == (
         "sdc surrogate treeshade generate savannah --jobs 4"

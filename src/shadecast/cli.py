@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 from typing import Annotated
 
 import click
@@ -33,7 +32,6 @@ from .corpus_cli import app as corpus_app
 from .dash_cli import app as dash_app
 from .experiments_cli import app as experiments_app
 from .logging_setup import configure
-from .pipeline import evaluate
 from .service.baseline_request import BaselineRequest
 from .service.build_request import BuildRequest
 from .service.build_service import BuildService
@@ -42,6 +40,8 @@ from .service.engine_service import EngineService
 from .service.missing_stage import MissingStage
 from .service.model_catalog import MODELS_ROOT
 from .service.null_progress import NullProgress
+from .service.plan_request import PlanRequest
+from .service.plan_service import PlanService
 from .service.results_report import ResultsReport
 from .service.run_status import RunStatus
 from .service.unknown_city import UnknownCity
@@ -203,22 +203,31 @@ def build(
 
 @app.command()
 def plan(
-    bundle: Annotated[Path, typer.Argument(help="A built city bundle directory.")],
+    city: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
+    tile: Annotated[
+        str | None, typer.Option("--tile", help="A tile id; else the densest built tile.")
+    ] = None,
     kind: Annotated[str, typer.Option("--kind", help="Intervention type.")] = "tree",
     budget: Annotated[float, typer.Option("--budget", help="Budget in USD.")] = 10_000_000,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
-    """Plan an intervention over a bundle and score it against doing nothing."""
-    with console.status(f"[cyan]{bundle.name}[/]: baseline physics, then the plan"):
-        result = evaluate(bundle, kind=kind, budget_usd=budget)
-
+    """Plan an intervention over a tile and score it against doing nothing."""
+    service = PlanService(CityCatalog.open(tile_paths.TILES_ROOT))
+    request = PlanRequest(target=city, tile=tile, kind=kind, budget_usd=budget)
+    try:
+        with console.status(f"[cyan]{city}[/]: baseline physics, then the plan"):
+            outcome = service.plan(request, NullProgress())
+    except (UnknownCity, UnknownTile, MissingStage) as exc:
+        error_console.print(str(exc), style="red", markup=False)
+        raise typer.Exit(code=1) from exc
     if as_json:
-        console.print_json(json.dumps(result))
+        console.print_json(outcome.model_dump_json())
         return
-    console.print(result_table(result))
+    console.print(result_table(outcome.result))
+    seconds = outcome.result.get("engine_seconds", {})
     console.print(
-        f"[dim]engine {result['engine_seconds']['baseline']:.0f}s baseline, "
-        f"{result['engine_seconds']['plan']:.0f}s plan, tier {result['tier']}.[/]"
+        f"[dim]engine {float(seconds.get('baseline', 0.0)):.0f}s baseline, "
+        f"{float(seconds.get('plan', 0.0)):.0f}s plan, tier {outcome.result.get('tier')}.[/]"
     )
 
 

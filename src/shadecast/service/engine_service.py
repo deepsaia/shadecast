@@ -8,7 +8,6 @@ from .baseline_outcome import BaselineOutcome
 from .baseline_request import BaselineRequest
 from .city_catalog import CityCatalog
 from .field_store import FieldStore
-from .missing_stage import MissingStage
 from .progress_listener import ProgressListener
 
 
@@ -33,9 +32,4 @@ class EngineService:
     def _paths(self, request: BaselineRequest) -> TilePaths:
         if request.tile is not None:
             return self._catalog.tile_paths(request.target, request.tile)
-        built = [
-            tile for tile in self._catalog.ranked_on_disk(request.target) if tile.stages.bundle
-        ]
-        if not built:
-            raise MissingStage("bundle", request.target, f"sdc build {request.target}")
-        return self._catalog.tile_paths(request.target, built[0].tile)
+        return self._catalog.densest_built(request.target)

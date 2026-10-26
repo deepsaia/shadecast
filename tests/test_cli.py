@@ -14,6 +14,7 @@ from shadecast.cli import app
 from shadecast.console import build_table, corpus_table, result_table
 from shadecast.corpus import tile_paths
 from shadecast.corpus.urban_centres import UrbanCentres
+from shadecast.service import plan_service
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
@@ -198,3 +199,36 @@ def test_run_produces_the_baseline_physics_for_a_tile(tmp_path, monkeypatch):
     assert (tile / "surrogate" / "baseline" / "tmrt_daylight.npy").exists()
     again = runner.invoke(app, ["run", "ahmedabad"])
     assert again.exit_code == 0 and "kept" in again.stdout
+
+
+def test_plan_reports_a_scored_plan_for_a_tile(tmp_path, monkeypatch):
+    def fake_evaluate(bundle, kind="tree", budget_usd=10_000_000.0, work_root=None):
+        return {
+            "city": "bundle",
+            "tier": "A",
+            "design_day": synthetic_tile.DESIGN_DAY,
+            "intervention": kind,
+            "pixels": 10,
+            "baseline": {"exposure": 50.0, "people_at_risk": 512.0, "cost_usd": 0.0},
+            "plan": {"exposure": 49.0, "people_at_risk": 500.0, "cost_usd": budget_usd},
+            "benefit": {
+                "delta_exposure_C": 1.0,
+                "delta_people_at_risk": 12.0,
+                "excess_reduced_per_1k_usd": 2.0,
+                "cost_usd": budget_usd,
+            },
+            "tmrt_drop_where_planted_C": 2.0,
+            "tmrt_drop_all_outdoor_C": 0.5,
+            "spillover_C": 0.1,
+            "engine_seconds": {"baseline": 1.0, "plan": 2.0},
+        }
+
+    monkeypatch.setattr(plan_service, "evaluate", fake_evaluate)
+    synthetic_tile.write_bundle(tmp_path)
+    result = runner.invoke(app, ["plan", "ahmedabad", "--budget", "5000000", "--json"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["exposure_drop"] == 1.0 and payload["cost_usd"] == 5_000_000.0
+    table = runner.invoke(app, ["plan", "ahmedabad"])
+    assert table.exit_code == 0, table.output
+    assert "outdoor Tmrt" in table.stdout
