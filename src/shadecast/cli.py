@@ -32,6 +32,7 @@ from .corpus_cli import app as corpus_app
 from .dash_cli import app as dash_app
 from .experiments_cli import app as experiments_app
 from .logging_setup import configure
+from .serve_cli import serve
 from .service.baseline_request import BaselineRequest
 from .service.build_request import BuildRequest
 from .service.build_service import BuildService
@@ -85,6 +86,7 @@ app.add_typer(tile_app, name="tile")
 app.add_typer(surrogate_app, name="surrogate")
 app.add_typer(dash_app, name="dash")
 app.add_typer(experiments_app, name="experiments")
+app.command("serve")(serve)
 
 
 @app.callback()
