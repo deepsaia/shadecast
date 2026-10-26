@@ -1,23 +1,26 @@
 """Command line for the pre-registered experiments.
 
-Each command runs a design written down in PREREGISTRATION.md before any result was
-seen. The verdict rules live in the experiment modules rather than here, so what counts
-as support cannot be adjusted from the command line after the fact.
+Each command names an experiment and the cities to run it over; the experiment service pairs
+every city's densest tile with a baseline to its generated physics and applies the fixed verdict
+rule. These commands only parse flags and render the outcome.
 """
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from .console import console
-from .experiments.channel import run_channel
-from .experiments.factorial import run_factorial
-from .experiments.targeting import run_targeting
+from .console import console, error_console
+from .corpus import tile_paths
+from .service.city_catalog import CityCatalog
+from .service.experiment_request import ExperimentRequest
+from .service.experiment_service import ExperimentService
+from .service.missing_stage import MissingStage
+from .service.null_progress import NullProgress
+from .service.unknown_city import UnknownCity
 
 logger = logging.getLogger(__name__)
 
@@ -27,78 +30,67 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-
-def _surrogate_dir(bundle: Path) -> tuple[str, Path]:
-    """The label and the surrogate directory of a tile, from the bundle beside it."""
-    provenance = json.loads((bundle / "provenance.json").read_text())
-    tile = provenance.get("tile", {}).get("id", bundle.parent.name)
-    key = provenance.get("city", {}).get("key", bundle.parent.name)
-    return f"{key}-{tile}", bundle.parent / "surrogate"
+CITIES_HELP = "City keys, ids, slugs or names; each contributes its densest tile with a baseline."
+DEFAULT_BUDGET = 2_288_000.0
 
 
-def _corpus(bundles: list[Path]) -> list[tuple[str, Path, Path]]:
-    """Pair each bundle with the surrogate directory holding its baseline field."""
-    corpus = []
-    for bundle in bundles:
-        name, surrogate_dir = _surrogate_dir(bundle)
-        if not (surrogate_dir / "baseline" / "tmrt_daylight.npy").exists():
-            raise typer.BadParameter(
-                f"{name} has no baseline field at {surrogate_dir}. Run the baseline first."
-            )
-        corpus.append((name, bundle, surrogate_dir))
-    return corpus
+def _run(request: ExperimentRequest, as_json: bool) -> None:
+    service = ExperimentService(
+        CityCatalog.open(tile_paths.TILES_ROOT), tile_paths.TILES_ROOT.parent
+    )
+    try:
+        with console.status(f"[cyan]{request.name}[/]: every cell is a real engine run"):
+            outcome = service.run(request, NullProgress())
+    except (ValueError, UnknownCity, MissingStage) as exc:
+        error_console.print(str(exc), style="red", markup=False)
+        raise typer.Exit(code=1) from exc
+    if as_json:
+        console.print_json(outcome.model_dump_json())
+        return
+    if outcome.verdict:
+        console.print_json(data=outcome.verdict)
+    console.print(f"[green]{outcome.rows} rows written to {outcome.out}[/]")
 
 
 @app.command("factorial")
 def factorial(
-    bundles: Annotated[list[Path], typer.Argument(help="Built city bundle directories.")],
-    out: Annotated[Path, typer.Option("--out", help="Where to write results.")] = Path(
-        "data/factorial.json"
-    ),
+    cities: Annotated[list[str], typer.Argument(help=CITIES_HELP)],
+    out: Annotated[Path | None, typer.Option("--out", help="Where to write results.")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a line.")] = False,
 ) -> None:
     """Which intervention type buys the most cooling per dollar (H3, H4)?
 
     Every cell is a real engine run. The albedo arms are excluded while their sign is
     unresolved, so this covers the geometry and surface temperature channels only.
     """
-    corpus = _corpus(bundles)
-    rows = run_factorial(corpus, out)
-    console.print(f"[green]{len(rows)} cells written to {out}[/]")
+    _run(ExperimentRequest(name="factorial", cities=cities, out=out), as_json)
 
 
 @app.command("targeting")
 def targeting(
-    bundles: Annotated[list[Path], typer.Argument(help="Built city bundle directories.")],
-    budget: Annotated[float, typer.Option("--budget", help="Budget in USD.")] = 2_288_000.0,
-    out: Annotated[Path, typer.Option("--out", help="Where to write results.")] = Path(
-        "data/targeting.json"
-    ),
+    cities: Annotated[list[str], typer.Argument(help=CITIES_HELP)],
+    budget: Annotated[float, typer.Option("--budget", help="Budget in USD.")] = DEFAULT_BUDGET,
+    out: Annotated[Path | None, typer.Option("--out", help="Where to write results.")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a line.")] = False,
 ) -> None:
     """Does targeting corridors select a different plan than targeting hot ground (H8)?
 
     Two plans per city at one budget, both simulated, each scored on both objectives.
     A high overlap falsifies H8 and is reported as a null rather than quietly dropped.
     """
-    corpus = _corpus(bundles)
-    result = run_targeting(corpus, out, budget=budget)
-    console.print_json(json.dumps(result["verdict"]))
-    console.print(f"[green]written to {out}[/]")
+    _run(ExperimentRequest(name="targeting", cities=cities, out=out, budget=budget), as_json)
 
 
 @app.command("channel")
 def channel(
-    bundles: Annotated[list[Path], typer.Argument(help="Built city bundle directories.")],
-    budget: Annotated[float, typer.Option("--budget", help="Budget in USD.")] = 2_288_000.0,
-    out: Annotated[Path, typer.Option("--out", help="Where to write results.")] = Path(
-        "data/channel.json"
-    ),
+    cities: Annotated[list[str], typer.Argument(help=CITIES_HELP)],
+    budget: Annotated[float, typer.Option("--budget", help="Budget in USD.")] = DEFAULT_BUDGET,
+    out: Annotated[Path | None, typer.Option("--out", help="Where to write results.")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a line.")] = False,
 ) -> None:
     """Does the surface temperature channel cool, and behave like its parameter (H5, H6)?
 
     Each city pays for one extra engine run holding land cover unchanged. Without that
     matched control the result would confound de-paving with switching land cover on.
     """
-    corpus = _corpus(bundles)
-    result = run_channel(corpus, out, budget=budget)
-    console.print_json(json.dumps(result["verdict"]))
-    console.print(f"[green]written to {out}[/]")
+    _run(ExperimentRequest(name="channel", cities=cities, out=out, budget=budget), as_json)

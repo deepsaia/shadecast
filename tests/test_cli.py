@@ -14,7 +14,7 @@ from shadecast.cli import app
 from shadecast.console import build_table, corpus_table, result_table
 from shadecast.corpus import tile_paths
 from shadecast.corpus.urban_centres import UrbanCentres
-from shadecast.service import plan_service
+from shadecast.service import experiment_service, plan_service
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
@@ -232,3 +232,20 @@ def test_plan_reports_a_scored_plan_for_a_tile(tmp_path, monkeypatch):
     table = runner.invoke(app, ["plan", "ahmedabad"])
     assert table.exit_code == 0, table.output
     assert "outdoor Tmrt" in table.stdout
+
+
+def test_experiments_run_over_a_city_by_name(tmp_path, monkeypatch):
+    def fake_factorial(cities, out_path):
+        Path(out_path).write_text("[]")
+        return [{"city": cities[0][0], "kind": "tree"}]
+
+    monkeypatch.setattr(experiment_service, "run_factorial", fake_factorial)
+    tile = synthetic_tile.write_bundle(tmp_path)
+    synthetic_tile.write_baseline(tile)
+    result = runner.invoke(
+        app, ["experiments", "factorial", "ahmedabad", "--out", str(tmp_path / "f.json"), "--json"]
+    )
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["rows"] == 1
+    missing = runner.invoke(app, ["experiments", "targeting", "london"])
+    assert missing.exit_code == 1 and "sdc build london" in missing.output
