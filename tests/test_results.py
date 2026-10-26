@@ -136,4 +136,4 @@ def test_the_results_page_carries_no_typed_numbers():
     for stale in ("39 plans", "3.5x", "Ahmedabad, Lagos, Rio", "2026-08-26"):
         assert stale not in page
     assert '<script src="result.js"></script>' in page
-    assert "result.js" in dash_cli.PAGES
+    assert "result.js" in dash_cli.RESULT_FILES

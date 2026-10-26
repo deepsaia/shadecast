@@ -23,11 +23,9 @@ from .dash.server import serve
 
 logger = logging.getLogger(__name__)
 
-# The same directory that gets published. Serving the walkthrough locally from one
-# bundle and publishing another is how the two quietly drift apart, which is exactly
-# what happened once: `shadecast dash` kept showing a build from hours earlier while
-# the public page had moved on.
-DEFAULT_OUT = Path("docs")
+# Outside the tracked tree. The bundle is reproducible from the data and is never
+# committed; GitHub Pages publishes only the hand-written pages.
+DEFAULT_OUT = Path("out/dash")
 
 app = typer.Typer(name="dash", help="Interactive local walkthrough of what we do to a city.")
 
@@ -53,17 +51,22 @@ def discover() -> list[tuple[str, Path, Path]]:
 
 
 ASSETS = ("app.html", "app.js")
-# Self-contained pages published beside the walkthrough, copied as they are.
-PAGES = ("model_pipeline.html", "result.html", "result.js", "proposal.html")
+# The results page is part of the walkthrough and ships beside it.
+RESULT_FILES = ("result.html", "result.js")
+# The hand-written pages GitHub Pages publishes. The walkthrough links them, so the bundle
+# carries a copy and the links work from a local build too.
+PAGES = ("model_pipeline.html", "proposal.html")
+PAGES_DIR = Path(__file__).parent / "pages"
 
 
 def publish_pages(destination: Path) -> list[Path]:
-    """Copy every standalone page into the bundle. Returns the paths written."""
-    here = Path(__file__).parent / "dash"
+    """Copy the result files and the pages into the bundle. Returns the paths written."""
+    dash = Path(__file__).parent / "dash"
+    sources = [dash / name for name in RESULT_FILES] + [PAGES_DIR / name for name in PAGES]
     written = []
-    for name in PAGES:
-        target = destination / name
-        target.write_text((here / name).read_text())
+    for source in sources:
+        target = destination / source.name
+        target.write_text(source.read_text())
         written.append(target)
     return written
 
@@ -133,9 +136,8 @@ def build(
 ) -> None:
     """Build the static bundle without serving it.
 
-    Point --out at docs/ to publish the walkthrough on GitHub Pages, which serves the
-    bundle exactly as it is: the page is static files and does all its work in the
-    browser, so nothing here needs a Python process at view time.
+    The bundle is plain files that do all their work in the browser, so the directory
+    can be zipped, archived beside a paper or served by any web server.
     """
     build_bundle(out)
     console.print(f"[green]built[/] into {out}")

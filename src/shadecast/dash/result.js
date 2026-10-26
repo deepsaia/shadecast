@@ -21,7 +21,7 @@ async function main(){
     if (!response.ok) throw new Error(String(response.status));
     data = await response.json();
   } catch (error) {
-    $("lede").textContent = "No results.json beside this page yet. Run sdc dash build --out docs after a tile has physics.";
+    $("lede").textContent = "No results.json beside this page yet. Run sdc dash build after a tile has physics.";
     $("lede").className = "lede empty";
     return;
   }

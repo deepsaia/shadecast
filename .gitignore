@@ -18,12 +18,6 @@ __pycache__/
 PHASE*.md
 data/dash/
 
-# Figure intermediates. The published page embeds its images, and the renderer
-# plus the generated physics reproduce them.
-docs/_*.json
-docs/_*.svg
-docs/figures/
-
 # Local download cache for open data fetches.
 /cache/
 
