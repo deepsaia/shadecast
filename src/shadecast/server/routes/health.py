@@ -23,7 +23,6 @@ def health(
     return Health(
         version=_version(),
         ready=current.data_root.is_dir(),
-        data_root=str(current.data_root),
         cities=len(found.catalog.keys()),
     )
 

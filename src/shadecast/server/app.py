@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from . import errors, pages, spa
 from .request_id import RequestIdMiddleware
-from .routes import cities, health, tiles
+from .routes import channels, cities, fields, health, results, runs, tiles
 from .services import Services
 from .settings import ServerSettings
 
@@ -36,9 +37,25 @@ def build_app(settings: ServerSettings, services: Services) -> FastAPI:
     app.state.services = services
     app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.add_middleware(RequestIdMiddleware)
+    # A browser lured to a rebound name must not reach a server bound to this machine.
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_hosts(settings))
     errors.install(app)
-    for router in (health.router, cities.router, tiles.router):
+    routers = (
+        health.router,
+        cities.router,
+        tiles.router,
+        fields.router,
+        channels.router,
+        results.router,
+        runs.router,
+    )
+    for router in routers:
         app.include_router(router, prefix=API)
     pages.mount(app)
     spa.mount(app, settings.static_dir)
     return app
+
+
+def trusted_hosts(settings: ServerSettings) -> list[str]:
+    """The names a request may address the server by: the bound host and the local names."""
+    return sorted({settings.host, "localhost", "127.0.0.1", "testserver"})
