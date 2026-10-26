@@ -10,11 +10,40 @@ export type CitySummary = components["schemas"]["CitySummary"];
 export type StageCounts = components["schemas"]["StageCounts"];
 export type TileSummary = components["schemas"]["TileSummary"];
 export type TileStatistics = components["schemas"]["TileStatistics"];
-export type Results = components["schemas"]["Results"];
 export type Health = components["schemas"]["Health"];
+export type Findings = components["schemas"]["Findings"];
+export type ModelSummary = components["schemas"]["ModelSummary"];
+export type ChannelSummary = components["schemas"]["ChannelSummary"];
+export type Plan = components["schemas"]["Plan"];
+
+export type RawResults = components["schemas"]["Results"];
+type RawCityResult = RawResults["cities"][number];
+export type CityResult = Omit<RawCityResult, "plans"> & { plans: Plan[] };
+export type Results = Omit<RawResults, "cities"> & { cities: CityResult[] };
+export type RankingRow = Results["ranking"]["rows"][number];
+
+export function results(raw: RawResults): Results {
+  return { ...raw, cities: raw.cities.map((city) => ({ ...city, plans: city.plans ?? [] })) };
+}
+
+/** A cited source as the registry lists it, in its group. */
+export interface Reference {
+  key: string;
+  group: string;
+  title: string;
+  authors_or_publisher: string;
+  year: number | null;
+  doi: string | null;
+  used_for: string;
+}
+
+export interface ReferenceGroup {
+  key: string;
+  title: string;
+  sources: Reference[];
+}
 
 type RawTileReport = components["schemas"]["TileReport"];
-export type Plan = NonNullable<RawTileReport["plans"]>[number];
 export type MetHour = NonNullable<RawTileReport["met"]>[number];
 export type HourlyStatistic = NonNullable<RawTileReport["hourly"]>[number];
 export type TileReport = Omit<RawTileReport, "plans" | "met" | "hourly"> & {

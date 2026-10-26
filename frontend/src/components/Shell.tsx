@@ -5,6 +5,10 @@ import { cn } from "@/lib/utils";
 
 const PAGES = [
   { to: "/", label: "Cities", end: true },
+  { to: "/results", label: "Results", end: false },
+  { to: "/models", label: "Models", end: false },
+  { to: "/findings", label: "Findings", end: false },
+  { to: "/references", label: "References", end: false },
 ];
 
 const DOCUMENTS = [
