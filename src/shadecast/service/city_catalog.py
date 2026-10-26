@@ -69,6 +69,10 @@ class CityCatalog:
     def _records(self) -> dict[str, City]:
         return self._selection.cities(self._load_centres)
 
+    def keys(self) -> list[str]:
+        """The selection keys, without loading anything."""
+        return self._selection.keys()
+
     def records(self) -> dict[str, City]:
         """The selected cities' records, keyed by selection key; loads the database when needed."""
         return self._records
