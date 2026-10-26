@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 from shadecast import cli, surrogate_cli
 from shadecast.cli import app
 from shadecast.corpus import tile_paths
+from shadecast.service import generation_service
 from shadecast.sim import runner
 from shadecast.surrogate.training_state import CHECKPOINT_NAME
 
@@ -65,10 +66,10 @@ def test_generate_stops_with_the_resume_line(tmp_path, monkeypatch):
     )
 
     def interrupted(bundle_dir, destination, settings, progress):
-        progress.start("x", total=17, done=3)
+        progress.started("x", total=17, done=3)
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(surrogate_cli, "generate", interrupted)
+    monkeypatch.setattr(generation_service, "generate", interrupted)
     result = cli_runner.invoke(
         app, ["surrogate", "treeshade", "generate", "ahmedabad", "--jobs", "4"]
     )
