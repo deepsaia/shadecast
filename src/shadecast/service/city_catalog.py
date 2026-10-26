@@ -16,6 +16,7 @@ from ..corpus.tiling import select_densest
 from ..corpus.urban_centre import UrbanCentre
 from ..corpus.urban_centres import UrbanCentres
 from .city_summary import CitySummary
+from .missing_stage import MissingStage
 from .stage_counting import count_stages
 from .stage_counts import StageCounts
 from .tile_index import TileIndex
@@ -105,7 +106,20 @@ class CityCatalog:
 
     def tile(self, text: str, tile_id: str) -> TileLocation:
         """Where everything for one tile lives and which stages have run."""
-        return self._location(self._paths(self.urban_centre_id(text), tile_id))
+        return self._location(self.tile_paths(text, tile_id))
+
+    def tile_paths(self, text: str, tile_id: str) -> TilePaths:
+        """The on-disk record of one tile, for services that read its files."""
+        return self._paths(self.urban_centre_id(text), tile_id)
+
+    def furthest_tile(self, text: str) -> TileSummary:
+        """The densest tile that came furthest: with physics, else with a baseline, else built."""
+        tiles = self.tiles(text)
+        for reached in ("physics", "baseline", "bundle"):
+            candidates = [tile for tile in tiles if tile.stages.model_dump().get(reached)]
+            if candidates:
+                return candidates[0]
+        raise MissingStage("bundle", text, f"sdc build {text}")
 
     def tiles_on_disk(self, text: str) -> list[TileLocation]:
         """Every tile directory present for the centre, in id order, listed in the file or not."""

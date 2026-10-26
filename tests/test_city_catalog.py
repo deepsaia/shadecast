@@ -7,6 +7,7 @@ from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
 
 from shadecast.corpus.urban_centres import UrbanCentres
 from shadecast.service.city_catalog import CityCatalog
+from shadecast.service.missing_stage import MissingStage
 from shadecast.service.stage_counts import StageCounts
 from shadecast.service.tile_index import TileIndex
 from shadecast.service.unknown_city import UnknownCity
@@ -158,3 +159,22 @@ def test_refresh_describes_the_tiles_again(root):
     catalog.tiles("ahmedabad")
     catalog.refresh("ahmedabad")
     assert len(calls) == 2
+
+
+def test_tile_paths_are_the_record_a_report_reads(root, catalog):
+    paths = catalog.tile_paths("ahmedabad", "t43N_249_2547")
+    assert paths.root == root / "6143" / "t43N_249_2547"
+
+
+def test_the_furthest_tile_prefers_physics_over_baseline_over_bundle(root, catalog):
+    _prove(root, DENSEST, "bundle")
+    _prove(root, "t43N_250_2546", "bundle", "baseline")
+    _prove(root, SPARSEST, "bundle", "baseline", "physics")
+    assert catalog.furthest_tile("ahmedabad").id == SPARSEST
+    (root / "6143" / SPARSEST / "surrogate" / "manifest.json").unlink()
+    assert catalog.furthest_tile("ahmedabad").id == "t43N_250_2546"
+
+
+def test_a_city_with_nothing_built_has_no_furthest_tile(catalog):
+    with pytest.raises(MissingStage, match="sdc build ahmedabad"):
+        catalog.furthest_tile("ahmedabad")
