@@ -28,6 +28,7 @@ from .console import (
     error_console,
     ranking_table,
     result_table,
+    runs_table,
 )
 from .corpus import tile_paths
 from .corpus.tile_paths import TilePaths
@@ -37,7 +38,9 @@ from .experiments_cli import app as experiments_app
 from .logging_setup import configure
 from .pipeline import evaluate
 from .service.city_catalog import CityCatalog
+from .service.model_catalog import MODELS_ROOT
 from .service.results_report import ResultsReport
+from .service.run_status import RunStatus
 from .sim.runner import run as run_engine
 from .surrogate_cli import app as surrogate_app
 from .tile_build import build_tile
@@ -136,6 +139,21 @@ def results(
         f"[dim]{totals.cities} tiles, {totals.plans} plans, budgets {totals.budget_min_m} to "
         f"{totals.budget_max_m} million.[/]"
     )
+
+
+@app.command("runs")
+def runs(
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
+) -> None:
+    """What is generating or training right now, and whether its process is still alive."""
+    found = RunStatus(CityCatalog.open(tile_paths.TILES_ROOT), MODELS_ROOT).runs()
+    if as_json:
+        console.print_json(json.dumps([run.model_dump() for run in found]))
+        return
+    if not found:
+        console.print("[dim]nothing is running: no generation lock and no unfinished training.[/]")
+        return
+    console.print(runs_table(found))
 
 
 @app.command()

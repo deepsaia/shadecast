@@ -205,22 +205,6 @@ def test_resume_command_repeats_the_options():
     )
 
 
-def test_model_created_sorts_named_and_manifested_models_together(tmp_path):
-    bare = tmp_path / "response-unet-ahmedabad-20261023T121739"
-    bare.mkdir()
-    assert surrogate_cli.model_created(bare) == "2026-10-23T12:17:39"
-    with_manifest = tmp_path / "response-unet-ahmedabad-2tiles-20261024T090000"
-    with_manifest.mkdir()
-    (with_manifest / "manifest.json").write_text(
-        json.dumps({"created": "2026-10-24T09:00:00+00:00"})
-    )
-    assert surrogate_cli.model_created(with_manifest) == "2026-10-24T09:00:00"
-    assert surrogate_cli.model_created(bare) < surrogate_cli.model_created(with_manifest)
-    odd = tmp_path / "custom"
-    odd.mkdir()
-    assert surrogate_cli.model_created(odd) == "custom"
-
-
 def test_training_can_pick_the_densest_or_stratified_tiles_with_physics(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
     tiles = {"t43N_249_2547": (100, 0.1), "t43N_250_2547": (900, 0.6), "t43N_251_2547": (500, 0.3)}

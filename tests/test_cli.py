@@ -1,6 +1,7 @@
 """Command line surface. No network, no engine and no database, so these stay fast."""
 
 import json
+import os
 
 import pytest
 from support import synthetic_tile
@@ -62,6 +63,7 @@ def _no_tiles(centre: object) -> list[dict]:
 
 @pytest.fixture(autouse=True)
 def _offline_corpus(monkeypatch, tmp_path):
+    monkeypatch.setenv("COLUMNS", "200")
     monkeypatch.setattr(cities, "corpus", _fixture_corpus)
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
 
@@ -155,3 +157,21 @@ def test_results_with_nothing_generated_say_so():
     result = runner.invoke(app, ["results"])
     assert result.exit_code == 0, result.output
     assert "no tile with physics" in result.stdout
+
+
+def test_runs_list_what_is_generating_now(tmp_path):
+    surrogate = tmp_path / "6143" / "t43N_249_2547" / "surrogate"
+    surrogate.mkdir(parents=True)
+    (surrogate / ".generating.lock").write_text(str(os.getpid()))
+    result = runner.invoke(app, ["runs", "--json"])
+    assert result.exit_code == 0, result.output
+    [run] = json.loads(result.stdout)
+    assert run["kind"] == "generation" and run["alive"] is True
+    table = runner.invoke(app, ["runs"])
+    assert "generation" in table.stdout and "t43N_249_2547" in table.stdout
+
+
+def test_runs_with_nothing_running_say_so():
+    result = runner.invoke(app, ["runs"])
+    assert result.exit_code == 0, result.output
+    assert "nothing is running" in result.stdout

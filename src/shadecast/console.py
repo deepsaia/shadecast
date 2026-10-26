@@ -14,6 +14,7 @@ from .corpus.urban_centre import UrbanCentre
 from .service.city_summary import CitySummary
 from .service.plan import Plan
 from .service.ranking_row import RankingRow
+from .service.run_summary import RunSummary
 from .service.stage_counts import StageCounts
 from .service.tile_summary import TileSummary
 
@@ -105,6 +106,35 @@ def ranking_table(rows: list[RankingRow]) -> Table:
 
 def _percent(value: float | None) -> str:
     return f"{value:.0%}" if value is not None else ""
+
+
+def runs_table(runs: list[RunSummary]) -> Table:
+    """Render the runs in progress, one row each."""
+    table = Table(title="runs in progress", title_style="bold", header_style="dim")
+    table.add_column("kind", no_wrap=True)
+    table.add_column("city", style="cyan", no_wrap=True)
+    table.add_column("tile", no_wrap=True)
+    table.add_column("model")
+    table.add_column("started", no_wrap=True)
+    table.add_column("process", no_wrap=True)
+    table.add_column("progress", justify="right", no_wrap=True)
+    for run in runs:
+        table.add_row(
+            run.kind,
+            run.city,
+            run.tile or "",
+            run.model or "",
+            run.started,
+            _liveness(run.alive),
+            f"{run.designs_done} of {run.designs_planned}" if run.designs_done is not None else "",
+        )
+    return table
+
+
+def _liveness(alive: bool | None) -> str:
+    if alive is None:
+        return "[dim]unknown[/]"
+    return "[green]alive[/]" if alive else "[red]gone[/]"
 
 
 def stage_line(counts: StageCounts) -> str:
