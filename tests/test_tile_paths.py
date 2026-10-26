@@ -50,3 +50,10 @@ def test_tiles_of_an_urban_centre_are_the_directories_that_exist(tmp_path):
     found = TilePaths.existing(tmp_path, 6143)
     assert [paths.tile.id for paths in found] == ["t43N_249_2546", "t43N_249_2548"]
     assert TilePaths.existing(tmp_path, 9999) == []
+
+
+def test_a_record_is_rebuilt_from_a_tile_directory(tmp_path):
+    root = tmp_path / "6143" / "t43N_249_2546"
+    paths = TilePaths.of_root(root)
+    assert paths == TilePaths(tmp_path, 6143, TILE)
+    assert paths.root == root

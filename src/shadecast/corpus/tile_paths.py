@@ -86,6 +86,12 @@ class TilePaths:
         }
 
     @classmethod
+    def of_root(cls, root: Path) -> TilePaths:
+        """The record for a tile directory ``<tiles root>/<urban centre id>/<tile id>``."""
+        root = Path(root)
+        return cls(root.parent.parent, int(root.parent.name), Tile.from_id(root.name))
+
+    @classmethod
     def existing(cls, tiles_root: Path, urban_centre: int) -> list[TilePaths]:
         """Every tile directory present for an urban centre, in id order."""
         parent = Path(tiles_root) / str(urban_centre)
