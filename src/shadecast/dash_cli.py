@@ -14,12 +14,12 @@ from typing import Annotated
 
 import typer
 
-from . import cities
 from .console import console
 from .corpus import tile_paths
-from .corpus.tile_paths import TilePaths
 from .dash.builder import build_index
 from .dash.server import serve
+from .service.city_catalog import CityCatalog
+from .service.city_summary import CitySummary
 
 logger = logging.getLogger(__name__)
 
@@ -30,23 +30,24 @@ DEFAULT_OUT = Path("out/dash")
 app = typer.Typer(name="dash", help="Interactive local walkthrough of what we do to a city.")
 
 
-def tile_entries(key: str, urban_centre: int) -> list[tuple[str, Path, Path]]:
+def tile_entries(city: CitySummary, catalog: CityCatalog) -> list[tuple[str, Path, Path]]:
     """Every tile of a city with a bundle and a baseline field, named by key and tile."""
     ready = [
-        paths
-        for paths in TilePaths.existing(tile_paths.TILES_ROOT, urban_centre)
-        if paths.stages().bundle and paths.stages().baseline
+        tile
+        for tile in catalog.tiles_on_disk(city.key)
+        if tile.stages.bundle and tile.stages.baseline
     ]
     if len(ready) == 1:
-        return [(key, ready[0].bundle, ready[0].surrogate)]
-    return [(f"{key}-{paths.tile.id}", paths.bundle, paths.surrogate) for paths in ready]
+        return [(city.key, Path(ready[0].bundle), Path(ready[0].surrogate))]
+    return [(f"{city.key}-{tile.tile}", Path(tile.bundle), Path(tile.surrogate)) for tile in ready]
 
 
 def discover() -> list[tuple[str, Path, Path]]:
-    """Every tile with both a bundle and generated physics, in selection order."""
+    """Every tile with both a bundle and a baseline field, in selection order."""
+    catalog = CityCatalog.open(tile_paths.TILES_ROOT)
     found: list[tuple[str, Path, Path]] = []
-    for key, city in cities.corpus().items():
-        found.extend(tile_entries(key, city.ucdb_id))
+    for city in catalog.cities():
+        found.extend(tile_entries(city, catalog))
     return found
 
 

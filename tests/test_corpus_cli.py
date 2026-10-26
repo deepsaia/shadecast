@@ -197,6 +197,7 @@ def test_show_reports_how_many_tiles_are_built(tmp_path):
     (tile / "provenance.json").write_text("{}")
     centre = json.loads(runner.invoke(app, ["corpus", "show", "ahmedabad", "--json"]).stdout)
     assert centre["status"] == {
+        "tiles": 365,
         "bundle": 1,
         "baseline": 0,
         "physics": 0,

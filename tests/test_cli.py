@@ -1,5 +1,7 @@
 """Command line surface. No network, no engine and no database, so these stay fast."""
 
+import json
+
 import pytest
 from typer.testing import CliRunner
 
@@ -7,6 +9,10 @@ from shadecast import cities
 from shadecast.cities import City
 from shadecast.cli import app
 from shadecast.console import build_table, corpus_table, result_table
+from shadecast.corpus import tile_paths
+from shadecast.corpus.urban_centres import UrbanCentres
+from shadecast.service.city_catalog import CityCatalog
+from shadecast.service.tile_index import TileIndex
 
 runner = CliRunner()
 
@@ -45,29 +51,52 @@ def _fixture_corpus(entries=None, centres=None) -> dict[str, City]:
     return dict(FIXTURE)
 
 
+def _no_database() -> UrbanCentres:
+    raise AssertionError("the database is not needed to list the selection")
+
+
+def _no_tiles(centre: object) -> list[dict]:
+    raise AssertionError("tiles are not described to list the selection")
+
+
 @pytest.fixture(autouse=True)
-def _offline_corpus(monkeypatch):
+def _offline_corpus(monkeypatch, tmp_path):
     monkeypatch.setattr(cities, "corpus", _fixture_corpus)
+    monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
 
 
 def test_help_lists_every_command():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for command in ("list", "build", "plan", "run"):
+    for command in ("cities", "build", "plan", "run"):
         assert command in result.stdout
 
 
-def test_list_renders_the_corpus():
-    result = runner.invoke(app, ["list"])
-    assert result.exit_code == 0
+def test_cities_renders_the_selection_and_its_stratification():
+    result = runner.invoke(app, ["cities"])
+    assert result.exit_code == 0, result.output
     assert "ahmedabad" in result.stdout
     assert "Global South" in result.stdout
 
 
-def test_list_json_is_parseable():
-    result = runner.invoke(app, ["list", "--json"])
-    assert result.exit_code == 0
-    assert '"cities"' in result.stdout
+def test_cities_json_carries_the_summary_and_what_each_city_has(tmp_path):
+    bundle = tmp_path / "6143" / "t43N_249_2547" / "bundle"
+    bundle.mkdir(parents=True)
+    (bundle / "provenance.json").write_text("{}")
+    result = runner.invoke(app, ["cities", "--json"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert "summary" in payload
+    ahmedabad = payload["cities"][0]
+    assert ahmedabad["key"] == "ahmedabad"
+    assert ahmedabad["stages"] == {
+        "tiles": 365,
+        "bundle": 1,
+        "baseline": 0,
+        "physics": 0,
+        "model": 0,
+        "results": 0,
+    }
 
 
 def test_build_without_a_city_is_rejected():
@@ -80,8 +109,9 @@ def test_build_rejects_an_unknown_city():
     assert result.exit_code != 0
 
 
-def test_corpus_table_has_a_row_per_city():
-    table = corpus_table(list(FIXTURE.values()))
+def test_corpus_table_has_a_row_per_city(tmp_path):
+    catalog = CityCatalog(dict(FIXTURE), _no_database, TileIndex(tmp_path, _no_tiles))
+    table = corpus_table(catalog.cities())
     assert table.row_count == len(FIXTURE)
 
 

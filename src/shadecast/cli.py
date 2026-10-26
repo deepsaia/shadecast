@@ -28,6 +28,7 @@ from .dash_cli import app as dash_app
 from .experiments_cli import app as experiments_app
 from .logging_setup import configure
 from .pipeline import evaluate
+from .service.city_catalog import CityCatalog
 from .sim.runner import run as run_engine
 from .surrogate_cli import app as surrogate_app
 from .tile_build import build_tile
@@ -78,26 +79,23 @@ def main(
     configure(verbose=verbose)
 
 
-@app.command("list")
+@app.command("cities")
 def list_cities(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
-    """Show the city corpus and how it is stratified."""
-    corpus = cities.corpus()
+    """Show the selected cities, how they are stratified, and what each has on disk."""
+    selection = cities.corpus()
+    listed = CityCatalog.over(selection, tile_paths.TILES_ROOT).cities()
+    summary = cities.summary(selection.values())
     if as_json:
-        payload = {
-            "summary": cities.summary(corpus.values()),
-            "cities": [vars(c) for c in corpus.values()],
-        }
+        payload = {"summary": summary, "cities": [city.model_dump() for city in listed]}
         console.print_json(json.dumps(payload))
         return
-
-    stats = cities.summary(corpus.values())
-    console.print(corpus_table(list(corpus.values())))
+    console.print(corpus_table(listed))
     console.print(
-        f"\n[dim]{stats['cities']} cities, {stats['global_south']} Global South, "
-        f"{stats['tropical_A']} tropical, {stats['southern_hemisphere']} southern hemisphere, "
-        f"{stats['wri_overlap']} overlapping WRI Cool Cities Lab.[/]"
+        f"\n[dim]{summary.get('cities')} cities, {summary.get('global_south')} Global South, "
+        f"{summary.get('tropical_A')} tropical, {summary.get('southern_hemisphere')} southern "
+        f"hemisphere, {summary.get('wri_overlap')} overlapping WRI Cool Cities Lab.[/]"
     )
 
 
