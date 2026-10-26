@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
 
+from shadecast.corpus.urban_centres import UrbanCentres
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.stage_counts import StageCounts
 from shadecast.service.tile_index import TileIndex
@@ -23,7 +24,7 @@ def root(tmp_path) -> Path:
 
 @pytest.fixture
 def catalog(root) -> CityCatalog:
-    return CityCatalog(fixture_corpus(), fixture_centres(), TileIndex(root, fixture_tiles))
+    return CityCatalog(fixture_corpus(), fixture_centres, TileIndex(root, fixture_tiles))
 
 
 def _prove(root: Path, tile_id: str, *stages: str, urban_centre: int = 6143) -> Path:
@@ -87,7 +88,7 @@ def test_tiles_come_densest_first_with_their_stages(root, catalog):
 
 def test_a_tiles_file_from_an_older_build_is_read_for_what_it_has(root):
     index = TileIndex(root, lambda centre: [{"id": "t43N_249_2547", "x_km": 6897, "people": 1}])
-    catalog = CityCatalog(fixture_corpus(), fixture_centres(), index)
+    catalog = CityCatalog(fixture_corpus(), fixture_centres, index)
     tiles = catalog.tiles("ahmedabad")
     assert [tile.id for tile in tiles] == ["t43N_249_2547"]
     assert tiles[0].population_2020 == 0.0
@@ -111,6 +112,20 @@ def test_a_tile_location_has_every_path_and_its_stages(root, catalog):
     assert location.results == str(root / "6143" / "t43N_249_2546" / "results.json")
     assert location.stages.bundle is True and location.stages.results is True
     assert location.stages.baseline is False
+
+
+def _no_database() -> UrbanCentres:
+    raise AssertionError("the database was loaded for a key or an id")
+
+
+def test_keys_and_ids_never_load_the_database(root):
+    catalog = CityCatalog(fixture_corpus(), _no_database, TileIndex(root, fixture_tiles))
+    _prove(root, "t43N_249_2547", "bundle")
+    assert [city.key for city in catalog.cities()] == ["ahmedabad", "london"]
+    assert catalog.city("ahmedabad").stages.bundle == 1
+    assert catalog.stage_counts("6143").bundle == 1
+    assert catalog.tile("ahmedabad", "t43N_249_2547").stages.bundle is True
+    assert [tile.tile for tile in catalog.tiles_on_disk("6143")] == ["t43N_249_2547"]
 
 
 def test_a_malformed_tile_id_raises_unknown_tile(catalog):
@@ -138,7 +153,7 @@ def test_refresh_describes_the_tiles_again(root):
         calls.append(1)
         return fixture_tiles(centre)
 
-    catalog = CityCatalog(fixture_corpus(), fixture_centres(), TileIndex(root, describe))
+    catalog = CityCatalog(fixture_corpus(), fixture_centres, TileIndex(root, describe))
     catalog.tiles("ahmedabad")
     catalog.tiles("ahmedabad")
     catalog.refresh("ahmedabad")

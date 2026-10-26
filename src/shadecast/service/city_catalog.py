@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from functools import cached_property
 from pathlib import Path
 
 from .. import cities
@@ -14,6 +16,7 @@ from ..corpus.tiling import select_densest
 from ..corpus.urban_centre import UrbanCentre
 from ..corpus.urban_centres import UrbanCentres
 from .city_summary import CitySummary
+from .stage_counting import count_stages
 from .stage_counts import StageCounts
 from .tile_index import TileIndex
 from .tile_location import TileLocation
@@ -32,17 +35,28 @@ class CityCatalog:
     """
 
     # Three collaborators because three records are read: the selection names the cities, the
-    # database resolves any centre a command names, and the index knows the 1 km tiles.
-    def __init__(self, selection: dict[str, City], centres: UrbanCentres, index: TileIndex) -> None:
+    # database resolves any centre a command names, and the index knows the 1 km tiles. The
+    # database is loaded only when a slug or a name must be resolved or a centre described, so
+    # listing the selection and reading what is on disk stay fast and offline.
+    def __init__(
+        self,
+        selection: dict[str, City],
+        load_centres: Callable[[], UrbanCentres],
+        index: TileIndex,
+    ) -> None:
         self._selection = selection
-        self._centres = centres
+        self._load_centres = load_centres
         self._index = index
 
     @classmethod
     def open(cls, tiles_root: Path) -> CityCatalog:
         """The catalog over the real selection, the real database and a tiles root."""
         index = TileIndex(tiles_root, tile_description.describe)
-        return cls(cities.corpus(), UrbanCentres.load(), index)
+        return cls(cities.corpus(), UrbanCentres.load, index)
+
+    @cached_property
+    def _centres(self) -> UrbanCentres:
+        return self._load_centres()
 
     def cities(self) -> list[CitySummary]:
         """Every selected city with how many of its tiles have reached each stage."""
@@ -50,17 +64,25 @@ class CityCatalog:
 
     def city(self, text: str) -> CitySummary:
         """One selected city; an urban centre outside the selection is unknown here."""
-        centre = self.centre(text)
+        urban_centre = self.urban_centre_id(text)
         for city in self._selection.values():
-            if city.ucdb_id == centre.id:
+            if city.ucdb_id == urban_centre:
                 return self._summary(city)
         raise UnknownCity(text, "it is an urban centre but not a selected city")
 
-    def centre(self, text: str) -> UrbanCentre:
-        """The urban centre a selection key, an id, a slug or a name refers to."""
+    def urban_centre_id(self, text: str) -> int:
+        """The id a key, an id, a slug or a name refers to; keys and ids need no database."""
         try:
-            return self._resolve(str(text).strip())
+            return self._resolve_id(str(text).strip())
         except (KeyError, ValueError) as exc:
+            raise UnknownCity(text, str(exc)) from exc
+
+    def centre(self, text: str) -> UrbanCentre:
+        """The urban centre record a key, an id, a slug or a name refers to."""
+        urban_centre = self.urban_centre_id(text)
+        try:
+            return self._centres.by_id(urban_centre)
+        except KeyError as exc:
             raise UnknownCity(text, str(exc)) from exc
 
     def tiles(self, text: str) -> list[TileSummary]:
@@ -75,12 +97,11 @@ class CityCatalog:
 
     def tile(self, text: str, tile_id: str) -> TileLocation:
         """Where everything for one tile lives and which stages have run."""
-        return self._location(self._paths(self.centre(text), tile_id))
+        return self._location(self._paths(self.urban_centre_id(text), tile_id))
 
     def tiles_on_disk(self, text: str) -> list[TileLocation]:
         """Every tile directory present for the centre, in id order, listed in the file or not."""
-        centre = self.centre(text)
-        found = TilePaths.existing(self._index.tiles_root, centre.id)
+        found = TilePaths.existing(self._index.tiles_root, self.urban_centre_id(text))
         return [self._location(paths) for paths in found]
 
     def statistics(self, text: str) -> TileStatistics:
@@ -98,14 +119,25 @@ class CityCatalog:
 
     def stage_counts(self, text: str) -> StageCounts:
         """How many of the centre's tiles have reached each stage, out of all it has."""
-        centre = self.centre(text)
-        return self._counts(centre.id, centre.tiles)
+        urban_centre = self.urban_centre_id(text)
+        return self._counts(urban_centre, self._tile_count(text, urban_centre))
 
-    def _resolve(self, query: str) -> UrbanCentre:
+    def _resolve_id(self, query: str) -> int:
         selected = self._selection.get(query)
         if selected is not None:
-            return self._centres.by_id(selected.ucdb_id)
-        return self._centres.resolve(query)
+            return selected.ucdb_id
+        if query.isdigit():
+            return int(query)
+        return self._centres.resolve(query).id
+
+    def _tile_count(self, text: str, urban_centre: int) -> int:
+        for city in self._selection.values():
+            if city.ucdb_id == urban_centre:
+                return city.tiles
+        try:
+            return self._centres.by_id(urban_centre).tiles
+        except KeyError as exc:
+            raise UnknownCity(text, str(exc)) from exc
 
     def _summary(self, city: City) -> CitySummary:
         return CitySummary(
@@ -122,33 +154,23 @@ class CityCatalog:
         )
 
     def _counts(self, urban_centre: int, tiles: int) -> StageCounts:
-        reached = [
-            paths.stages() for paths in TilePaths.existing(self._index.tiles_root, urban_centre)
-        ]
-        return StageCounts(
-            tiles=tiles,
-            bundle=sum(stages.bundle for stages in reached),
-            baseline=sum(stages.baseline for stages in reached),
-            physics=sum(stages.physics for stages in reached),
-            model=sum(stages.model for stages in reached),
-            results=sum(stages.results for stages in reached),
-        )
+        return count_stages(self._index.tiles_root, urban_centre, tiles)
 
     def _summaries(self, centre: UrbanCentre, payload: dict) -> list[TileSummary]:
         rows = payload.get("tiles", [])
         return [
             TileSummary.model_validate(
-                {**row, "stages": self._paths(centre, str(row.get("id"))).stages()}
+                {**row, "stages": self._paths(centre.id, str(row.get("id"))).stages()}
             )
             for row in select_densest(rows, len(rows))
         ]
 
-    def _paths(self, centre: UrbanCentre, tile_id: str) -> TilePaths:
+    def _paths(self, urban_centre: int, tile_id: str) -> TilePaths:
         try:
             tile = Tile.from_id(tile_id)
         except ValueError as exc:
-            raise UnknownTile(centre.slug, tile_id) from exc
-        return TilePaths(self._index.tiles_root, centre.id, tile)
+            raise UnknownTile(str(urban_centre), tile_id) from exc
+        return TilePaths(self._index.tiles_root, urban_centre, tile)
 
     def _location(self, paths: TilePaths) -> TileLocation:
         return TileLocation.model_validate({**paths.as_dict(), "stages": paths.stages()})
