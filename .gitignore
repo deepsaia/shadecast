@@ -23,3 +23,6 @@ data/dash/
 
 # Per-run logs some users keep beside the data.
 logs/
+
+# The built client, produced by make frontend and never committed.
+src/shadecast/server/static/
