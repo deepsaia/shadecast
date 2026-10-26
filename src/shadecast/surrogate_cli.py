@@ -17,7 +17,11 @@ import typer
 
 from .console import console, error_console, pairs_table
 from .corpus import tile_lookup, tile_paths
+from .corpus.tile_paths import TilePaths
 from .corpus.tile_selection import TileSelection
+from .service.json_file import read_object
+from .service.model_catalog import MODELS_ROOT, ModelCatalog, model_created
+from .service.model_summary import ModelSummary
 from .surrogate import manifest
 from .surrogate.assessment import assess
 from .surrogate.assessment_inputs import AssessmentInputs
@@ -36,7 +40,6 @@ from .surrogate.training_state import CHECKPOINT_NAME
 logger = logging.getLogger(__name__)
 
 # Models trained on several tiles belong to no tile and live here.
-MODELS_ROOT = Path("data/models")
 
 
 def models_root(pairs: list[tuple[Path, Path]]) -> Path:
@@ -111,88 +114,40 @@ def resolve_pairs(target: str, tiles: str | None) -> list[tuple[Path, Path]]:
         raise typer.Exit(code=1) from exc
 
 
-def city_models(target: str, tile: str | None) -> tuple[list[Path], Path, Path]:
-    """Every model that learned from this city, oldest first, and the tile to assess it on.
-
-    Per-tile models live under the tile; pooled models live under data/models and name the
-    city in their manifest. The tile is the named one, else the densest with physics.
-    """
-    found = tile_lookup.generated_tiles(target, None, tile_paths.TILES_ROOT)
-    chosen = [paths for paths in found if paths.tile.id == tile] if tile else found
-    if tile and not chosen:
-        raise ValueError(f"{target} tile {tile} has no generated physics")
-    paths = (
-        tile_lookup.densest_generated_tile(target, tile_paths.TILES_ROOT)
-        if tile is None
-        else chosen[0]
-    )
-    candidates = [model_dir for tile_paths_ in found for model_dir in tile_paths_.model_dirs()]
-    candidates += pooled_models(tile_lookup.centre_id(target))
-    candidates.sort(key=model_created)
-    return candidates, paths.surrogate, paths.bundle
-
-
-def pooled_models(centre: int) -> list[Path]:
-    """Models under data/models whose manifest lists a tile of this urban centre."""
-    if not MODELS_ROOT.is_dir():
-        return []
-    chosen = []
-    for model_dir in sorted(MODELS_ROOT.iterdir()):
-        if not (model_dir / "manifest.json").exists():
-            continue
-        tiles = read_manifest(model_dir).get("data", {}).get("tiles", [])
-        if any(entry.get("urban_centre") == centre for entry in tiles):
-            chosen.append(model_dir)
-    return chosen
-
-
-def model_created(model_dir: Path) -> str:
-    """When a model was made, as ``YYYY-MM-DDTHH:MM:SS`` so models from any directory sort together.
-
-    From the manifest when there is one, else from the directory name, which ends in a
-    compact timestamp such as ``20261023T121739``.
-    """
-    created = read_manifest(model_dir).get("created")
-    if created:
-        return str(created)[:19]
-    stamp = model_dir.name.rsplit("-", 1)[-1]
-    if len(stamp) == 15 and stamp[8] == "T" and stamp.replace("T", "").isdigit():
-        return f"{stamp[:4]}-{stamp[4:6]}-{stamp[6:8]}T{stamp[9:11]}:{stamp[11:13]}:{stamp[13:15]}"
-    return model_dir.name
-
-
-def read_manifest(model_dir: Path) -> dict:
-    """The manifest as written, without the completeness check describe applies."""
-    path = Path(model_dir) / "manifest.json"
-    return json.loads(path.read_text()) if path.exists() else {}
-
-
 def newest_model(
     target: str, model: str | None, tile: str | None = None
 ) -> tuple[Path, Path, Path]:
     """For a city key: (model dir, surrogate dir, bundle), the newest model unless one is named."""
     try:
-        candidates, surrogate_dir, bundle = city_models(target, tile)
-    except ValueError as exc:
+        paths = assessment_tile(target, tile)
+        found = chosen_model(target, model)
+    except (ValueError, LookupError) as exc:
         error_console.print(str(exc), style="red", markup=False)
         raise typer.Exit(code=1) from exc
-    if model is not None:
-        named = [model_dir for model_dir in candidates if model_dir.name == model]
-        if not named:
-            error_console.print(f"{target} has no model named {model}")
-            raise typer.Exit(code=1)
-        return named[0], surrogate_dir, bundle
-    if not candidates:
-        error_console.print(
-            f"{target} has no trained model yet; run 'sdc surrogate treeshade train {target}'"
-        )
-        raise typer.Exit(code=1)
-    return candidates[-1], surrogate_dir, bundle
+    return Path(found.path), paths.surrogate, paths.bundle
+
+
+def assessment_tile(target: str, tile: str | None) -> TilePaths:
+    """The tile to assess a model on: the named one, else the densest with physics."""
+    if tile is None:
+        return tile_lookup.densest_generated_tile(target, tile_paths.TILES_ROOT)
+    found = tile_lookup.generated_tiles(target, None, tile_paths.TILES_ROOT)
+    chosen = [paths for paths in found if paths.tile.id == tile]
+    if not chosen:
+        raise ValueError(f"{target} tile {tile} has no generated physics")
+    return chosen[0]
+
+
+def chosen_model(target: str, model: str | None) -> ModelSummary:
+    """The named model of the city, or its newest."""
+    models = ModelCatalog(tile_paths.TILES_ROOT, MODELS_ROOT)
+    centre = tile_lookup.centre_id(target)
+    return models.named(centre, model) if model else models.newest(centre)
 
 
 def assessment_name(model_dir: Path, bundle: Path) -> str:
     """assessment.json for a model of one tile; assessment-<tile>.json for a pooled model."""
-    tiles = read_manifest(model_dir).get("data", {}).get("tiles", [])
+    tiles = read_object(Path(model_dir) / "manifest.json").get("data", {}).get("tiles", [])
     if len(tiles) <= 1:
         return "assessment.json"
     return f"assessment-{tile_key(bundle).replace(':', '-')}.json"

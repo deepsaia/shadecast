@@ -37,6 +37,8 @@ from .tile_context import TileContext
 
 logger = logging.getLogger(__name__)
 
+GENERATION_LOCK = ".generating.lock"
+
 
 def default_plan() -> list[dict]:
     """The standard generation plan for one city.
@@ -106,7 +108,7 @@ def generate(
     progress = progress if progress is not None else GenerationProgress.quiet()
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    lock = out_dir / ".generating.lock"
+    lock = out_dir / GENERATION_LOCK
     acquire_lock(lock)
     try:
         return _generate(bundle, out_dir, settings, progress)
