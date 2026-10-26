@@ -163,11 +163,11 @@ From Robert C. Martin's *The Clean Coder*. How we behave, not what we type.
 - `__init__.py` files are empty. No docstring, no imports, no code.
 - No global mutable state. Module-level constants are fine.
 - Group related modules into packages by responsibility: `data`, `sim`, `surrogate`, `baselines`, `experiments`,
-  `network`, `dash`.
+  `network`, `service`, `server`.
 - `sim/` is the only package that knows the physics engine exists, and it reaches it as a subprocess. Nothing
   under `src/` imports `solweig_gpu`, which is GPL-3.0.
-- The walkthrough bundle is generated into `out/dash` by `sdc dash build` and is never committed. The hand-written
-  pages that GitHub Pages publishes live in `src/shadecast/pages/`.
+- The client is built into `src/shadecast/server/static/` by `make frontend` and is never committed. The
+  hand-written pages that GitHub Pages publishes live in `src/shadecast/pages/`.
 
 ## 6. Documentation
 

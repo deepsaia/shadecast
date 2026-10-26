@@ -16,7 +16,6 @@ __pycache__/
 
 # Working evidence logs, kept local.
 PHASE*.md
-data/dash/
 
 # Local download cache for open data fetches.
 /cache/

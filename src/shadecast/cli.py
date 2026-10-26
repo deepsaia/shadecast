@@ -29,7 +29,6 @@ from .console import (
 )
 from .corpus import tile_paths
 from .corpus_cli import app as corpus_app
-from .dash_cli import app as dash_app
 from .experiments_cli import app as experiments_app
 from .logging_setup import configure
 from .serve_cli import serve
@@ -84,7 +83,6 @@ def entry() -> int:
 app.add_typer(corpus_app, name="corpus")
 app.add_typer(tile_app, name="tile")
 app.add_typer(surrogate_app, name="surrogate")
-app.add_typer(dash_app, name="dash")
 app.add_typer(experiments_app, name="experiments")
 app.command("serve")(serve)
 

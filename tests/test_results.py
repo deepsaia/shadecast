@@ -6,7 +6,6 @@ from pathlib import Path
 from support import synthetic_tile
 from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
 
-from shadecast import dash_cli
 from shadecast.corpus.tile_stages import TileStages
 from shadecast.service.baseline_score import BaselineScore
 from shadecast.service.city_catalog import CityCatalog
@@ -18,7 +17,6 @@ from shadecast.service.tile_facts import TileFacts
 from shadecast.service.tile_index import TileIndex
 from shadecast.service.tile_report import TileReport
 
-SOURCE = Path(dash_cli.__file__).parent / "dash"
 PHYSICS = PhysicsFacts(
     designs=2, engine_minutes=11.0, seconds_per_design_min=300, seconds_per_design_max=360
 )
@@ -171,11 +169,3 @@ def test_collect_reads_every_tile_with_physics_from_disk(tmp_path):
     results = _service(tmp_path).collect()
     assert [city.key for city in results.cities] == ["ahmedabad"]
     assert results.totals.plans == 3 and results.arrangement.cities_compared == 1
-
-
-def test_the_results_page_carries_no_typed_numbers():
-    page = (SOURCE / "result.html").read_text()
-    for stale in ("39 plans", "3.5x", "Ahmedabad, Lagos, Rio", "2026-08-26"):
-        assert stale not in page
-    assert '<script src="result.js"></script>' in page
-    assert "result.js" in dash_cli.RESULT_FILES

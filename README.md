@@ -2,9 +2,10 @@
 
 ### [deepsaia.github.io/shadecast](https://deepsaia.github.io/shadecast/): the proposal and the surrogate pipeline
 
-The interactive walkthrough runs locally, from your own physics output, with `uv run sdc dash`:
-step by step through the whole pipeline, every number from a real physics run, maps drawn in
-your browser from raw model output so that hovering any pixel reads its actual temperature.
+The interactive dashboard runs locally, from your own physics output, with `make frontend` once and
+then `uv run sdc serve`: step by step through the whole pipeline, every number from a real physics
+run, maps drawn in your browser from raw model output so that hovering any pixel reads its actual
+temperature.
 
 Open, credential-free pipeline that turns any city into an urban heat **decision**
 problem, plus baselines and a benchmark.
