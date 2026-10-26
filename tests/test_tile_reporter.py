@@ -10,7 +10,7 @@ from shadecast.corpus.tile_paths import TilePaths
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.missing_stage import MissingStage
 from shadecast.service.tile_index import TileIndex
-from shadecast.service.tile_reporter import TileReporter
+from shadecast.service.tile_reporter import TileReporter, report_of
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def catalog(tmp_path) -> CityCatalog:
 
 def test_a_bundle_only_tile_reports_its_facts_and_nothing_it_lacks(tmp_path, catalog):
     tile = synthetic_tile.write_bundle(tmp_path)
-    report = TileReporter(catalog).report_of(TilePaths.of_root(tile))
+    report = report_of(TilePaths.of_root(tile))
     assert report.city == "ahmedabad" and report.tile == synthetic_tile.TILE_ID
     assert report.facts.tier == "A" and report.facts.urban_centre.koppen == "BSh"
     assert report.facts.sources.get("terrain") == "Copernicus DEM"
@@ -36,7 +36,7 @@ def test_a_bundle_only_tile_reports_its_facts_and_nothing_it_lacks(tmp_path, cat
 def test_a_tile_with_a_baseline_reports_its_score_meteorology_and_hours(tmp_path, catalog):
     tile = synthetic_tile.write_bundle(tmp_path)
     synthetic_tile.write_baseline(tile)
-    report = TileReporter(catalog).report_of(TilePaths.of_root(tile))
+    report = report_of(TilePaths.of_root(tile))
     assert report.baseline.exposure == synthetic_tile.BASELINE_C
     assert len(report.met) == 24 and len(report.hourly) == 24
     assert report.hourly[5].median == 35.0 and report.hourly[5].max == 35.0
@@ -47,7 +47,7 @@ def test_a_tile_with_designs_reports_plans_and_physics(tmp_path, catalog):
     tile = synthetic_tile.write_bundle(tmp_path)
     synthetic_tile.write_baseline(tile)
     synthetic_tile.write_designs(tile)
-    report = TileReporter(catalog).report_of(TilePaths.of_root(tile))
+    report = report_of(TilePaths.of_root(tile))
     assert [plan.arrangement for plan in report.plans] == ["clustered", "corridor", "scattered"]
     assert report.physics.designs == 4
 
@@ -56,7 +56,7 @@ def test_a_baseline_whose_hourly_raster_is_gone_still_reports(tmp_path, catalog)
     tile = synthetic_tile.write_bundle(tmp_path)
     baseline = synthetic_tile.write_baseline(tile)
     (baseline / "output_folder" / "0_0" / "TMRT_0_0.tif").unlink()
-    report = TileReporter(catalog).report_of(TilePaths.of_root(tile))
+    report = report_of(TilePaths.of_root(tile))
     assert report.baseline is not None and report.hourly == []
 
 
@@ -65,16 +65,15 @@ def test_the_second_report_is_read_from_the_cache_until_a_source_changes(tmp_pat
     synthetic_tile.write_baseline(tile)
     synthetic_tile.write_designs(tile)
     paths = TilePaths.of_root(tile)
-    reporter = TileReporter(catalog)
-    first = reporter.report_of(paths)
+    first = report_of(paths)
     cached = paths.root / "derived" / "report.json"
     assert cached.exists()
     cached.write_text(cached.read_text().replace('"designs":4', '"designs":99'))
-    assert reporter.report_of(paths).physics.designs == 99
+    assert report_of(paths).physics.designs == 99
     archive = paths.surrogate / "clustered_0101" / "response.npz"
     later = archive.stat().st_mtime_ns + 1_000_000
     os.utime(archive, ns=(later, later))
-    assert reporter.report_of(paths).physics.designs == first.physics.designs == 4
+    assert report_of(paths).physics.designs == first.physics.designs == 4
 
 
 def test_a_named_tile_and_the_furthest_tile_resolve_through_the_catalog(tmp_path, catalog):

@@ -30,7 +30,7 @@ DEFAULT_OUT = Path("out/dash")
 app = typer.Typer(name="dash", help="Interactive local walkthrough of what we do to a city.")
 
 
-def tile_entries(city: CitySummary, catalog: CityCatalog) -> list[tuple[str, Path, Path]]:
+def tile_entries(city: CitySummary, catalog: CityCatalog) -> list[tuple[str, Path]]:
     """Every tile of a city with a bundle and a baseline field, named by key and tile."""
     ready = [
         tile
@@ -38,14 +38,14 @@ def tile_entries(city: CitySummary, catalog: CityCatalog) -> list[tuple[str, Pat
         if tile.stages.bundle and tile.stages.baseline
     ]
     if len(ready) == 1:
-        return [(city.key, Path(ready[0].bundle), Path(ready[0].surrogate))]
-    return [(f"{city.key}-{tile.tile}", Path(tile.bundle), Path(tile.surrogate)) for tile in ready]
+        return [(city.key, Path(ready[0].root))]
+    return [(f"{city.key}-{tile.tile}", Path(tile.root)) for tile in ready]
 
 
-def discover() -> list[tuple[str, Path, Path]]:
+def discover() -> list[tuple[str, Path]]:
     """Every tile with both a bundle and a baseline field, in selection order."""
     catalog = CityCatalog.open(tile_paths.TILES_ROOT)
-    found: list[tuple[str, Path, Path]] = []
+    found: list[tuple[str, Path]] = []
     for city in catalog.cities():
         found.extend(tile_entries(city, catalog))
     return found

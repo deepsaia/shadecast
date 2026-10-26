@@ -31,6 +31,7 @@ uv sync
 sdc cities                        # the selected cities, their strata and what each has; sdc is short for shadecast
 sdc build savannah                # assemble the densest tile's bundle, about a minute
 sdc tile show savannah            # where its tiles live and which stages have run; reads disk only
+sdc tile report savannah          # the tile's baseline, its physics run and every scored plan
 sdc surrogate treeshade generate savannah --jobs 4   # physics for the 17 tree designs, 4 at a time
 sdc surrogate treeshade train savannah      # fit the tree shade surrogate on that tile
 sdc surrogate treeshade assess savannah     # judge the newest model against the engine

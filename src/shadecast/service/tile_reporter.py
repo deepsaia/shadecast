@@ -24,23 +24,24 @@ class TileReporter:
         self._catalog = catalog
 
     def report(self, text: str, tile_id: str) -> TileReport:
-        return self.report_of(self._catalog.tile_paths(text, tile_id))
+        return report_of(self._catalog.tile_paths(text, tile_id))
 
     def report_furthest(self, text: str) -> TileReport:
         """The report of the city's densest tile with physics, else with a baseline, else built."""
         furthest = self._catalog.furthest_tile(text)
-        return self.report_of(self._catalog.tile_paths(text, furthest.id))
+        return report_of(self._catalog.tile_paths(text, furthest.id))
 
-    def report_of(self, paths: TilePaths) -> TileReport:
-        """The report for a tile record, from the cache while its sources are unchanged."""
-        store = FieldStore(paths)
-        cache = DerivedCache(paths.root / DERIVED)
-        sources = store.sources()
-        if cache.current(REPORT, sources):
-            return TileReport.model_validate(cache.read(REPORT))
-        report = _compute(paths, store)
-        cache.write(REPORT, report.model_dump(mode="json"), sources)
-        return report
+
+def report_of(paths: TilePaths) -> TileReport:
+    """The report for a tile record, from the cache while its sources are unchanged."""
+    store = FieldStore(paths)
+    cache = DerivedCache(paths.root / DERIVED)
+    sources = store.sources()
+    if cache.current(REPORT, sources):
+        return TileReport.model_validate(cache.read(REPORT))
+    report = _compute(paths, store)
+    cache.write(REPORT, report.model_dump(mode="json"), sources)
+    return report
 
 
 def _compute(paths: TilePaths, store: FieldStore) -> TileReport:

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from support import synthetic_tile
 from typer.testing import CliRunner
 
 from shadecast import cities, tile_cli
@@ -272,3 +273,37 @@ def test_show_without_a_tile_lists_every_tile_on_disk(tmp_path, monkeypatch):
     empty = runner.invoke(app, ["tile", "show", "6143"])
     assert empty.exit_code == 0, empty.output
     assert "sdc build 6143" in empty.output
+
+
+def test_report_renders_a_tiles_plans_and_physics(tmp_path):
+    tile = synthetic_tile.write_bundle(tmp_path)
+    synthetic_tile.write_baseline(tile)
+    synthetic_tile.write_designs(tile)
+    result = runner.invoke(
+        app, ["tile", "report", "ahmedabad", "--tile", synthetic_tile.TILE_ID, "--json"]
+    )
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.stdout)
+    assert report["tile"] == synthetic_tile.TILE_ID
+    assert [plan["arrangement"] for plan in report["plans"]] == [
+        "clustered",
+        "corridor",
+        "scattered",
+    ]
+    assert report["physics"]["designs"] == 4
+    table = runner.invoke(app, ["tile", "report", "ahmedabad"])
+    assert table.exit_code == 0, table.output
+    assert "clustered_0101" in table.stdout and "scattered" in table.stdout
+
+
+def test_report_of_a_built_tile_without_physics_says_what_to_run_next(tmp_path):
+    synthetic_tile.write_bundle(tmp_path)
+    result = runner.invoke(app, ["tile", "report", "ahmedabad"])
+    assert result.exit_code == 0, result.output
+    assert "sdc run" in result.stdout or "sdc surrogate treeshade generate" in result.stdout
+
+
+def test_report_of_a_city_with_nothing_built_names_the_build_command():
+    result = runner.invoke(app, ["tile", "report", "ahmedabad"])
+    assert result.exit_code == 1
+    assert "sdc build ahmedabad" in result.output

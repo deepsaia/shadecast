@@ -1,13 +1,12 @@
 """The measured results, assembled from the walkthrough payload; the page carries no typed numbers.
 
 Every figure on the results page is derived here from the scored plans of every tile with
-physics, from the experiment files when they exist, and from the generation manifests for the
-engine time. The page renders this payload in the browser; nothing on it is written by hand.
+physics and from the experiment files when they exist; the engine time comes with each tile's
+report. The page renders this payload in the browser; nothing on it is written by hand.
 """
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 
@@ -19,10 +18,9 @@ THRESHOLD_C = 45.0
 CLUSTERED, SCATTERED = "clustered", "scattered"
 
 
-def collect(index_cities: list[dict], pairs: list[tuple[str, Path, Path]], data_root: Path) -> dict:
+def collect(index_cities: list[dict], data_root: Path) -> dict:
     """The results payload: cities with their plans and derived verdicts, plus the experiments."""
-    surrogate_dirs = {key: Path(surrogate) for key, _, surrogate in pairs}
-    cities = [city_record(city, surrogate_dirs.get(str(city.get("city")))) for city in index_cities]
+    cities = [city_record(city) for city in index_cities]
     # A tile with a baseline but no scored plan yet has nothing to say here.
     cities = [city for city in cities if city["plans"]]
     plans = [plan for city in cities for plan in city["plans"]]
@@ -44,7 +42,7 @@ def collect(index_cities: list[dict], pairs: list[tuple[str, Path, Path]], data_
     }
 
 
-def city_record(city: dict, surrogate_dir: Path | None) -> dict:
+def city_record(city: dict) -> dict:
     """One city's facts, baseline and plans, in the shape the page draws."""
     provenance = city.get("provenance", {})
     plans = [dict(plan) for plan in city.get("plans", {}).get("list", [])]
@@ -63,22 +61,8 @@ def city_record(city: dict, surrogate_dir: Path | None) -> dict:
         },
         "baseline": city.get("baseline", {}),
         "plans": plans,
-        "physics": physics_facts(surrogate_dir),
+        "physics": city.get("physics", {}),
         "matched": matched_pair(plans),
-    }
-
-
-def physics_facts(surrogate_dir: Path | None) -> dict:
-    """How many designs the engine ran for the tile and how long they took, from the manifest."""
-    if surrogate_dir is None or not (surrogate_dir / "manifest.json").exists():
-        return {}
-    entries = json.loads((surrogate_dir / "manifest.json").read_text()).get("manifest", [])
-    seconds = [float(entry.get("engine_seconds", 0)) for entry in entries]
-    return {
-        "designs": len(entries),
-        "engine_minutes": round(sum(seconds) / 60, 1),
-        "seconds_per_design_min": round(min(seconds)) if seconds else None,
-        "seconds_per_design_max": round(max(seconds)) if seconds else None,
     }
 
 

@@ -12,6 +12,7 @@ from rich.table import Table
 from .corpus.tile_stages import STAGE_NAMES, TileStages
 from .corpus.urban_centre import UrbanCentre
 from .service.city_summary import CitySummary
+from .service.plan import Plan
 from .service.stage_counts import StageCounts
 from .service.tile_summary import TileSummary
 
@@ -53,6 +54,31 @@ def corpus_table(cities: list[CitySummary]) -> Table:
 
 def _of_tiles(count: int, tiles: int) -> str:
     return f"{count}/{tiles:,}" if count else "[dim]0[/]"
+
+
+def plans_table(plans: list[Plan]) -> Table:
+    """Render scored plans, one row each, in the order the report gives them."""
+    table = Table(header_style="dim")
+    table.add_column("plan", style="cyan", no_wrap=True)
+    table.add_column("arrangement", no_wrap=True)
+    table.add_column("coverage", justify="right", no_wrap=True)
+    table.add_column("trees", justify="right", no_wrap=True)
+    table.add_column("cost", justify="right", no_wrap=True)
+    table.add_column("exposure drop", justify="right", no_wrap=True)
+    table.add_column("people", justify="right", no_wrap=True)
+    table.add_column("per $1k", justify="right", no_wrap=True)
+    for plan in plans:
+        table.add_row(
+            plan.id,
+            plan.arrangement,
+            f"{plan.coverage:.1%}",
+            f"{plan.trees:,}",
+            f"${plan.cost_m:,.2f}M",
+            f"{plan.exposure_drop:.3f} C",
+            f"{plan.people:,}",
+            f"{plan.efficiency:,.1f}",
+        )
+    return table
 
 
 def stage_line(counts: StageCounts) -> str:

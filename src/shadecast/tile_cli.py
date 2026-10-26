@@ -17,7 +17,15 @@ from typing import Annotated
 import typer
 
 from . import cities
-from .console import console, error_console, pairs_table, stage_line, stages_reached, tiles_table
+from .console import (
+    console,
+    error_console,
+    pairs_table,
+    plans_table,
+    stage_line,
+    stages_reached,
+    tiles_table,
+)
 from .corpus import tile_paths
 from .corpus.tile import Tile
 from .corpus.tile_description import describe
@@ -25,7 +33,10 @@ from .corpus.tiling import select_densest, select_ids, select_random, select_str
 from .corpus.urban_centre import UrbanCentre
 from .corpus.urban_centres import UrbanCentres
 from .service.city_catalog import CityCatalog
+from .service.missing_stage import MissingStage
 from .service.tile_index import TileIndex
+from .service.tile_report import TileReport
+from .service.tile_reporter import TileReporter
 from .service.tile_summary import TileSummary
 from .service.unknown_city import UnknownCity
 from .service.unknown_tile import UnknownTile
@@ -65,7 +76,7 @@ def answer[Answer](ask: Callable[[], Answer]) -> Answer:
     """Ask the catalog one question; an unknown city or tile ends the command with its message."""
     try:
         return ask()
-    except (UnknownCity, UnknownTile) as exc:
+    except (UnknownCity, UnknownTile, MissingStage) as exc:
         error_console.print(str(exc), style="red", markup=False)
         raise typer.Exit(code=1) from exc
 
@@ -220,6 +231,66 @@ def show(
         console.print(
             f"[dim]{len(listed)} tile{'s' if len(listed) != 1 else ''} on disk for {centre}.[/]"
         )
+
+
+@app.command("report")
+def report(
+    centre: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
+    tile: Annotated[
+        str | None,
+        typer.Option("--tile", help="A tile id; else the tile that has come furthest."),
+    ] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of tables.")] = False,
+) -> None:
+    """A tile's report: its facts, the baseline, the physics run and every scored plan."""
+    reporter = TileReporter(catalog())
+    ask = (
+        partial(reporter.report, centre, tile)
+        if tile
+        else partial(reporter.report_furthest, centre)
+    )
+    found = answer(ask)
+    if as_json:
+        console.print_json(found.model_dump_json())
+        return
+    console.print(pairs_table(f"{found.name} {found.tile}", _fact_rows(found)))
+    if found.baseline is None:
+        console.print(
+            f"[dim]no baseline physics yet; run 'sdc run {centre} --tile {found.tile}' first.[/]"
+        )
+        return
+    console.print(
+        pairs_table(
+            "doing nothing",
+            {"exposure, C": found.baseline.exposure, "people at risk": found.baseline.at_risk},
+        )
+    )
+    if not found.plans:
+        console.print(
+            f"[dim]no plans yet; run 'sdc surrogate treeshade generate {centre} "
+            f"--tiles {found.tile}' first.[/]"
+        )
+        return
+    console.print(plans_table(found.plans))
+    if found.physics is not None:
+        console.print(
+            f"[dim]{found.physics.designs} designs through the engine, "
+            f"{found.physics.engine_minutes} engine minutes.[/]"
+        )
+
+
+def _fact_rows(found: TileReport) -> dict:
+    facts = found.facts
+    return {
+        "city": facts.key,
+        "design day": facts.design_day,
+        "tier": facts.tier,
+        "buildings": facts.buildings,
+        "built fraction": facts.built_fraction,
+        "canopy": facts.canopy,
+        "people, 2020 epoch": facts.population_2020,
+        "stages run": stages_reached(found.stages),
+    }
 
 
 def _tile(text: str) -> Tile:

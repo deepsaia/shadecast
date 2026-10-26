@@ -1,4 +1,4 @@
-"""The dash finds cities in the tile layout first and in the legacy roots after."""
+"""The dash finds every tile with a bundle and a baseline, named by city key and tile."""
 
 from pathlib import Path
 
@@ -37,7 +37,7 @@ def _offline(monkeypatch, tmp_path):
 
 def test_a_city_with_one_tile_keeps_its_key(tmp_path):
     tile = _tile(tmp_path / "tiles", 6143, "t43N_249_2546")
-    assert dash_cli.discover() == [("ahmedabad", tile / "bundle", tile / "surrogate")]
+    assert dash_cli.discover() == [("ahmedabad", tile)]
 
 
 def test_a_city_with_several_tiles_is_named_by_key_and_tile(tmp_path):
