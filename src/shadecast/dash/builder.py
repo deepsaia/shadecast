@@ -13,19 +13,19 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
 
 from .. import sources
 from ..corpus.tile_paths import TilePaths
-from ..experiments.factorial import verdict as factorial_verdict
 from ..service.field_store import FieldStore
+from ..service.findings_report import FindingsReport
 from ..service.plan import Plan
+from ..service.results_report import results_from
 from ..service.tile_report import TileReport
 from ..service.tile_reporter import report_of
-from . import encode, findings, results
+from . import encode
 
 logger = logging.getLogger(__name__)
 
@@ -105,19 +105,17 @@ def build_city(city: str, tile_root: Path, out_dir: Path) -> dict:
 def build_index(cities: list[tuple[str, Path]], out_dir: Path, data_root: Path) -> dict:
     """Build every city plus the findings panel, and write index.json and results.json."""
     out_dir = Path(out_dir)
-    rows = findings.load_json(Path(data_root) / "factorial.json")
-    verdict = factorial_verdict(rows) if isinstance(rows, list) and rows else {}
-
     payload = {
         "cities": [build_city(key, tile_root, out_dir) for key, tile_root in cities],
-        "findings": findings.collect(Path(data_root), verdict),
+        "findings": FindingsReport(data_root).collect().model_dump(),
         "references": sources.grouped(),
     }
     (out_dir / "index.json").write_text(json.dumps(payload, separators=(",", ":")))
     logger.info("index.json written with %d cities", len(payload["cities"]))
 
-    measured = results.collect(payload["cities"], Path(data_root))
-    measured["as_of"] = datetime.now(UTC).strftime("%Y-%m-%d")
-    (out_dir / "results.json").write_text(json.dumps(measured, separators=(",", ":")))
-    logger.info("results.json written with %d plans", measured["totals"]["plans"])
+    # The second read of each report comes from the derived cache the first one wrote.
+    reports = [report_of(TilePaths.of_root(Path(tile_root))) for _, tile_root in cities]
+    measured = results_from(reports, data_root)
+    (out_dir / "results.json").write_text(measured.model_dump_json())
+    logger.info("results.json written with %d plans", measured.totals.plans)
     return payload

@@ -20,7 +20,15 @@ import click
 import typer
 
 from . import cities, tile_cli
-from .console import add_build_row, build_table, console, corpus_table, error_console, result_table
+from .console import (
+    add_build_row,
+    build_table,
+    console,
+    corpus_table,
+    error_console,
+    ranking_table,
+    result_table,
+)
 from .corpus import tile_paths
 from .corpus.tile_paths import TilePaths
 from .corpus_cli import app as corpus_app
@@ -29,6 +37,7 @@ from .experiments_cli import app as experiments_app
 from .logging_setup import configure
 from .pipeline import evaluate
 from .service.city_catalog import CityCatalog
+from .service.results_report import ResultsReport
 from .sim.runner import run as run_engine
 from .surrogate_cli import app as surrogate_app
 from .tile_build import build_tile
@@ -96,6 +105,36 @@ def list_cities(
         f"\n[dim]{summary.get('cities')} cities, {summary.get('global_south')} Global South, "
         f"{summary.get('tropical_A')} tropical, {summary.get('southern_hemisphere')} southern "
         f"hemisphere, {summary.get('wri_overlap')} overlapping WRI Cool Cities Lab.[/]"
+    )
+
+
+@app.command("results")
+def results(
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of tables.")] = False,
+) -> None:
+    """The measured results across every tile with physics: ranking, arrangement verdict, totals."""
+    catalog = CityCatalog.open(tile_paths.TILES_ROOT)
+    found = ResultsReport(catalog, tile_paths.TILES_ROOT.parent).collect()
+    if as_json:
+        console.print_json(found.model_dump_json())
+        return
+    if not found.cities:
+        console.print(
+            "[dim]no tile with physics yet; run 'sdc surrogate treeshade generate <city>' first.[/]"
+        )
+        return
+    console.print(ranking_table(found.ranking.rows))
+    verdict = found.arrangement
+    if verdict.cities_compared:
+        console.print(
+            f"Scattered planting beat clustered per dollar at matched coverage in "
+            f"{verdict.scattered_wins} of {verdict.cities_compared} tiles, "
+            f"by {verdict.ratio_min} to {verdict.ratio_max} times."
+        )
+    totals = found.totals
+    console.print(
+        f"[dim]{totals.cities} tiles, {totals.plans} plans, budgets {totals.budget_min_m} to "
+        f"{totals.budget_max_m} million.[/]"
     )
 
 
