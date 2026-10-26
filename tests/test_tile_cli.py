@@ -7,7 +7,8 @@ import pandas as pd
 import pytest
 from typer.testing import CliRunner
 
-from shadecast import tile_cli
+from shadecast import cities, tile_cli
+from shadecast.cities import City
 from shadecast.cli import app
 from shadecast.corpus import tile_paths
 from shadecast.corpus.urban_centre import UrbanCentre
@@ -84,10 +85,17 @@ TILES = [
         "mean_height_m": 0.0,
     },
 ]
+AHMEDABAD = City(
+    "ahmedabad", 6143, "Ahmedabad", "India", 23.0, 72.6, "BSh", "LM", "South Asia", 7898650, 6
+)
 
 
 def _fixture_centres() -> UrbanCentres:
     return UrbanCentres(pd.DataFrame(ROWS, columns=COLUMNS))
+
+
+def _fixture_corpus(entries: object = None, centres: object = None) -> dict[str, City]:
+    return {"ahmedabad": AHMEDABAD}
 
 
 def _fixture_describe(centre: UrbanCentre) -> list[dict]:
@@ -101,6 +109,7 @@ def _refuse_describe(centre: UrbanCentre) -> list[dict]:
 @pytest.fixture(autouse=True)
 def _offline(monkeypatch, tmp_path):
     monkeypatch.setenv("COLUMNS", "200")
+    monkeypatch.setattr(cities, "corpus", _fixture_corpus)
     monkeypatch.setattr(tile_cli, "load_centres", _fixture_centres)
     monkeypatch.setattr(tile_cli, "describe", _fixture_describe)
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
@@ -109,8 +118,9 @@ def _offline(monkeypatch, tmp_path):
 def test_help_lists_the_tile_commands():
     result = runner.invoke(app, ["tile", "--help"])
     assert result.exit_code == 0
-    for command in ("list", "select", "stats", "path", "status"):
+    for command in ("list", "select", "stats", "show"):
         assert command in result.stdout
+    assert "status" not in result.stdout and "path" not in result.stdout
 
 
 def test_list_writes_tiles_json_and_prints_the_densest_first(tmp_path):
@@ -120,6 +130,7 @@ def test_list_writes_tiles_json_and_prints_the_densest_first(tmp_path):
     assert payload["count"] == 6
     assert payload["urban_centre"]["id"] == 6143
     assert [row["id"] for row in payload["tiles"]][:2] == ["t43N_249_2547", "t43N_250_2547"]
+    assert payload["tiles"][0]["stages"]["bundle"] is False
     written = json.loads((tmp_path / "6143" / "tiles.json").read_text())
     assert written["count"] == 6
     table = runner.invoke(app, ["tile", "list", "6143", "--limit", "2"])
@@ -131,6 +142,12 @@ def test_list_reads_the_written_file_instead_of_describing_again(monkeypatch):
     monkeypatch.setattr(tile_cli, "describe", _refuse_describe)
     assert runner.invoke(app, ["tile", "list", "ahmedabad"]).exit_code == 0
     assert runner.invoke(app, ["tile", "list", "ahmedabad", "--refresh"]).exit_code == 1
+
+
+def test_an_unknown_centre_is_refused_by_name():
+    result = runner.invoke(app, ["tile", "list", "atlantis"])
+    assert result.exit_code == 1
+    assert "atlantis" in result.output
 
 
 def _select(*args: str) -> list[dict]:
@@ -151,6 +168,10 @@ def test_select_stratified_spreads_over_built_fraction_terciles():
 def test_select_ids_keeps_the_asked_order():
     chosen = _select("--ids", "t43N_250_2546", "--ids", "t43N_249_2547")
     assert [row["id"] for row in chosen] == ["t43N_250_2546", "t43N_249_2547"]
+    table = runner.invoke(
+        app, ["tile", "select", "ahmedabad", "--ids", "t43N_250_2546", "--ids", "t43N_249_2547"]
+    )
+    assert table.stdout.index("t43N_250_2546") < table.stdout.index("t43N_249_2547")
 
 
 def test_select_random_is_reproducible_and_populated():
@@ -173,11 +194,6 @@ def test_select_refuses_an_unknown_tile_id_by_name():
     assert "t1_1" in result.output
 
 
-def test_tiles_path_is_keyed_by_urban_centre_id(tmp_path):
-    centre = _fixture_centres().by_id(6143)
-    assert tile_cli.tiles_path(centre) == Path(tmp_path) / "6143" / "tiles.json"
-
-
 def test_stats_summarise_the_described_tiles():
     result = runner.invoke(app, ["tile", "stats", "ahmedabad", "--json"])
     assert result.exit_code == 0, result.output
@@ -185,22 +201,8 @@ def test_stats_summarise_the_described_tiles():
     assert stats["tiles"] == 6
     assert stats["populated_tiles"] == 5
     assert stats["population_2020"] == 25000.0
-    assert stats["urban_centre"]["population_2025"] == 7898650
+    assert stats["urban_centre"] == 6143 and stats["population_2025"] == 7898650
     assert "built_fraction" in runner.invoke(app, ["tile", "stats", "ahmedabad"]).stdout
-
-
-def test_path_prints_where_a_tile_lives_and_its_stages(tmp_path):
-    result = runner.invoke(app, ["tile", "path", "ahmedabad", "t43N_249_2546", "--json"])
-    assert result.exit_code == 0, result.output
-    listed = json.loads(result.stdout)
-    assert listed["tile"] == "t43N_249_2546"
-    assert listed["bundle"] == str(tmp_path / "6143" / "t43N_249_2546" / "bundle")
-    assert listed["stages"]["bundle"] is False
-
-
-def test_path_refuses_a_malformed_tile_id():
-    result = runner.invoke(app, ["tile", "path", "ahmedabad", "6908"])
-    assert result.exit_code == 1
 
 
 def _built(root: Path, tile_id: str, *, with_physics: bool) -> None:
@@ -212,43 +214,61 @@ def _built(root: Path, tile_id: str, *, with_physics: bool) -> None:
         (tile / "surrogate" / "baseline" / "tmrt_daylight.npy").write_bytes(b"")
 
 
-def test_status_reports_k_of_n_per_stage(tmp_path):
+def test_stats_report_k_of_n_per_stage(tmp_path):
     _built(tmp_path, "t43N_249_2547", with_physics=True)
     _built(tmp_path, "t43N_250_2547", with_physics=False)
-    result = runner.invoke(app, ["tile", "status", "ahmedabad", "--json"])
+    result = runner.invoke(app, ["tile", "stats", "ahmedabad", "--json"])
     assert result.exit_code == 0, result.output
-    status = json.loads(result.stdout)
-    assert status["tiles"] == 6
-    assert status["totals"] == {
+    assert json.loads(result.stdout)["stages"] == {
+        "tiles": 6,
         "bundle": 2,
         "baseline": 1,
         "physics": 0,
         "model": 0,
         "results": 0,
     }
-    assert [row["tile"] for row in status["rows"]] == ["t43N_249_2547", "t43N_250_2547"]
-    table = runner.invoke(app, ["tile", "status", "ahmedabad"])
-    assert "2 of 6" in table.stdout
+    table = runner.invoke(app, ["tile", "stats", "ahmedabad"])
+    assert "2 of 6 bundle" in table.stdout and "1 of 6 baseline" in table.stdout
 
 
-def test_status_of_an_untouched_centre_is_zero_of_n(tmp_path):
-    status = json.loads(runner.invoke(app, ["tile", "status", "ahmedabad", "--json"]).stdout)
-    assert status["totals"]["bundle"] == 0 and status["tiles"] == 6
+def test_stats_of_an_untouched_centre_are_zero_of_n():
+    stages = json.loads(runner.invoke(app, ["tile", "stats", "ahmedabad", "--json"]).stdout)[
+        "stages"
+    ]
+    assert stages["bundle"] == 0 and stages["tiles"] == 6
 
 
-def test_path_without_a_tile_lists_every_tile_on_disk(tmp_path, monkeypatch):
+def test_show_prints_where_a_tile_lives_and_its_stages(tmp_path):
+    result = runner.invoke(app, ["tile", "show", "ahmedabad", "--tile", "t43N_249_2546", "--json"])
+    assert result.exit_code == 0, result.output
+    [listed] = json.loads(result.stdout)
+    assert listed["tile"] == "t43N_249_2546"
+    assert listed["bundle"] == str(tmp_path / "6143" / "t43N_249_2546" / "bundle")
+    assert listed["stages"]["bundle"] is False
+    table = runner.invoke(app, ["tile", "show", "ahmedabad", "--tile", "t43N_249_2546"])
+    assert "t43N_249_2546" in table.stdout and "none" in table.stdout
+
+
+def test_show_refuses_a_malformed_tile_id():
+    result = runner.invoke(app, ["tile", "show", "ahmedabad", "--tile", "6908"])
+    assert result.exit_code == 1
+    assert "6908" in result.output
+
+
+def test_show_without_a_tile_lists_every_tile_on_disk(tmp_path, monkeypatch):
     bundle = tmp_path / "6143" / "t43N_249_2547" / "bundle"
     bundle.mkdir(parents=True)
     (bundle / "provenance.json").write_text("{}")
     (tmp_path / "6143" / "t43N_250_2547").mkdir()
-    result = runner.invoke(app, ["tile", "path", "6143", "--json"])
+    result = runner.invoke(app, ["tile", "show", "6143", "--json"])
     assert result.exit_code == 0, result.output
     listed = json.loads(result.stdout)
     assert [item["tile"] for item in listed] == ["t43N_249_2547", "t43N_250_2547"]
     assert listed[0]["stages"]["bundle"] is True and listed[1]["stages"]["bundle"] is False
-    table = runner.invoke(app, ["tile", "path", "6143"])
+    table = runner.invoke(app, ["tile", "show", "6143"])
     assert "t43N_249_2547" in table.stdout and "bundle" in table.stdout
+    assert "2 tiles on disk" in table.stdout
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path / "empty")
-    empty = runner.invoke(app, ["tile", "path", "6143"])
+    empty = runner.invoke(app, ["tile", "show", "6143"])
     assert empty.exit_code == 0, empty.output
     assert "sdc build 6143" in empty.output

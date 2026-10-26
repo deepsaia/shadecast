@@ -51,8 +51,12 @@ class CityCatalog:
     @classmethod
     def open(cls, tiles_root: Path) -> CityCatalog:
         """The catalog over the real selection, the real database and a tiles root."""
-        index = TileIndex(tiles_root, tile_description.describe)
-        return cls(cities.corpus(), UrbanCentres.load, index)
+        return cls.over(cities.corpus(), tiles_root)
+
+    @classmethod
+    def over(cls, selection: dict[str, City], tiles_root: Path) -> CityCatalog:
+        """The catalog over a selection already in hand, the real database and a tiles root."""
+        return cls(selection, UrbanCentres.load, TileIndex(tiles_root, tile_description.describe))
 
     @cached_property
     def _centres(self) -> UrbanCentres:
@@ -94,6 +98,10 @@ class CityCatalog:
         """Describe the centre's tiles again, then list them as `tiles` does."""
         centre = self.centre(text)
         return self._summaries(centre, self._index.describe_and_write(centre))
+
+    def tiles_file(self, text: str) -> Path:
+        """Where the centre's tiles are described on disk."""
+        return self._index.path(self.centre(text))
 
     def tile(self, text: str, tile_id: str) -> TileLocation:
         """Where everything for one tile lives and which stages have run."""

@@ -9,8 +9,11 @@ from __future__ import annotations
 from rich.console import Console
 from rich.table import Table
 
-from .cities import City
+from .corpus.tile_stages import STAGE_NAMES, TileStages
 from .corpus.urban_centre import UrbanCentre
+from .service.city_summary import CitySummary
+from .service.stage_counts import StageCounts
+from .service.tile_summary import TileSummary
 
 console = Console()
 error_console = Console(stderr=True)
@@ -18,9 +21,9 @@ error_console = Console(stderr=True)
 TIER_STYLE = {"A": "green", "B": "yellow", "C": "red"}
 
 
-def corpus_table(cities: list[City]) -> Table:
-    """Render the city corpus."""
-    table = Table(title="shadecast corpus", title_style="bold", header_style="dim")
+def corpus_table(cities: list[CitySummary]) -> Table:
+    """Render the selected cities and how far each has come: built, with physics, modeled."""
+    table = Table(title="selected cities", title_style="bold", header_style="dim")
     table.add_column("key", style="cyan", no_wrap=True)
     table.add_column("city")
     table.add_column("cc", style="dim", no_wrap=True)
@@ -28,6 +31,9 @@ def corpus_table(cities: list[City]) -> Table:
     table.add_column("income", no_wrap=True)
     table.add_column("region", style="dim")
     table.add_column("wri", justify="center")
+    table.add_column("built", justify="right", no_wrap=True)
+    table.add_column("physics", justify="right", no_wrap=True)
+    table.add_column("models", justify="right", no_wrap=True)
 
     for city in cities:
         table.add_row(
@@ -38,8 +44,27 @@ def corpus_table(cities: list[City]) -> Table:
             city.income,
             city.region,
             "[green]yes[/]" if city.in_wri else "",
+            _of_tiles(city.stages.bundle, city.stages.tiles),
+            _of_tiles(city.stages.physics, city.stages.tiles),
+            _of_tiles(city.stages.model, city.stages.tiles),
         )
     return table
+
+
+def _of_tiles(count: int, tiles: int) -> str:
+    return f"{count}/{tiles:,}" if count else "[dim]0[/]"
+
+
+def stage_line(counts: StageCounts) -> str:
+    """One line a reader can scan: how many tiles have reached each stage, out of all."""
+    reached = counts.model_dump()
+    return ", ".join(f"{reached.get(stage, 0)} of {counts.tiles} {stage}" for stage in STAGE_NAMES)
+
+
+def stages_reached(stages: TileStages) -> str:
+    """The stages a tile has reached, named in pipeline order, or none."""
+    reached = [stage for stage, flag in stages.model_dump().items() if flag]
+    return ", ".join(reached) or "none"
 
 
 def centres_table(centres: list[UrbanCentre], matched: dict[int, str] | None = None) -> Table:
@@ -97,22 +122,24 @@ def centre_details(centre: UrbanCentre) -> Table:
     return table
 
 
-def tiles_table(rows: list[dict]) -> Table:
-    """Render described tiles, one row each."""
+def tiles_table(tiles: list[TileSummary]) -> Table:
+    """Render described tiles, one row each, with the stages each has reached."""
     table = Table(header_style="dim")
     table.add_column("tile", style="cyan", no_wrap=True)
     table.add_column("people 2020", justify="right", no_wrap=True)
     table.add_column("built", justify="right", no_wrap=True)
     table.add_column("height", justify="right", no_wrap=True)
     table.add_column("centre", style="dim", no_wrap=True)
-    for row in rows:
-        centre = row.get("centre") or [float("nan"), float("nan")]
+    table.add_column("stages", style="dim")
+    for tile in tiles:
+        centre = tile.centre or [float("nan"), float("nan")]
         table.add_row(
-            str(row.get("id")),
-            f"{float(row.get('population_2020', 0.0)):,.0f}",
-            f"{float(row.get('built_fraction', 0.0)):.0%}",
-            f"{float(row.get('mean_height_m', 0.0)):.1f} m",
+            tile.id,
+            f"{tile.population_2020:,.0f}",
+            f"{tile.built_fraction:.0%}",
+            f"{tile.mean_height_m:.1f} m",
             f"{centre[0]:.4f}, {centre[1]:.4f}",
+            stages_reached(tile.stages),
         )
     return table
 

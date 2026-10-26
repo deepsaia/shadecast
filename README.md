@@ -28,9 +28,9 @@ bundle, offline, forever. A benchmark that requires three accounts is not a benc
 
 ```bash
 uv sync
-sdc list                          # the 38 city selection and its stratification; sdc is short for shadecast
+sdc cities                        # the selected cities, their strata and what each has; sdc is short for shadecast
 sdc build savannah                # assemble the densest tile's bundle, about a minute
-sdc tile path savannah            # where that tile lives and which stages have run; reads disk only
+sdc tile show savannah            # where its tiles live and which stages have run; reads disk only
 sdc surrogate treeshade generate savannah --jobs 4   # physics for the 17 tree designs, 4 at a time
 sdc surrogate treeshade train savannah      # fit the tree shade surrogate on that tile
 sdc surrogate treeshade assess savannah     # judge the newest model against the engine
@@ -49,7 +49,7 @@ sdc surrogate treeshade generate savannah --tiles all --jobs 4   # physics for e
 sdc surrogate treeshade train savannah --tiles all      # one model over every tile with physics
 ```
 
-A tile's directory is `data/tiles/<urban centre id>/<tile id>/`, and `sdc tile path <city>`
+A tile's directory is `data/tiles/<urban centre id>/<tile id>/`, and `sdc tile show <city>`
 prints it, so nobody needs to know the id.
 
 The physics engine is optional and lives in its own uv environment, which is what

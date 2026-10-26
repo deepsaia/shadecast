@@ -1,9 +1,8 @@
 """Command line for tiles: list the 1 km cells of an urban centre and choose among them.
 
 Every urban centre is an exact set of 1 km GHS grid cells, so listing its tiles is a
-computation, not a choice. Each tile is described from rasters that share the grid before any
-bundle exists, and the description is written beside the urban centre's tiles so that a later
-status report can say k of N. Choosing tiles is explicit: the densest, a spread across
+computation, not a choice. The city catalog answers every question asked here; this module
+parses flags and renders answers. Choosing tiles is explicit: the densest, a spread across
 built-fraction terciles, named ids, or a seeded draw. Selection writes nothing; building does.
 """
 
@@ -11,24 +10,27 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
+from collections.abc import Callable
+from functools import partial
 from typing import Annotated
 
 import typer
 
-from .console import console, error_console, pairs_table, records_table, tiles_table
-from .corpus import tile_paths, ucdb
-from .corpus.statistics import tile_stats
+from . import cities
+from .console import console, error_console, pairs_table, stage_line, stages_reached, tiles_table
+from .corpus import tile_paths
 from .corpus.tile import Tile
 from .corpus.tile_description import describe
-from .corpus.tile_paths import TilePaths
-from .corpus.tile_status import summary_line, tile_status
 from .corpus.tiling import select_densest, select_ids, select_random, select_stratified
 from .corpus.urban_centre import UrbanCentre
 from .corpus.urban_centres import UrbanCentres
+from .service.city_catalog import CityCatalog
+from .service.tile_index import TileIndex
+from .service.tile_summary import TileSummary
+from .service.unknown_city import UnknownCity
+from .service.unknown_tile import UnknownTile
 
 logger = logging.getLogger(__name__)
-
 
 app = typer.Typer(
     name="tile",
@@ -41,82 +43,65 @@ def load_centres() -> UrbanCentres:
     return UrbanCentres.load()
 
 
-def tiles_path(centre: UrbanCentre) -> Path:
-    return Path(tile_paths.TILES_ROOT) / str(centre.id) / "tiles.json"
+def catalog() -> CityCatalog:
+    """The catalog over the selection, the database and the tiles root, built per command.
+
+    The database is loaded once here and handed to both the selection and the catalog.
+    """
+    centres = load_centres()
+    selection = cities.corpus(centres=centres)
+    return CityCatalog(selection, partial(_loaded, centres), _index())
 
 
-def write_tiles(centre: UrbanCentre, rows: list[dict]) -> dict:
-    payload = {
-        "urban_centre": {
-            "id": centre.id,
-            "slug": centre.slug,
-            "name": centre.name,
-            "country": centre.country,
-            "area_km2": centre.area_km2,
-        },
-        "release": f"{ucdb.RELEASE} {ucdb.VERSION}",
-        "count": len(rows),
-        "tiles": rows,
-    }
-    path = tiles_path(centre)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2))
-    return payload
+def _loaded(centres: UrbanCentres) -> UrbanCentres:
+    return centres
 
 
-def cached_tiles(centre: UrbanCentre) -> dict | None:
-    """The tiles written earlier for this centre, or None when there are none yet."""
-    path = tiles_path(centre)
-    return json.loads(path.read_text()) if path.exists() else None
+def _index() -> TileIndex:
+    return TileIndex(tile_paths.TILES_ROOT, describe)
 
 
-def describe_and_write(centre: UrbanCentre) -> dict:
-    return write_tiles(centre, describe(centre))
-
-
-def _resolve(text: str) -> UrbanCentre:
+def answer[Answer](ask: Callable[[], Answer]) -> Answer:
+    """Ask the catalog one question; an unknown city or tile ends the command with its message."""
     try:
-        return load_centres().resolve(text)
-    except (KeyError, ValueError) as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
-
-
-def _named(rows: list[dict], ids: list[str]) -> list[dict]:
-    try:
-        return select_ids(rows, ids)
-    except KeyError as exc:
+        return ask()
+    except (UnknownCity, UnknownTile) as exc:
         error_console.print(str(exc), style="red", markup=False)
         raise typer.Exit(code=1) from exc
 
 
 @app.command("list")
 def list_tiles(
-    centre: Annotated[str, typer.Argument(help="An id, a slug such as ahmedabad, or a name.")],
+    centre: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
     limit: Annotated[int, typer.Option("--limit", help="Rows to show.")] = 20,
     refresh: Annotated[
         bool, typer.Option("--refresh", help="Describe again, ignoring tiles.json.")
     ] = False,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
-    """List every tile of an urban centre, densest first, and write tiles.json beside it."""
-    found = _resolve(centre)
-    payload = None if refresh else cached_tiles(found)
-    if payload is None:
-        payload = describe_and_write(found)
-    rows = select_densest(payload.get("tiles", []), len(payload.get("tiles", [])))
+    """List every tile of an urban centre, densest first, with the stages each has reached."""
+    found = catalog()
+    ask = partial(found.refresh, centre) if refresh else partial(found.tiles, centre)
+    tiles = answer(ask)
+    urban = found.centre(centre)
     if as_json:
-        console.print_json(json.dumps({**payload, "tiles": rows}))
+        payload = {
+            "urban_centre": {"id": urban.id, "slug": urban.slug, "name": urban.name},
+            "count": len(tiles),
+            "tiles": [tile.model_dump() for tile in tiles],
+        }
+        console.print_json(json.dumps(payload))
         return
-    console.print(tiles_table(rows[:limit]))
+    console.print(tiles_table(tiles[:limit]))
     console.print(
-        f"[dim]{len(rows)} tiles, {min(limit, len(rows))} shown. Written to {tiles_path(found)}.[/]"
+        f"[dim]{len(tiles)} tiles, {min(limit, len(tiles))} shown. "
+        f"Written to {found.tiles_file(centre)}.[/]"
     )
 
 
 @app.command("select")
 def select(
-    centre: Annotated[str, typer.Argument(help="An id, a slug such as ahmedabad, or a name.")],
+    centre: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
     densest: Annotated[int | None, typer.Option("--densest", help="The k densest tiles.")] = None,
     stratified: Annotated[
         int | None,
@@ -135,9 +120,8 @@ def select(
     strategies = [value for value in (densest, stratified, ids, random) if value]
     if len(strategies) != 1:
         raise typer.BadParameter("choose exactly one of --densest, --stratified, --ids or --random")
-    found = _resolve(centre)
-    payload = cached_tiles(found) or describe_and_write(found)
-    rows = payload.get("tiles", [])
+    tiles = answer(partial(catalog().tiles, centre))
+    rows = [tile.model_dump() for tile in tiles]
     if densest:
         chosen = select_densest(rows, densest)
     elif stratified:
@@ -149,43 +133,93 @@ def select(
     if as_json:
         console.print_json(json.dumps(chosen))
         return
-    console.print(tiles_table(chosen))
+    console.print(tiles_table(_in_chosen_order(tiles, [str(row.get("id")) for row in chosen])))
     console.print(f"[dim]{len(chosen)} of {len(rows)} tiles chosen.[/]")
+
+
+def _named(rows: list[dict], ids: list[str]) -> list[dict]:
+    try:
+        return select_ids(rows, ids)
+    except KeyError as exc:
+        error_console.print(str(exc), style="red", markup=False)
+        raise typer.Exit(code=1) from exc
+
+
+def _in_chosen_order(tiles: list[TileSummary], chosen_ids: list[str]) -> list[TileSummary]:
+    picked = [tile for tile in tiles if tile.id in chosen_ids]
+    return sorted(picked, key=partial(_rank, chosen_ids))
+
+
+def _rank(chosen_ids: list[str], tile: TileSummary) -> int:
+    return chosen_ids.index(tile.id)
 
 
 @app.command("stats")
 def stats(
-    centre: Annotated[str, typer.Argument(help="An id, a slug such as ahmedabad, or a name.")],
+    centre: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of tables.")] = False,
 ) -> None:
-    """Statistics over the tiles of one urban centre: counts, people, and spreads."""
-    found = _resolve(centre)
-    payload = cached_tiles(found) or describe_and_write(found)
-    summary = tile_stats(payload.get("tiles", []))
-    summary["urban_centre"] = {
-        "id": found.id,
-        "slug": found.slug,
-        "name": found.name,
-        "population_2025": found.population_2025,
-        "area_km2": found.area_km2,
-    }
+    """Statistics over one urban centre's tiles: counts, people, spreads, and k of N per stage."""
+    statistics = answer(partial(catalog().statistics, centre))
     if as_json:
-        console.print_json(json.dumps(summary))
+        console.print_json(statistics.model_dump_json())
         return
     console.print(
         pairs_table(
-            found.name,
+            statistics.name,
             {
-                "tiles": summary.get("tiles"),
-                "populated tiles": summary.get("populated_tiles"),
-                "people, 2020 epoch": summary.get("population_2020"),
-                "people, 2025 epoch (GHS-UCDB)": found.population_2025,
-                **summary.get("tiles_over", {}),
+                "tiles": statistics.tiles,
+                "populated tiles": statistics.populated_tiles,
+                "people, 2020 epoch": statistics.population_2020,
+                "people, 2025 epoch (GHS-UCDB)": statistics.population_2025,
+                **statistics.tiles_over,
             },
         )
     )
-    for field, quantiles in summary.get("quantiles", {}).items():
+    for field, quantiles in statistics.quantiles.items():
         console.print(pairs_table(field, quantiles))
+    console.print(f"[dim]{stage_line(statistics.stages)}.[/]")
+
+
+@app.command("show")
+def show(
+    centre: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
+    tile: Annotated[
+        str | None,
+        typer.Option("--tile", help="A tile id such as t43N_249_2547; else every tile on disk."),
+    ] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
+) -> None:
+    """Where everything for a tile lives, and which stages have run. Reads disk only."""
+    found = catalog()
+    if tile is None:
+        listed = answer(partial(found.tiles_on_disk, centre))
+    else:
+        listed = [answer(partial(found.tile, centre, tile))]
+    if as_json:
+        console.print_json(json.dumps([item.model_dump() for item in listed]))
+        return
+    if not listed:
+        console.print(f"[dim]no tile on disk for {centre}; run 'sdc build {centre}' first.[/]")
+        return
+    # One two-column table per tile: paths are long, so they read down, not across.
+    for item in listed:
+        console.print(
+            pairs_table(
+                f"{centre} {item.tile}",
+                {
+                    "bundle": item.bundle,
+                    "surrogate": item.surrogate,
+                    "models": item.models,
+                    "results": item.results,
+                    "stages run": stages_reached(item.stages),
+                },
+            )
+        )
+    if tile is None:
+        console.print(
+            f"[dim]{len(listed)} tile{'s' if len(listed) != 1 else ''} on disk for {centre}.[/]"
+        )
 
 
 def _tile(text: str) -> Tile:
@@ -196,59 +230,13 @@ def _tile(text: str) -> Tile:
         raise typer.Exit(code=1) from exc
 
 
-@app.command("path")
-def path(
-    centre: Annotated[str, typer.Argument(help="An id, a slug such as ahmedabad, or a name.")],
-    tile: Annotated[
-        str | None, typer.Argument(help="A tile id such as t43N_249_2547; else every tile on disk.")
-    ] = None,
-    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
-) -> None:
-    """Where everything for a tile lives, and which stages have run. Reads disk only."""
-    centre_id = _resolve(centre).id
-    if tile is None:
-        listed = [
-            {**paths.as_dict(), "stages": paths.stages().model_dump()}
-            for paths in TilePaths.existing(tile_paths.TILES_ROOT, centre_id)
-        ]
-        if as_json:
-            console.print_json(json.dumps(listed))
-            return
-        if not listed:
-            console.print(f"[dim]no tile on disk for {centre}; run 'sdc build {centre}' first.[/]")
-            return
-        # One two-column table per tile: paths are long, so they read down, not across.
-        for item in listed:
-            stages = ", ".join(k for k, v in item["stages"].items() if v) or "none"
-            console.print(
-                pairs_table(
-                    f"{centre} {item['tile']}",
-                    {
-                        "bundle": item["bundle"],
-                        "surrogate": item["surrogate"],
-                        "models": item["models"],
-                        "results": item["results"],
-                        "stages run": stages,
-                    },
-                )
-            )
-        console.print(
-            f"[dim]{len(listed)} tile{'s' if len(listed) != 1 else ''} on disk for {centre}.[/]"
-        )
-        return
-    paths = TilePaths(tile_paths.TILES_ROOT, centre_id, _tile(tile))
-    listed_one = {**paths.as_dict(), "stages": paths.stages().model_dump()}
-    if as_json:
-        console.print_json(json.dumps(listed_one))
-        return
-    console.print(pairs_table(f"{paths.urban_centre} {paths.tile.id}", paths.as_dict()))
-    console.print(pairs_table("stages", paths.stages().model_dump()))
+def _rows(centre: UrbanCentre) -> list[dict]:
+    return _index().read_or_describe(centre).get("tiles", [])
 
 
 def densest_tile(centre: UrbanCentre) -> Tile:
     """The most populous tile of a centre, describing the centre first if needed."""
-    payload = cached_tiles(centre) or describe_and_write(centre)
-    rows = select_densest(payload.get("tiles", []), 1)
+    rows = select_densest(_rows(centre), 1)
     if not rows:
         raise ValueError(f"{centre.slug} has no tiles to build")
     return Tile.from_id(str(rows[0].get("id")))
@@ -259,8 +247,7 @@ ALL_TILES = "all"
 
 def tile_count(centre: UrbanCentre) -> int:
     """How many 1 km tiles the centre has, from the tiles file or by describing it."""
-    payload = cached_tiles(centre) or describe_and_write(centre)
-    return len(payload.get("tiles", []))
+    return len(_rows(centre))
 
 
 def chosen_tiles(
@@ -273,8 +260,7 @@ def chosen_tiles(
     ``--stratified K``: the corpus selections of that size, by residents or spread over
     built-fraction terciles.
     """
-    payload = cached_tiles(centre) or describe_and_write(centre)
-    rows = payload.get("tiles", [])
+    rows = _rows(centre)
     if tiles is not None:
         if tiles.strip().lower() in ("", ALL_TILES):
             return [Tile.from_id(str(row.get("id"))) for row in rows]
@@ -284,19 +270,3 @@ def chosen_tiles(
     if stratified:
         return [Tile.from_id(str(row.get("id"))) for row in select_stratified(rows, stratified)]
     return [densest_tile(centre)]
-
-
-@app.command("status")
-def status(
-    centre: Annotated[str, typer.Argument(help="An id, a slug such as ahmedabad, or a name.")],
-    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
-) -> None:
-    """How many of an urban centre's tiles have a bundle, physics, a model and results."""
-    found = _resolve(centre)
-    report = tile_status(found, tile_paths.TILES_ROOT)
-    if as_json:
-        console.print_json(json.dumps(report))
-        return
-    if report.get("rows"):
-        console.print(records_table(found.name, report["rows"]))
-    console.print(f"[dim]{summary_line(report)}.[/]")

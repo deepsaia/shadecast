@@ -20,6 +20,7 @@ from .console import (
     error_console,
     pairs_table,
     records_table,
+    stage_line,
 )
 from .corpus import tile_paths
 from .corpus.draw import Draw
@@ -27,9 +28,9 @@ from .corpus.sampling import sample as draw_sample
 from .corpus.sampling import strata
 from .corpus.slugs import slugify
 from .corpus.statistics import corpus_stats
-from .corpus.tile_status import summary_line, tile_status
 from .corpus.urban_centre import UrbanCentre
 from .corpus.urban_centres import UrbanCentres
+from .service.stage_counting import count_stages
 
 logger = logging.getLogger(__name__)
 
@@ -104,12 +105,12 @@ def show(
     except (KeyError, ValueError) as exc:
         error_console.print(str(exc), style="red", markup=False)
         raise typer.Exit(code=1) from exc
-    report = tile_status(found, tile_paths.TILES_ROOT)
+    counts = count_stages(tile_paths.TILES_ROOT, found.id, found.tiles)
     if as_json:
-        console.print_json(json.dumps({**as_record(found), "status": report.get("totals", {})}))
+        console.print_json(json.dumps({**as_record(found), "status": counts.model_dump()}))
         return
     console.print(centre_details(found))
-    console.print(f"[dim]{summary_line(report)}.[/]")
+    console.print(f"[dim]{stage_line(counts)}.[/]")
 
 
 @app.command("sample")
