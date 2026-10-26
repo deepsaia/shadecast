@@ -7,7 +7,7 @@ missed.
 
 Every cell is a real engine run. No surrogate output appears in any number here.
 
-Live walkthrough: <https://deepsaia.github.io/shadecast/>
+Public pages: <https://deepsaia.github.io/shadecast/>. The interactive walkthrough runs locally with `sdc dash`.
 
 ## Settled
 
