@@ -15,6 +15,12 @@ def _city(key: str, plans: list[tuple[str, float, float, float, float, float]]) 
         "name": key.title(),
         "provenance": {"canopy": 0.1, "built_fraction": 0.3, "population_2020": 1000, "tier": "A"},
         "baseline": {"exposure": 55.0, "at_risk": 400},
+        "physics": {
+            "designs": 2,
+            "engine_minutes": 11.0,
+            "seconds_per_design_min": 300,
+            "seconds_per_design_max": 360,
+        },
         "plans": {
             "list": [
                 {
@@ -52,20 +58,8 @@ def _payload():
     return [a, b]
 
 
-def _pairs(tmp_path: Path):
-    pairs = []
-    for key in ("ahmedabad", "lagos"):
-        surrogate = tmp_path / key / "surrogate"
-        surrogate.mkdir(parents=True)
-        (surrogate / "manifest.json").write_text(
-            json.dumps({"manifest": [{"engine_seconds": 300.0}, {"engine_seconds": 360.0}]})
-        )
-        pairs.append((key, tmp_path / key / "bundle", surrogate))
-    return pairs
-
-
 def test_collect_derives_totals_matched_pairs_and_verdicts(tmp_path):
-    payload = results.collect(_payload(), _pairs(tmp_path), tmp_path)
+    payload = results.collect(_payload(), tmp_path)
     assert payload["totals"] == {
         "cities": 2,
         "plans": 6,
@@ -89,7 +83,7 @@ def test_collect_derives_totals_matched_pairs_and_verdicts(tmp_path):
 
 
 def test_ranking_orders_cities_by_scattered_efficiency_and_measures_the_spread(tmp_path):
-    payload = results.collect(_payload(), _pairs(tmp_path), tmp_path)
+    payload = results.collect(_payload(), tmp_path)
     rows = payload["ranking"]["rows"]
     assert [row["key"] for row in rows] == ["lagos", "ahmedabad"]
     assert rows[0]["scattered_per_1k"] == 156.3 and rows[1]["clustered_per_1k"] == 14.85
@@ -98,7 +92,7 @@ def test_ranking_orders_cities_by_scattered_efficiency_and_measures_the_spread(t
 
 def test_experiment_files_are_passed_through_when_present(tmp_path):
     (tmp_path / "factorial.json").write_text(json.dumps([{"city": "ahmedabad", "kind": "tree"}]))
-    payload = results.collect(_payload(), _pairs(tmp_path), tmp_path)
+    payload = results.collect(_payload(), tmp_path)
     assert payload["factorial"] == [{"city": "ahmedabad", "kind": "tree"}]
     assert payload["targeting"] is None or payload["targeting"] == {}
 
@@ -113,19 +107,19 @@ def test_matched_pair_ties_resolve_to_the_largest_coverage(tmp_path):
             ("scattered", 0.10, 10.0, 4.0, 50, 40.0),
         ],
     )
-    payload = results.collect([city], [], tmp_path)
+    payload = results.collect([city], tmp_path)
     matched = payload["cities"][0]["matched"]
     assert matched["clustered"]["coverage"] == 0.10 and matched["ratio"] == round(40 / 12, 2)
 
 
 def test_a_city_with_a_baseline_but_no_plans_is_left_off_the_page(tmp_path):
-    payload = results.collect([_city("empty", [])], [], tmp_path)
+    payload = results.collect([_city("empty", [])], tmp_path)
     assert payload["cities"] == [] and payload["totals"]["plans"] == 0
 
 
 def test_a_city_without_both_arrangements_has_no_matched_pair(tmp_path):
     only = [_city("rio", [("corridor", 0.01, 1.0, 0.5, 10, 20.0)])]
-    payload = results.collect(only, [], tmp_path)
+    payload = results.collect(only, tmp_path)
     assert payload["cities"][0]["matched"] is None
     assert payload["arrangement"]["cities_compared"] == 0
     assert payload["ranking"]["spread"] is None
