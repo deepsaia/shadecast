@@ -55,6 +55,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/shadecast"]
+# The built client is ignored by git, which hatchling honors, so it is named as an artifact:
+# a wheel built after make frontend carries it and sdc serve needs no Node from an installed copy.
+artifacts = ["src/shadecast/server/static/**"]
 
 [dependency-groups]
 dev = [

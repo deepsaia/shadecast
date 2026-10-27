@@ -16,9 +16,10 @@ NOT_BUILT = """<!doctype html><meta charset="utf-8"><title>shadecast</title>
 <body style="font-family: system-ui; max-width: 40rem; margin: 4rem auto; line-height: 1.5">
 <h1>The client is not built</h1>
 <p>The API is up at <a href="/api/docs">/api/docs</a>. To serve the dashboard, build the client
-once:</p>
+once from a checkout:</p>
 <pre>make frontend</pre>
-<p>then start the server again.</p></body>"""
+<p>then start the server again. An installed copy gets the client from a wheel built with
+<code>make wheel</code>.</p></body>"""
 
 
 def mount(app: FastAPI, static_dir: Path) -> None:

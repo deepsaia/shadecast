@@ -1,4 +1,4 @@
-.PHONY: sync lint test engine frontend frontend-test types
+.PHONY: sync lint test engine frontend frontend-test types wheel
 
 sync:
 	uv sync
@@ -25,6 +25,10 @@ frontend-test:
 	pnpm --dir frontend lint
 	pnpm --dir frontend typecheck
 	pnpm --dir frontend test
+
+# An installable wheel: the client first, so the wheel carries it and sdc serve needs no Node.
+wheel: frontend
+	uv build --wheel
 
 # The client's types come from the server's schema, so the contract is written once, in pydantic.
 types:

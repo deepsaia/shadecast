@@ -26,6 +26,9 @@ logs/
 # The built client, produced by make frontend and never committed.
 src/shadecast/server/static/
 
+# Wheels built by make wheel.
+/dist/
+
 # The client's packages, installed by make frontend.
 frontend/node_modules/
 /out/openapi.json
