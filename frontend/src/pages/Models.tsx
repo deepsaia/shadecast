@@ -15,7 +15,8 @@ export function ModelsPage() {
       <h1>Models</h1>
       <p className="mt-2 max-w-[60ch] text-muted-foreground">
         A surrogate learns one physical channel from a city's generated physics and answers in a fraction of a
-        second what the engine answers in minutes. Every model is listed from its manifest.
+        second what the engine answers in minutes. Generating physics writes what a model learns from; training
+        is its own step. Every model is listed from its manifest.
       </p>
       <Loading query={channels} what="the channels" />
       {channels.data && cities.data && channels.data.map((channel) => (
@@ -34,10 +35,35 @@ function ChannelModels({ channelKey, label, cities }: { channelKey: string; labe
       <Loading query={models} what="the models" />
       {models.data && (models.data.length ? <ModelTable models={models.data} names={names} /> : (
         <p className="mt-3 max-w-[60ch] text-sm text-muted-foreground">
-          No model trained yet. Generate a city's physics, then <code>sdc surrogate treeshade train &lt;city&gt;</code>.
+          No model trained yet. Generate a city's physics, then <code>sdc surrogate {channelKey} train &lt;city&gt;</code>.
         </p>
       ))}
+      {models.data && <Untrained channelKey={channelKey} cities={cities} />}
     </section>
+  );
+}
+
+/** The cities whose tiles have physics and no model, each with the command that trains one. */
+function Untrained({ channelKey, cities }: { channelKey: string; cities: CitySummary[] }) {
+  const waiting = cities.filter((city) => city.stages.physics > 0 && city.stages.model === 0);
+  if (!waiting.length) return null;
+  return (
+    <div className="mt-6 max-w-[64ch] rounded-md border border-dashed p-4 text-sm">
+      <p>
+        {waiting.length === 1 ? "One city has" : `${waiting.length} cities have`} generated physics and no model
+        yet. Train one per city with:
+      </p>
+      <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+        {waiting.map((city) => (
+          <li key={city.key} className="flex items-baseline justify-between gap-3">
+            <span>{city.name}</span>
+            <code className="text-[13px]">
+              sdc surrogate {channelKey} train {city.key}
+            </code>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
