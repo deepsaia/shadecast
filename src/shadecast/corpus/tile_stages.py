@@ -15,3 +15,7 @@ class TileStages(BaseModel):
     physics: bool = False
     model: bool = False
     results: bool = False
+
+    def with_model(self, found: bool) -> TileStages:
+        """These stages with the model flag as the models root answers it; no tile proves it."""
+        return self.model_copy(update={"model": found})

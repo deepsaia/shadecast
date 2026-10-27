@@ -2,9 +2,10 @@
 
 ``data/tiles/<uc_id>/<tile_id>/`` holds the bundle, the surrogate directory (the generated
 responses, with the baseline physics in ``surrogate/baseline`` as it always has, so the
-experiments and the walkthrough keep reading it unchanged), one directory per trained model under
-``models/``, the plans, and a results file. Status is read from the
-files that prove a stage ran, never from a separate record: the directories are the record.
+experiments keep reading it unchanged), the plans, and a results file. Models live apart, under
+one root for all of them, ``data/models/<model id>/``, whatever tiles they learned from: their
+manifests name the tiles. Status is read from the files that prove a stage ran, never from a
+separate record: the directories are the record.
 """
 
 from __future__ import annotations
@@ -16,6 +17,8 @@ from .tile import Tile
 from .tile_stages import TileStages
 
 TILES_ROOT = Path("data/tiles")
+# Every model, from one tile or pooled over many, in one place with one reader.
+MODELS_ROOT = Path("data/models")
 
 
 @dataclass(frozen=True)
@@ -41,16 +44,6 @@ class TilePaths:
         return self.surrogate / "baseline"
 
     @property
-    def models(self) -> Path:
-        return self.root / "models"
-
-    def model_dirs(self) -> list[Path]:
-        """Every trained model of this tile, oldest first by directory name."""
-        if not self.models.is_dir():
-            return []
-        return sorted(child for child in self.models.iterdir() if (child / "model.pt").exists())
-
-    @property
     def plans(self) -> Path:
         return self.root / "plans"
 
@@ -63,12 +56,15 @@ class TilePaths:
         return Path(self.tiles_root) / str(self.urban_centre) / "tiles.json"
 
     def stages(self) -> TileStages:
-        """Which stages have run, from the files that prove it."""
+        """Which stages the tile directory proves.
+
+        The model stage is not among them: models live under one root apart from the tiles, so
+        the catalog sets it from their manifests with ``TileStages.with_model``.
+        """
         return TileStages(
             bundle=(self.bundle / "provenance.json").exists(),
             baseline=(self.baseline / "tmrt_daylight.npy").exists(),
             physics=(self.surrogate / "manifest.json").exists(),
-            model=bool(self.model_dirs()),
             results=self.results.exists(),
         )
 
@@ -80,7 +76,6 @@ class TilePaths:
             "bundle": str(self.bundle),
             "baseline": str(self.baseline),
             "surrogate": str(self.surrogate),
-            "models": str(self.models),
             "plans": str(self.plans),
             "results": str(self.results),
         }

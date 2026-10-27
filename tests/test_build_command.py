@@ -27,6 +27,7 @@ def _offline(monkeypatch, tmp_path):
     monkeypatch.setattr(tile_cli, "load_centres", fixture_centres)
     monkeypatch.setattr(tile_cli, "describe", fixture_tiles)
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
+    monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
 
 
 def test_build_a_named_tile_goes_into_the_tile_layout(tmp_path):

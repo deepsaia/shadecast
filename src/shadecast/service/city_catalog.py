@@ -17,6 +17,7 @@ from ..corpus.urban_centre import UrbanCentre
 from ..corpus.urban_centres import UrbanCentres
 from .city_summary import CitySummary
 from .missing_stage import MissingStage
+from .model_catalog import ModelCatalog
 from .selection import Selection
 from .stage_counting import count_stages
 from .stage_counts import StageCounts
@@ -36,31 +37,42 @@ class CityCatalog:
     first time. Stages come from the files that prove them, never from a record kept apart.
     """
 
-    # Three collaborators because three records are read: the selection names the cities, the
-    # database resolves any centre a command names, and the index knows the 1 km tiles. The
-    # database is loaded only when a slug or a name must be resolved or a centre described, so
-    # listing the selection and reading what is on disk stay fast and offline.
+    # Four collaborators because four records are read: the selection names the cities, the
+    # database resolves any centre a command names, the index knows the 1 km tiles, and the model
+    # catalog knows which tiles a model learned from, since models live apart from their tiles.
+    # The database is loaded only when a slug or a name must be resolved or a centre described,
+    # so listing the selection and reading what is on disk stay fast and offline.
     def __init__(
         self,
         selection: Selection,
         load_centres: Callable[[], UrbanCentres],
         index: TileIndex,
+        models: ModelCatalog,
     ) -> None:
         self._selection = selection
         self._load_centres = load_centres
         self._index = index
+        self._models = models
 
     @classmethod
-    def open(cls, tiles_root: Path) -> CityCatalog:
-        """The catalog over the real selection, the real database and a tiles root."""
+    def open(cls, tiles_root: Path, models_root: Path) -> CityCatalog:
+        """The catalog over the real selection, the real database and the two data roots."""
         index = TileIndex(tiles_root, tile_description.describe)
-        return cls(Selection.read(), UrbanCentres.load, index)
+        return cls(Selection.read(), UrbanCentres.load, index, ModelCatalog(models_root))
 
     @classmethod
-    def over(cls, listed: dict[str, City], tiles_root: Path) -> CityCatalog:
-        """The catalog over city records already in hand, the real database and a tiles root."""
+    def with_centres(
+        cls, centres: UrbanCentres, tiles_root: Path, models_root: Path
+    ) -> CityCatalog:
+        """The catalog over the real selection and a database a command has already loaded."""
         index = TileIndex(tiles_root, tile_description.describe)
-        return cls(Selection.resolved(listed), UrbanCentres.load, index)
+        return cls(Selection.read(), partial(_loaded, centres), index, ModelCatalog(models_root))
+
+    @classmethod
+    def over(cls, listed: dict[str, City], tiles_root: Path, models_root: Path) -> CityCatalog:
+        """The catalog over city records already in hand, the real database and the data roots."""
+        index = TileIndex(tiles_root, tile_description.describe)
+        return cls(Selection.resolved(listed), UrbanCentres.load, index, ModelCatalog(models_root))
 
     @cached_property
     def _centres(self) -> UrbanCentres:
@@ -73,10 +85,6 @@ class CityCatalog:
     def keys(self) -> list[str]:
         """The selection keys, without loading anything."""
         return self._selection.keys()
-
-    def urban_centre_ids(self) -> list[int]:
-        """The urban centre of every selected city, in selection order, without the database."""
-        return [self.urban_centre_id(key) for key in self.keys()]
 
     def records(self) -> dict[str, City]:
         """The selected cities' records, keyed by selection key; loads the database when needed."""
@@ -136,7 +144,8 @@ class CityCatalog:
 
     def tile(self, text: str, tile_id: str) -> TileLocation:
         """Where everything for one tile lives and which stages have run."""
-        return self._location(self.tile_paths(text, tile_id))
+        paths = self.tile_paths(text, tile_id)
+        return self._location(paths, self._models.tiles_with_models(paths.urban_centre))
 
     def tile_paths(self, text: str, tile_id: str) -> TilePaths:
         """The on-disk record of one tile, for services that read its files."""
@@ -157,8 +166,10 @@ class CityCatalog:
 
     def tiles_on_disk(self, text: str) -> list[TileLocation]:
         """Every tile directory present for the centre, in id order, listed in the file or not."""
-        found = TilePaths.existing(self._index.tiles_root, self.urban_centre_id(text))
-        return [self._location(paths) for paths in found]
+        urban_centre = self.urban_centre_id(text)
+        modelled = self._models.tiles_with_models(urban_centre)
+        found = TilePaths.existing(self._index.tiles_root, urban_centre)
+        return [self._location(paths, modelled) for paths in found]
 
     def ranked_on_disk(self, text: str) -> list[TileLocation]:
         """The tiles present, densest first by the tiles file when it exists; no database needed."""
@@ -167,8 +178,9 @@ class CityCatalog:
         ranked = {
             str(row.get("id")): index for index, row in enumerate(select_densest(rows, len(rows)))
         }
+        modelled = self._models.tiles_with_models(urban_centre)
         found = [
-            self._location(paths)
+            self._location(paths, modelled)
             for paths in TilePaths.existing(self._index.tiles_root, urban_centre)
         ]
         return sorted(found, key=partial(_rank_then_id, ranked))
@@ -190,6 +202,10 @@ class CityCatalog:
         """How many of the centre's tiles have reached each stage, out of all it has."""
         urban_centre = self.urban_centre_id(text)
         return self._counts(urban_centre, self._tile_count(text, urban_centre))
+
+    def stage_counts_of(self, centre: UrbanCentre) -> StageCounts:
+        """The same for a centre record in hand, selected or not, without the selection."""
+        return self._counts(centre.id, centre.tiles)
 
     def _resolve_id(self, query: str) -> int:
         selected = self._selection.ucdb_id(query)
@@ -222,18 +238,28 @@ class CityCatalog:
         )
 
     def _counts(self, urban_centre: int, tiles: int) -> StageCounts:
-        return count_stages(self._index.tiles_root, urban_centre, tiles)
+        return count_stages(self._stages_on_disk(urban_centre), tiles)
+
+    def _stages_on_disk(self, urban_centre: int) -> list[TileStages]:
+        modelled = self._models.tiles_with_models(urban_centre)
+        return [
+            paths.stages().with_model(paths.tile.id in modelled)
+            for paths in TilePaths.existing(self._index.tiles_root, urban_centre)
+        ]
 
     def _summaries(self, centre: UrbanCentre, payload: dict) -> list[TileSummary]:
         rows = payload.get("tiles", [])
+        modelled = self._models.tiles_with_models(centre.id)
         return [
             TileSummary.model_validate(
-                {**row, "stages": self._stages_of(centre.id, str(row.get("id")))}
+                {**row, "stages": self._stages_of(centre.id, str(row.get("id")), modelled)}
             )
             for row in select_densest(rows, len(rows))
         ]
 
-    def _stages_of(self, urban_centre: int, tile_id: str) -> TileStages:
+    # Three arguments: the tile is named by centre and id, and the modelled tiles are read from
+    # the models root once per listing rather than once per row.
+    def _stages_of(self, urban_centre: int, tile_id: str, modelled: set[str]) -> TileStages:
         """The stages of a listed tile; a row whose id is not a tile id has none on disk.
 
         Older files listed tiles under a scheme the layout no longer uses.
@@ -242,7 +268,8 @@ class CityCatalog:
             tile = Tile.from_id(tile_id)
         except ValueError:
             return TileStages()
-        return TilePaths(self._index.tiles_root, urban_centre, tile).stages()
+        stages = TilePaths(self._index.tiles_root, urban_centre, tile).stages()
+        return stages.with_model(tile_id in modelled)
 
     def _paths(self, urban_centre: int, tile_id: str) -> TilePaths:
         try:
@@ -251,8 +278,13 @@ class CityCatalog:
             raise UnknownTile(str(urban_centre), tile_id) from exc
         return TilePaths(self._index.tiles_root, urban_centre, tile)
 
-    def _location(self, paths: TilePaths) -> TileLocation:
-        return TileLocation.model_validate({**paths.as_dict(), "stages": paths.stages()})
+    def _location(self, paths: TilePaths, modelled: set[str]) -> TileLocation:
+        stages = paths.stages().with_model(paths.tile.id in modelled)
+        return TileLocation.model_validate({**paths.as_dict(), "stages": stages})
+
+
+def _loaded(centres: UrbanCentres) -> UrbanCentres:
+    return centres
 
 
 def _rank_then_id(ranked: dict[str, int], tile: TileLocation) -> tuple[int, str]:

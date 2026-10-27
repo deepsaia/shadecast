@@ -59,6 +59,7 @@ def test_entry_point_keeps_usage_errors_and_planned_exits(monkeypatch):
 
 def test_generate_stops_with_the_resume_line(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
+    monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
     bundle = tmp_path / "6143" / "t43N_249_2547" / "bundle"
     bundle.mkdir(parents=True)
     (bundle / "provenance.json").write_text(

@@ -7,19 +7,20 @@ from pathlib import Path
 
 from ..corpus.tile_paths import TilePaths
 from ..surrogate.dataset import GENERATION_LOCK, default_plan, lock_is_stale
-from ..surrogate.training_state import CHECKPOINT_NAME
+from ..surrogate.training_state import CHECKPOINT_NAME, STARTED_NAME
 from .city_catalog import CityCatalog
 from .field_store import RESPONSE_ARCHIVE
+from .json_file import read_object
 from .model_catalog import MANIFEST
 from .run_summary import RunSummary
 
 GENERATION = "generation"
 TRAINING = "training"
-POOLED = "pooled"
+UNRECORDED = "unrecorded"
 
 
 class RunStatus:
-    """Answers which runs are in progress across every selected city and the pooled models."""
+    """Answers which runs are in progress: generation per tile, training under the models root."""
 
     def __init__(self, catalog: CityCatalog, models_root: Path) -> None:
         self._catalog = catalog
@@ -30,22 +31,11 @@ class RunStatus:
         for city in self._catalog.cities():
             for tile in self._catalog.tiles_on_disk(city.key):
                 paths = self._catalog.tile_paths(city.key, tile.tile)
-                found.extend(_tile_runs(city.key, paths))
-        found.extend(
-            _training(POOLED, None, model_dir) for model_dir in _unfinished(self._models_root)
-        )
+                lock = paths.surrogate / GENERATION_LOCK
+                if lock.exists():
+                    found.append(_generation(city.key, paths, lock))
+        found.extend(_training(model_dir) for model_dir in _unfinished(self._models_root))
         return found
-
-
-def _tile_runs(city: str, paths: TilePaths) -> list[RunSummary]:
-    runs = []
-    lock = paths.surrogate / GENERATION_LOCK
-    if lock.exists():
-        runs.append(_generation(city, paths, lock))
-    runs.extend(
-        _training(city, paths.tile.id, model_dir) for model_dir in _unfinished(paths.models)
-    )
-    return runs
 
 
 def _generation(city: str, paths: TilePaths, lock: Path) -> RunSummary:
@@ -62,13 +52,17 @@ def _generation(city: str, paths: TilePaths, lock: Path) -> RunSummary:
     )
 
 
-def _training(city: str, tile: str | None, model_dir: Path) -> RunSummary:
+def _training(model_dir: Path) -> RunSummary:
+    """An unfinished run, named for the tiles its start record lists; older runs left none."""
+    record = read_object(model_dir / STARTED_NAME)
+    tiles: list[dict] = record.get("tiles", [])
+    cities = list(dict.fromkeys(str(entry.get("city")) for entry in tiles if entry.get("city")))
     return RunSummary(
         kind=TRAINING,
-        city=city,
-        tile=tile,
+        city=", ".join(cities) or UNRECORDED,
+        tile=str(tiles[0].get("tile")) if len(tiles) == 1 and tiles[0].get("tile") else None,
         model=model_dir.name,
-        started=_stamp(model_dir / CHECKPOINT_NAME),
+        started=str(record.get("started") or _stamp(model_dir / CHECKPOINT_NAME)),
         alive=None,
         designs_done=None,
         designs_planned=None,

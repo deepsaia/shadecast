@@ -11,6 +11,7 @@ from shadecast.service.baseline_request import BaselineRequest
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.engine_service import EngineService
 from shadecast.service.missing_stage import MissingStage
+from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
 from shadecast.sim.result import RunResult
@@ -31,7 +32,10 @@ def service(tmp_path, monkeypatch) -> EngineService:
     RUNS.clear()
     monkeypatch.setattr(dataset, "run", _fake_run)
     catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(tmp_path, fixture_tiles)
+        Selection.resolved(fixture_corpus()),
+        fixture_centres,
+        TileIndex(tmp_path, fixture_tiles),
+        ModelCatalog(tmp_path / "models"),
     )
     return EngineService(catalog)
 

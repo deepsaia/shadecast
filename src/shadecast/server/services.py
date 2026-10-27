@@ -35,13 +35,14 @@ class Services:
         with the command that describes them, never by fetching rasters on a request.
         """
         index = TileIndex(settings.tiles_root, _never_describe)
-        catalog = CityCatalog(Selection.read(), UrbanCentres.load, index)
+        models = ModelCatalog(settings.models_root)
+        catalog = CityCatalog(Selection.read(), UrbanCentres.load, index, models)
         return cls(
             catalog=catalog,
             reporter=TileReporter(catalog),
             results=ResultsReport(catalog, settings.data_root),
             findings=FindingsReport(settings.data_root),
-            models=ModelCatalog(settings.tiles_root, settings.models_root),
+            models=models,
             runs=RunStatus(catalog, settings.models_root),
         )
 

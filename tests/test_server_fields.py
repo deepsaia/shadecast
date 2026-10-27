@@ -1,6 +1,7 @@
 """Fields travel as NPY arrays, at native or requested size, and the remaining questions as JSON."""
 
 import io
+import json
 from pathlib import Path
 
 import numpy as np
@@ -27,14 +28,17 @@ TILE = synthetic_tile.TILE_ID
 def _services(data_root: Path) -> Services:
     tiles_root = data_root / "tiles"
     catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(tiles_root, fixture_tiles)
+        Selection.resolved(fixture_corpus()),
+        fixture_centres,
+        TileIndex(tiles_root, fixture_tiles),
+        ModelCatalog(data_root / "models"),
     )
     return Services(
         catalog=catalog,
         reporter=TileReporter(catalog),
         results=ResultsReport(catalog, data_root),
         findings=FindingsReport(data_root),
-        models=ModelCatalog(tiles_root, data_root / "models"),
+        models=ModelCatalog(data_root / "models"),
         runs=RunStatus(catalog, data_root / "models"),
     )
 
@@ -108,11 +112,11 @@ def test_channels_and_models(client, data_root):
     channels = client.get("/api/v1/channels").json()
     assert [channel["key"] for channel in channels] == ["treeshade"]
     assert client.get("/api/v1/channels/treeshade/models?city=ahmedabad").json() == []
-    model = (
-        data_root / "tiles" / "6143" / TILE / "models" / "response-unet-ahmedabad-20261023T121739"
-    )
+    model = data_root / "models" / "response-unet-ahmedabad-20261023T121739"
     model.mkdir(parents=True)
     (model / "model.pt").write_bytes(b"w")
+    tiles = [{"city": "ahmedabad", "tile": TILE, "urban_centre": 6143}]
+    (model / "manifest.json").write_text(json.dumps({"data": {"tiles": tiles}}))
     listed = client.get("/api/v1/channels/treeshade/models?city=ahmedabad").json()
     assert [entry["id"] for entry in listed] == [model.name] and listed[0]["tile"] == TILE
     named = client.get(f"/api/v1/channels/treeshade/models/{model.name}?city=ahmedabad").json()

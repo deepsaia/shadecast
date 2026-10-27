@@ -1,5 +1,6 @@
 """The city catalog answers what the selected cities are and what their tiles have reached."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,7 @@ from shadecast.corpus.tile_stages import TileStages
 from shadecast.corpus.urban_centres import UrbanCentres
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.missing_stage import MissingStage
+from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.selection import Selection
 from shadecast.service.stage_counts import StageCounts
 from shadecast.service.tile_index import TileIndex
@@ -28,7 +30,10 @@ def root(tmp_path) -> Path:
 @pytest.fixture
 def catalog(root) -> CityCatalog:
     return CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(root, fixture_tiles)
+        Selection.resolved(fixture_corpus()),
+        fixture_centres,
+        TileIndex(root, fixture_tiles),
+        ModelCatalog(root / "models"),
     )
 
 
@@ -39,14 +44,24 @@ def _prove(root: Path, tile_id: str, *stages: str, urban_centre: int = 6143) -> 
         "bundle": tile / "bundle" / "provenance.json",
         "baseline": tile / "surrogate" / "baseline" / "tmrt_daylight.npy",
         "physics": tile / "surrogate" / "manifest.json",
-        "model": tile / "models" / "unet-1" / "model.pt",
         "results": tile / "results.json",
     }
     tile.mkdir(parents=True, exist_ok=True)
     for stage in stages:
+        if stage == "model":
+            _model_of(root, tile_id, urban_centre)
+            continue
         proofs[stage].parent.mkdir(parents=True, exist_ok=True)
         proofs[stage].write_bytes(b"")
     return tile
+
+
+def _model_of(root: Path, tile_id: str, urban_centre: int) -> None:
+    """A finished model under the models root whose manifest names the tile."""
+    model = root / "models" / f"response-unet-{tile_id}"
+    model.mkdir(parents=True, exist_ok=True)
+    tiles = [{"tile": tile_id, "urban_centre": urban_centre}]
+    (model / "manifest.json").write_text(json.dumps({"data": {"tiles": tiles}}))
 
 
 def test_cities_are_the_selection_with_nothing_built(catalog):
@@ -93,7 +108,9 @@ def test_tiles_come_densest_first_with_their_stages(root, catalog):
 
 def test_a_tiles_file_from_an_older_build_is_read_for_what_it_has(root):
     index = TileIndex(root, lambda centre: [{"id": "t43N_249_2547", "x_km": 6897, "people": 1}])
-    catalog = CityCatalog(Selection.resolved(fixture_corpus()), fixture_centres, index)
+    catalog = CityCatalog(
+        Selection.resolved(fixture_corpus()), fixture_centres, index, ModelCatalog(root / "models")
+    )
     tiles = catalog.tiles("ahmedabad")
     assert [tile.id for tile in tiles] == ["t43N_249_2547"]
     assert tiles[0].population_2020 == 0.0
@@ -125,7 +142,10 @@ def _no_database() -> UrbanCentres:
 
 def test_keys_and_ids_never_load_the_database(root):
     catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), _no_database, TileIndex(root, fixture_tiles)
+        Selection.resolved(fixture_corpus()),
+        _no_database,
+        TileIndex(root, fixture_tiles),
+        ModelCatalog(root / "models"),
     )
     _prove(root, "t43N_249_2547", "bundle")
     assert [city.key for city in catalog.cities()] == ["ahmedabad", "london"]
@@ -161,7 +181,10 @@ def test_refresh_describes_the_tiles_again(root):
         return fixture_tiles(centre)
 
     catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(root, describe)
+        Selection.resolved(fixture_corpus()),
+        fixture_centres,
+        TileIndex(root, describe),
+        ModelCatalog(root / "models"),
     )
     catalog.tiles("ahmedabad")
     catalog.tiles("ahmedabad")
@@ -209,7 +232,9 @@ def test_a_tiles_file_from_an_older_build_with_old_ids_lists_without_failing(roo
     index = TileIndex(
         root, lambda centre: [{"id": "t6908_2818", "x_km": 6908, "population_2020": 5.0}]
     )
-    catalog = CityCatalog(Selection.resolved(fixture_corpus()), fixture_centres, index)
+    catalog = CityCatalog(
+        Selection.resolved(fixture_corpus()), fixture_centres, index, ModelCatalog(root / "models")
+    )
     [tile] = catalog.tiles("ahmedabad")
     assert tile.id == "t6908_2818" and tile.stages == TileStages()
 
@@ -218,7 +243,9 @@ def test_the_furthest_tile_needs_no_tiles_file(root):
     _prove(root, "t43N_250_2547", "bundle", "baseline")
     _prove(root, "t43N_249_2547", "bundle")
     index = TileIndex(root, _refuse_describe)
-    catalog = CityCatalog(Selection.resolved(fixture_corpus()), _no_database, index)
+    catalog = CityCatalog(
+        Selection.resolved(fixture_corpus()), _no_database, index, ModelCatalog(root / "models")
+    )
     assert catalog.furthest_tile("ahmedabad").tile == "t43N_250_2547"
 
 

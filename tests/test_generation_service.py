@@ -11,6 +11,7 @@ from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.generation_request import GenerationRequest
 from shadecast.service.generation_service import GenerationService
 from shadecast.service.missing_stage import MissingStage
+from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.null_progress import NullProgress
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
@@ -21,7 +22,10 @@ DENSE, SPARSE = "t43N_250_2547", "t43N_249_2547"
 @pytest.fixture
 def service(tmp_path) -> GenerationService:
     catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(tmp_path, fixture_tiles)
+        Selection.resolved(fixture_corpus()),
+        fixture_centres,
+        TileIndex(tmp_path, fixture_tiles),
+        ModelCatalog(tmp_path / "models"),
     )
     return GenerationService(catalog)
 

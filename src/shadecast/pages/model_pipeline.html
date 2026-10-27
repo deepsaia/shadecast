@@ -585,12 +585,12 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
 
 <section id="storage">
   <h2><i>11</i>Where models live</h2>
-  <p>Models, data and results are not in git. They live under <code>data/</code>, which git ignores. The layout puts each tile's models beside the physics that trained them.</p>
+  <p>Models, data and results are not in git. They live under <code>data/</code>, which git ignores. Every model lives under one root, whatever tiles it learned from. Its manifest names those tiles, so one reader finds a model of one tile and a model pooled over several the same way.</p>
   <pre>data/tiles/&lt;urban center id&gt;/&lt;tile id&gt;/
   bundle/        the five layers, provenance.json
   surrogate/     baseline/ and one directory per design
-  models/        one directory per trained model: model.pt, manifest.json, assessment.json
-data/models/     models trained on several tiles</pre>
+data/models/&lt;model id&gt;/
+  model.pt, manifest.json, started.json, training_report.json, assessment.json</pre>
   <p>Storing models elsewhere is an option, never a requirement. A model store interface will have three backends: a local directory, which is the default, the Hugging Face Hub, and a git-lfs repository. Each holds the same files. Fetching from a public store needs no account. Publishing needs the credential that store asks for, at build time. This is issue 103.</p>
 </section>
 

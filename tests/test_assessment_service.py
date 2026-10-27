@@ -33,9 +33,11 @@ def _physics(bundle: Path) -> Path:
 
 
 def _model(root: Path, tile_id: str, name: str) -> Path:
-    model = root / str(CENTRE) / tile_id / "models" / name
+    model = root / "models" / name
     model.mkdir(parents=True)
     (model / "model.pt").write_bytes(b"w")
+    tiles = [{"city": "ahmedabad", "tile": tile_id, "urban_centre": CENTRE}]
+    (model / "manifest.json").write_text(json.dumps({"data": {"tiles": tiles}}))
     return model
 
 

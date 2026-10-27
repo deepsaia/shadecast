@@ -9,6 +9,7 @@ from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
 from shadecast.corpus.tile_paths import TilePaths
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.missing_stage import MissingStage
+from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
 from shadecast.service.tile_reporter import TileReporter, report_of
@@ -17,7 +18,10 @@ from shadecast.service.tile_reporter import TileReporter, report_of
 @pytest.fixture
 def catalog(tmp_path) -> CityCatalog:
     return CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(tmp_path, fixture_tiles)
+        Selection.resolved(fixture_corpus()),
+        fixture_centres,
+        TileIndex(tmp_path, fixture_tiles),
+        ModelCatalog(tmp_path / "models"),
     )
 
 

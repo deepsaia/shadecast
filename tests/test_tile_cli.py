@@ -114,6 +114,7 @@ def _offline(monkeypatch, tmp_path):
     monkeypatch.setattr(tile_cli, "load_centres", _fixture_centres)
     monkeypatch.setattr(tile_cli, "describe", _fixture_describe)
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
+    monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
 
 
 def test_help_lists_the_tile_commands():
@@ -270,6 +271,7 @@ def test_show_without_a_tile_lists_every_tile_on_disk(tmp_path, monkeypatch):
     assert "t43N_249_2547" in table.stdout and "bundle" in table.stdout
     assert "2 tiles on disk" in table.stdout
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path / "empty")
+    monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
     empty = runner.invoke(app, ["tile", "show", "6143"])
     assert empty.exit_code == 0, empty.output
     assert "sdc build 6143" in empty.output

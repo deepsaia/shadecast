@@ -30,7 +30,7 @@ export interface paths {
         };
         /**
          * Models
-         * @description The channel's models for one city, or for every selected city when none is named.
+         * @description The channel's models for one city, or every model under the root when none is named.
          */
         get: operations["models_api_v1_channels__channel__models_get"];
         put?: never;
@@ -605,8 +605,6 @@ export interface components {
             baseline: string;
             /** Bundle */
             bundle: string;
-            /** Models */
-            models: string;
             /** Plans */
             plans: string;
             /** Results */

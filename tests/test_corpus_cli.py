@@ -95,6 +95,7 @@ def _offline_database(monkeypatch, tmp_path):
     monkeypatch.setenv("COLUMNS", "200")
     monkeypatch.setattr(corpus_cli, "load_centres", _fixture_centres)
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
+    monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
 
 
 def test_help_lists_the_corpus_commands():

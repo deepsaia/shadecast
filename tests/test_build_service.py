@@ -7,6 +7,7 @@ from support.recording_progress import RecordingProgress
 from shadecast.service.build_request import BuildRequest
 from shadecast.service.build_service import BuildService
 from shadecast.service.city_catalog import CityCatalog
+from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
 from shadecast.service.unknown_city import UnknownCity
@@ -30,7 +31,10 @@ def _failing_build_tile(city, tile, paths):
 def service(tmp_path) -> BuildService:
     CALLS.clear()
     catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(tmp_path, fixture_tiles)
+        Selection.resolved(fixture_corpus()),
+        fixture_centres,
+        TileIndex(tmp_path, fixture_tiles),
+        ModelCatalog(tmp_path / "models"),
     )
     return BuildService(catalog, tmp_path, _fake_build_tile)
 
@@ -93,7 +97,10 @@ def test_build_records_each_tile_and_reports_every_step(tmp_path, service):
 
 def test_one_failed_tile_does_not_stop_the_others(tmp_path):
     catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(tmp_path, fixture_tiles)
+        Selection.resolved(fixture_corpus()),
+        fixture_centres,
+        TileIndex(tmp_path, fixture_tiles),
+        ModelCatalog(tmp_path / "models"),
     )
     service = BuildService(catalog, tmp_path, _failing_build_tile)
     progress = RecordingProgress()

@@ -26,7 +26,7 @@ class AssessmentService:
 
     def __init__(self, tiles_root: Path, models_root: Path) -> None:
         self._tiles_root = Path(tiles_root)
-        self._models = ModelCatalog(tiles_root, models_root)
+        self._models = ModelCatalog(models_root)
 
     def assess(self, request: AssessmentRequest, progress: ProgressListener) -> AssessmentOutcome:
         model_dir, surrogate_dir, bundle = self._inputs(request)

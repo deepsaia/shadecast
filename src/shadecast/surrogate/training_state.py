@@ -18,6 +18,8 @@ from torch import nn
 from .trainables import Trainables
 
 CHECKPOINT_NAME = "checkpoint.pt"
+# Written before the first epoch with the tiles a run trains on, so an unfinished run has a name.
+STARTED_NAME = "started.json"
 
 
 @dataclass

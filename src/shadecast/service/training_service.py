@@ -1,7 +1,8 @@
-"""Fit a surrogate for a city's tiles, or several pooled, and write the model and its records."""
+"""Fit a surrogate for a city's tiles, or several pooled, and write it under the models root."""
 
 from __future__ import annotations
 
+import json
 import time
 from datetime import datetime
 from pathlib import Path
@@ -18,7 +19,7 @@ from ..surrogate.patch_settings import PatchSettings
 from ..surrogate.patches import crop_batch, crop_cities
 from ..surrogate.training import save_report, train
 from ..surrogate.training_settings import TrainingSettings
-from ..surrogate.training_state import CHECKPOINT_NAME
+from ..surrogate.training_state import CHECKPOINT_NAME, STARTED_NAME
 from .model_catalog import model_created
 from .progress_listener import ProgressListener
 from .training_outcome import TrainingOutcome
@@ -87,6 +88,7 @@ class TrainingService:
         created = manifest.now()
         destination, model_id, resumed = self._destination(request, pairs, created)
         destination.mkdir(parents=True, exist_ok=True)
+        _record_start(destination, pairs, created)
         settings = TrainingSettings(
             epochs=request.epochs, holdout_city=request.holdout_city, channels=request.channels
         )
@@ -134,21 +136,26 @@ class TrainingService:
     def _destination(
         self, request: TrainingRequest, pairs: list[tuple[Path, Path]], created: datetime
     ) -> tuple[Path, str, bool]:
-        root = models_root_for(pairs, self._models_root)
         if request.resume:
-            unfinished = unfinished_model(root)
+            unfinished = unfinished_model(self._models_root)
             if unfinished is None:
-                raise ValueError(f"nothing to resume under {root}")
+                raise ValueError(f"nothing to resume under {self._models_root}")
             return unfinished, unfinished.name, True
         model_id = manifest.new_model_id(pairs, created)
-        return root / model_id, model_id, False
+        return self._models_root / model_id, model_id, False
 
 
-def models_root_for(pairs: list[tuple[Path, Path]], pooled_root: Path) -> Path:
-    """One tile's models live beside its surrogate directory; pooled models at the shared root."""
-    if len(pairs) == 1:
-        return Path(pairs[0][0]).parent / "models"
-    return Path(pooled_root)
+def _record_start(destination: Path, pairs: list[tuple[Path, Path]], created: datetime) -> None:
+    """Write which tiles the run trains on before it starts, so an unfinished run can be named.
+
+    A resumed run keeps the record of its first start.
+    """
+    record = destination / STARTED_NAME
+    if record.exists():
+        return
+    tiles = [manifest.tile_record(surrogate_dir, bundle) for surrogate_dir, bundle in pairs]
+    started = {"started": created.isoformat(timespec="seconds"), "tiles": tiles}
+    record.write_text(json.dumps(started, indent=2))
 
 
 def unfinished_model(root: Path) -> Path | None:

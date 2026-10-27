@@ -12,6 +12,7 @@ from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.experiment_request import ExperimentRequest
 from shadecast.service.experiment_service import ExperimentService
 from shadecast.service.missing_stage import MissingStage
+from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
 
@@ -44,6 +45,7 @@ def service(tmp_path, monkeypatch) -> ExperimentService:
         Selection.resolved(fixture_corpus()),
         fixture_centres,
         TileIndex(tmp_path / "tiles", fixture_tiles),
+        ModelCatalog(tmp_path / "models"),
     )
     return ExperimentService(catalog, tmp_path)
 
