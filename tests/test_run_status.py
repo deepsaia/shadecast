@@ -1,24 +1,39 @@
 """What is generating or training now is read from the locks and checkpoints runs leave."""
 
+import json
 import os
 
 from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
 
 from shadecast.service.city_catalog import CityCatalog
+from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.run_status import RunStatus
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
 from shadecast.surrogate.dataset import GENERATION_LOCK
-from shadecast.surrogate.training_state import CHECKPOINT_NAME
+from shadecast.surrogate.training_state import CHECKPOINT_NAME, STARTED_NAME
 
 TILE = "t43N_249_2547"
 
 
 def _status(root) -> RunStatus:
     catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(root, fixture_tiles)
+        Selection.resolved(fixture_corpus()),
+        fixture_centres,
+        TileIndex(root, fixture_tiles),
+        ModelCatalog(root / "models"),
     )
     return RunStatus(catalog, root / "models")
+
+
+def _unfinished(root, name: str, tiles: list[dict] | None = None):
+    model = root / "models" / name
+    model.mkdir(parents=True)
+    (model / CHECKPOINT_NAME).write_bytes(b"c")
+    if tiles is not None:
+        started = {"started": "2026-10-23T12:17:39+00:00", "tiles": tiles}
+        (model / STARTED_NAME).write_text(json.dumps(started))
+    return model
 
 
 def _surrogate(root, designs: int):
@@ -46,23 +61,27 @@ def test_a_stale_or_unreadable_lock_is_reported_as_not_alive(tmp_path):
     assert run.alive is False
 
 
-def test_a_checkpoint_without_a_manifest_is_a_training_run(tmp_path):
-    model = tmp_path / "6143" / TILE / "models" / "response-unet-ahmedabad-20261023T121739"
-    model.mkdir(parents=True)
-    (model / CHECKPOINT_NAME).write_bytes(b"c")
-    finished = tmp_path / "6143" / TILE / "models" / "response-unet-ahmedabad-20261023T100000"
-    finished.mkdir()
-    (finished / CHECKPOINT_NAME).write_bytes(b"c")
+def test_a_checkpoint_without_a_manifest_is_a_training_run_named_by_its_start_record(tmp_path):
+    one = _unfinished(
+        tmp_path,
+        "response-unet-ahmedabad-20261023T121739",
+        [{"city": "ahmedabad", "tile": TILE, "urban_centre": 6143}],
+    )
+    pooled = _unfinished(
+        tmp_path,
+        "response-unet-ahmedabad+lagos-20261024T090000",
+        [{"city": "ahmedabad", "tile": TILE}, {"city": "lagos", "tile": "t31N_537_714"}],
+    )
+    bare = _unfinished(tmp_path, "response-unet-x-20261024T100000")
+    finished = _unfinished(tmp_path, "response-unet-ahmedabad-20261023T100000")
     (finished / "manifest.json").write_text("{}")
-    pooled = tmp_path / "models" / "response-unet-ahmedabad-2tiles-20261024T090000"
-    pooled.mkdir(parents=True)
-    (pooled / CHECKPOINT_NAME).write_bytes(b"c")
-    runs = _status(tmp_path).runs()
-    assert [(run.kind, run.model) for run in runs] == [
-        ("training", "response-unet-ahmedabad-20261023T121739"),
-        ("training", "response-unet-ahmedabad-2tiles-20261024T090000"),
-    ]
-    assert runs[0].tile == TILE and runs[1].tile is None and runs[0].alive is None
+    runs = {run.model: run for run in _status(tmp_path).runs()}
+    assert set(runs) == {one.name, pooled.name, bare.name}
+    assert all(run.kind == "training" and run.alive is None for run in runs.values())
+    assert runs[one.name].city == "ahmedabad" and runs[one.name].tile == TILE
+    assert runs[one.name].started == "2026-10-23T12:17:39+00:00"
+    assert runs[pooled.name].city == "ahmedabad, lagos" and runs[pooled.name].tile is None
+    assert runs[bare.name].city == "unrecorded" and runs[bare.name].started
 
 
 def test_nothing_running_is_an_empty_list(tmp_path):

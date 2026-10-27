@@ -7,7 +7,7 @@ from shadecast.service.findings_report import FindingsReport
 
 
 def _model(root: Path, tile: str, name: str, created: str, skill: float) -> Path:
-    model = root / "tiles" / "6143" / tile / "models" / name
+    model = root / "models" / name
     model.mkdir(parents=True)
     (model / "manifest.json").write_text(json.dumps({"created": created}))
     (model / "assessment.json").write_text(json.dumps({"headline": {"mean_skill": skill}}))

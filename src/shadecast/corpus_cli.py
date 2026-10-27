@@ -30,7 +30,7 @@ from .corpus.slugs import slugify
 from .corpus.statistics import corpus_stats
 from .corpus.urban_centre import UrbanCentre
 from .corpus.urban_centres import UrbanCentres
-from .service.stage_counting import count_stages
+from .service.city_catalog import CityCatalog
 
 logger = logging.getLogger(__name__)
 
@@ -100,12 +100,14 @@ def show(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """Show one urban centre: strata, population, and how many 1 km tiles it holds."""
+    centres = load_centres()
     try:
-        found = load_centres().resolve(centre)
+        found = centres.resolve(centre)
     except (KeyError, ValueError) as exc:
         error_console.print(str(exc), style="red", markup=False)
         raise typer.Exit(code=1) from exc
-    counts = count_stages(tile_paths.TILES_ROOT, found.id, found.tiles)
+    catalog = CityCatalog.with_centres(centres, tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT)
+    counts = catalog.stage_counts_of(found)
     if as_json:
         console.print_json(json.dumps({**as_record(found), "status": counts.model_dump()}))
         return

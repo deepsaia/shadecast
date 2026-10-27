@@ -1,4 +1,4 @@
-"""Every model that learned from a city's tiles is listed, per tile or pooled, oldest first."""
+"""Every model lives under one root and belongs to the cities its manifest names, oldest first."""
 
 import json
 from pathlib import Path
@@ -10,51 +10,52 @@ from shadecast.service.model_catalog import ModelCatalog, model_created
 from shadecast.service.unknown_model import UnknownModel
 
 CENTRE = 6143
+LAGOS = 1289
 TILE = "t43N_249_2547"
 
 
-def _tile_model(root: Path, name: str, created: str | None = None, weights: bool = True) -> Path:
-    model = root / str(CENTRE) / TILE / "models" / name
+def _tile(tile: str = TILE, centre: int = CENTRE) -> dict:
+    return {
+        "city": "ahmedabad" if centre == CENTRE else "lagos",
+        "tile": tile,
+        "urban_centre": centre,
+    }
+
+
+def _model(
+    root: Path, name: str, created: str | None, tiles: list[dict], weights: bool = True
+) -> Path:
+    """A model directory; a created stamp means a manifest, and no stamp means weights alone."""
+    model = root / name
     model.mkdir(parents=True)
     if weights:
         (model / "model.pt").write_bytes(b"w")
     if created:
-        (model / "manifest.json").write_text(
-            json.dumps(
-                {"created": created, "metrics": {"best_skill": 0.8}, "data": {"tiles": [{}]}}
-            )
-        )
+        manifest = {"created": created, "metrics": {"best_skill": 0.8}, "data": {"tiles": tiles}}
+        (model / "manifest.json").write_text(json.dumps(manifest))
     return model
 
 
-def _pooled_model(
-    models_root: Path, name: str, created: str, centres: list[int], weights: bool = True
-) -> Path:
-    model = models_root / name
-    model.mkdir(parents=True)
-    if weights:
-        (model / "model.pt").write_bytes(b"w")
-    tiles = [{"urban_centre": centre} for centre in centres]
-    (model / "manifest.json").write_text(json.dumps({"created": created, "data": {"tiles": tiles}}))
-    return model
-
-
-def test_models_come_oldest_first_across_tile_and_pooled_directories(tmp_path):
-    _tile_model(tmp_path, "response-unet-ahmedabad-20261023T121739")
-    _tile_model(tmp_path, "response-unet-ahmedabad-20260826T143800")
-    _pooled_model(
-        tmp_path / "models",
+def test_a_centres_models_come_oldest_first_whatever_they_learned_from(tmp_path):
+    _model(
+        tmp_path, "response-unet-ahmedabad-20261023T121739", "2026-10-23T12:17:39+00:00", [_tile()]
+    )
+    _model(
+        tmp_path, "response-unet-ahmedabad-20260826T143800", "2026-08-26T14:38:00+00:00", [_tile()]
+    )
+    _model(
+        tmp_path,
         "response-unet-ahmedabad-2tiles-20261024T090000",
         "2026-10-24T09:00:00+00:00",
-        [CENTRE, CENTRE],
+        [_tile(), _tile("t43N_250_2547")],
     )
-    _pooled_model(
-        tmp_path / "models",
+    _model(
+        tmp_path,
         "response-unet-lagos-20261024T100000",
         "2026-10-24T10:00:00+00:00",
-        [1289],
+        [_tile("t31N_537_714", LAGOS)],
     )
-    listed = ModelCatalog(tmp_path, tmp_path / "models").models(CENTRE)
+    listed = ModelCatalog(tmp_path).models(CENTRE)
     assert [model.id for model in listed] == [
         "response-unet-ahmedabad-20260826T143800",
         "response-unet-ahmedabad-20261023T121739",
@@ -62,54 +63,71 @@ def test_models_come_oldest_first_across_tile_and_pooled_directories(tmp_path):
     ]
     assert [model.tile for model in listed] == [TILE, TILE, None]
     assert [model.urban_centres for model in listed] == [[CENTRE], [CENTRE], [CENTRE]]
-
-
-def test_models_across_cities_list_a_pooled_model_once_with_every_centre_it_serves(tmp_path):
-    _tile_model(tmp_path, "response-unet-ahmedabad-20261023T121739")
-    _pooled_model(
-        tmp_path / "models",
-        "response-unet-ahmedabad+lagos-20261024T090000",
-        "2026-10-24T09:00:00+00:00",
-        [CENTRE, 1289],
-    )
-    listed = ModelCatalog(tmp_path, tmp_path / "models").models_across([CENTRE, 1289])
-    assert [model.id for model in listed] == [
-        "response-unet-ahmedabad-20261023T121739",
-        "response-unet-ahmedabad+lagos-20261024T090000",
-    ]
-    assert listed[-1].urban_centres == [CENTRE, 1289]
     assert listed[-1].tiles_trained == 2 and listed[-1].channel == "treeshade"
 
 
-def test_the_newest_and_a_named_model_are_found(tmp_path):
-    _tile_model(tmp_path, "response-unet-ahmedabad-20260826T143800")
-    newest = _tile_model(
-        tmp_path, "response-unet-ahmedabad-20261023T121739", "2026-10-23T12:17:39+00:00"
+def test_every_model_is_listed_once_and_one_without_a_manifest_belongs_to_no_city(tmp_path):
+    pooled = _model(
+        tmp_path,
+        "response-unet-ahmedabad+lagos-20261024T090000",
+        "2026-10-24T09:00:00+00:00",
+        [_tile(), _tile("t31N_537_714", LAGOS)],
     )
-    catalog = ModelCatalog(tmp_path, tmp_path / "models")
+    bare = _model(tmp_path, "response-unet-ahmedabad-20261025T090000", None, [])
+    catalog = ModelCatalog(tmp_path)
+    assert [model.id for model in catalog.all_models()] == [pooled.name, bare.name]
+    assert catalog.all_models()[0].urban_centres == [CENTRE, LAGOS]
+    assert (
+        catalog.all_models()[1].urban_centres == []
+        and catalog.all_models()[1].has_manifest is False
+    )
+    assert [model.id for model in catalog.models(CENTRE)] == [pooled.name]
+    assert [model.id for model in catalog.models(LAGOS)] == [pooled.name]
+
+
+def test_the_tiles_with_models_are_those_a_finished_model_learned_from(tmp_path):
+    _model(
+        tmp_path, "response-unet-ahmedabad-20261023T121739", "2026-10-23T12:17:39+00:00", [_tile()]
+    )
+    _model(tmp_path, "response-unet-ahmedabad-20261025T090000", None, [])
+    catalog = ModelCatalog(tmp_path)
+    assert catalog.tiles_with_models(CENTRE) == {TILE}
+    assert catalog.tiles_with_models(LAGOS) == set()
+
+
+def test_the_newest_and_a_named_model_are_found(tmp_path):
+    older = _model(
+        tmp_path, "response-unet-ahmedabad-20260826T143800", "2026-08-26T14:38:00+00:00", [_tile()]
+    )
+    newest = _model(
+        tmp_path, "response-unet-ahmedabad-20261023T121739", "2026-10-23T12:17:39+00:00", [_tile()]
+    )
+    catalog = ModelCatalog(tmp_path)
     found = catalog.newest(CENTRE)
     assert found.id == newest.name and found.path == str(newest) and found.skill == 0.8
-    assert catalog.named(CENTRE, "response-unet-ahmedabad-20260826T143800").skill is None
+    assert catalog.named(CENTRE, older.name).id == older.name
 
 
 def test_an_unknown_name_and_a_city_without_models_are_refused(tmp_path):
-    catalog = ModelCatalog(tmp_path, tmp_path / "models")
+    catalog = ModelCatalog(tmp_path)
     with pytest.raises(MissingStage, match="sdc surrogate treeshade train"):
         catalog.newest(CENTRE)
-    _tile_model(tmp_path, "response-unet-ahmedabad-20261023T121739")
+    _model(
+        tmp_path, "response-unet-ahmedabad-20261023T121739", "2026-10-23T12:17:39+00:00", [_tile()]
+    )
     with pytest.raises(UnknownModel, match="nope"):
         catalog.named(CENTRE, "nope")
 
 
-def test_a_pooled_model_without_weights_is_listed_not_hidden(tmp_path):
-    _pooled_model(
-        tmp_path / "models",
-        "response-unet-ahmedabad-2tiles-20261024T090000",
+def test_a_model_without_weights_is_listed_not_hidden(tmp_path):
+    _model(
+        tmp_path,
+        "response-unet-ahmedabad-20261024T090000",
         "2026-10-24T09:00:00+00:00",
-        [CENTRE],
+        [_tile()],
         weights=False,
     )
-    [model] = ModelCatalog(tmp_path, tmp_path / "models").models(CENTRE)
+    [model] = ModelCatalog(tmp_path).models(CENTRE)
     assert model.has_weights is False and model.has_manifest is True
 
 

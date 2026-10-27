@@ -8,6 +8,7 @@ from support.recording_progress import RecordingProgress
 from shadecast.service import plan_service
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.missing_stage import MissingStage
+from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.plan_request import PlanRequest
 from shadecast.service.plan_service import PlanService
 from shadecast.service.selection import Selection
@@ -44,7 +45,10 @@ def service(tmp_path, monkeypatch) -> PlanService:
     SEEN.clear()
     monkeypatch.setattr(plan_service, "evaluate", _fake_evaluate)
     catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(tmp_path, fixture_tiles)
+        Selection.resolved(fixture_corpus()),
+        fixture_centres,
+        TileIndex(tmp_path, fixture_tiles),
+        ModelCatalog(tmp_path / "models"),
     )
     return PlanService(catalog)
 

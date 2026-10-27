@@ -21,7 +21,6 @@ from .service.city_catalog import CityCatalog
 from .service.generation_request import GenerationRequest
 from .service.generation_service import GenerationService, settings_for
 from .service.missing_stage import MissingStage
-from .service.model_catalog import MODELS_ROOT
 from .service.null_progress import NullProgress
 from .service.training_request import TrainingRequest
 from .service.training_service import TrainingService
@@ -89,7 +88,7 @@ def generate_data(
     an interrupted run resumes where it stopped. Put -v before the command for debug logging.
     """
     request = GenerationRequest(target=target, tiles=tiles, out=out, jobs=jobs, kind=KIND)
-    service = GenerationService(CityCatalog.open(tile_paths.TILES_ROOT))
+    service = GenerationService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT))
     try:
         chosen = service.tiles_for(request)
     except (UnknownCity, MissingStage, ValueError) as exc:
@@ -225,7 +224,7 @@ def train_model(
         stratified=stratified,
         resume=resume,
     )
-    service = TrainingService(tile_paths.TILES_ROOT, MODELS_ROOT)
+    service = TrainingService(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT)
     try:
         outcome = service.train(request, TrainingProgress(console))
     except ValueError as exc:
@@ -288,7 +287,7 @@ def assess_model(
         tile=tile,
         design=design,
     )
-    service = AssessmentService(tile_paths.TILES_ROOT, MODELS_ROOT)
+    service = AssessmentService(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT)
     try:
         with console.status("[cyan]comparing surrogate against engine truth[/]"):
             outcome = service.assess(request, NullProgress())
@@ -335,5 +334,5 @@ def describe(
 
 
 def _model_dir(target: str, model: str | None) -> Path:
-    service = AssessmentService(tile_paths.TILES_ROOT, MODELS_ROOT)
+    service = AssessmentService(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT)
     return Path(service.model_summary(target, model).path)

@@ -14,7 +14,6 @@ class TileLocation(BaseModel):
     bundle: str
     baseline: str
     surrogate: str
-    models: str
     plans: str
     results: str
     stages: TileStages

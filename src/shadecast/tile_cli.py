@@ -32,6 +32,7 @@ from .corpus.tiling import select_densest, select_ids, select_random, select_str
 from .corpus.urban_centres import UrbanCentres
 from .service.city_catalog import CityCatalog
 from .service.missing_stage import MissingStage
+from .service.model_catalog import ModelCatalog
 from .service.selection import Selection
 from .service.tile_index import TileIndex
 from .service.tile_report import TileReport
@@ -60,7 +61,8 @@ def catalog() -> CityCatalog:
     """
     centres = load_centres()
     selection = cities.corpus(centres=centres)
-    return CityCatalog(Selection.resolved(selection), partial(_loaded, centres), _index())
+    models = ModelCatalog(tile_paths.MODELS_ROOT)
+    return CityCatalog(Selection.resolved(selection), partial(_loaded, centres), _index(), models)
 
 
 def _loaded(centres: UrbanCentres) -> UrbanCentres:
@@ -220,7 +222,6 @@ def show(
                 {
                     "bundle": item.bundle,
                     "surrogate": item.surrogate,
-                    "models": item.models,
                     "results": item.results,
                     "stages run": stages_reached(item.stages),
                 },

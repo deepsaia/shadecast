@@ -37,15 +37,19 @@ def everything(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_cli, "load_centres", fixture_centres)
     monkeypatch.setattr(tile_cli, "describe", fixture_tiles)
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tiles_root)
+    monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
     catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(tiles_root, fixture_tiles)
+        Selection.resolved(fixture_corpus()),
+        fixture_centres,
+        TileIndex(tiles_root, fixture_tiles),
+        ModelCatalog(tmp_path / "models"),
     )
     services = Services(
         catalog=catalog,
         reporter=TileReporter(catalog),
         results=ResultsReport(catalog, tmp_path),
         findings=FindingsReport(tmp_path),
-        models=ModelCatalog(tiles_root, tmp_path / "models"),
+        models=ModelCatalog(tmp_path / "models"),
         runs=RunStatus(catalog, tmp_path / "models"),
     )
     settings = ServerSettings(data_root=tmp_path, static_dir=tmp_path / "static")

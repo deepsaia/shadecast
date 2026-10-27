@@ -36,7 +36,8 @@ DEFAULT_BUDGET = 2_288_000.0
 
 def _run(request: ExperimentRequest, as_json: bool) -> None:
     service = ExperimentService(
-        CityCatalog.open(tile_paths.TILES_ROOT), tile_paths.TILES_ROOT.parent
+        CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT),
+        tile_paths.TILES_ROOT.parent,
     )
     try:
         with console.status(f"[cyan]{request.name}[/]: every cell is a real engine run"):

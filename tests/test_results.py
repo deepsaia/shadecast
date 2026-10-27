@@ -9,6 +9,7 @@ from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
 from shadecast.corpus.tile_stages import TileStages
 from shadecast.service.baseline_score import BaselineScore
 from shadecast.service.city_catalog import CityCatalog
+from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.physics_facts import PhysicsFacts
 from shadecast.service.plan import Plan
 from shadecast.service.results_report import ResultsReport
@@ -88,6 +89,7 @@ def _service(tmp_path: Path) -> ResultsReport:
         Selection.resolved(fixture_corpus()),
         fixture_centres,
         TileIndex(tmp_path / "tiles", fixture_tiles),
+        ModelCatalog(tmp_path / "models"),
     )
     return ResultsReport(catalog, tmp_path)
 

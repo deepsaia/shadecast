@@ -10,7 +10,7 @@ from shadecast.service import training_service
 from shadecast.service.null_progress import NullProgress
 from shadecast.service.training_request import TrainingRequest
 from shadecast.service.training_service import TrainingService, unfinished_model
-from shadecast.surrogate.training_state import CHECKPOINT_NAME
+from shadecast.surrogate.training_state import CHECKPOINT_NAME, STARTED_NAME
 
 CENTRE = 6143
 
@@ -144,7 +144,11 @@ def test_train_crops_fits_and_writes_the_model_its_report_and_its_manifest(tmp_p
         TrainingRequest(target="ahmedabad", epochs=6), NullProgress()
     )
     destination = Path(outcome.destination)
-    assert destination.parent == tmp_path / str(CENTRE) / "t43N_249_2547" / "models"
+    assert destination.parent == tmp_path / "models"
+    started = json.loads((destination / STARTED_NAME).read_text())
+    assert started["tiles"] == [
+        {"city": "ahmedabad", "tile": "t43N_249_2547", "urban_centre": CENTRE, "designs": 2}
+    ]
     assert destination.name.startswith("response-unet-ahmedabad-")
     assert (destination / "model.pt").exists() and (destination / "manifest.json").exists()
     report = json.loads((destination / "training_report.json").read_text())
@@ -156,7 +160,7 @@ def test_train_crops_fits_and_writes_the_model_its_report_and_its_manifest(tmp_p
 def test_resume_continues_the_newest_unfinished_model(tmp_path, monkeypatch):
     bundle = _bundle(tmp_path, "t43N_249_2547")
     _physics(bundle)
-    unfinished = bundle.parent / "models" / "response-unet-ahmedabad-20261023T100000"
+    unfinished = tmp_path / "models" / "response-unet-ahmedabad-20261023T100000"
     unfinished.mkdir(parents=True)
     (unfinished / CHECKPOINT_NAME).write_bytes(b"c")
     monkeypatch.setattr(training_service, "crop_batch", _fake_crop)

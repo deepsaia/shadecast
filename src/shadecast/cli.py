@@ -38,7 +38,6 @@ from .service.build_service import BuildService
 from .service.city_catalog import CityCatalog
 from .service.engine_service import EngineService
 from .service.missing_stage import MissingStage
-from .service.model_catalog import MODELS_ROOT
 from .service.null_progress import NullProgress
 from .service.plan_request import PlanRequest
 from .service.plan_service import PlanService
@@ -101,7 +100,7 @@ def list_cities(
 ) -> None:
     """Show the selected cities, how they are stratified, and what each has on disk."""
     selection = cities.corpus()
-    listed = CityCatalog.over(selection, tile_paths.TILES_ROOT).cities()
+    listed = CityCatalog.over(selection, tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT).cities()
     summary = cities.summary(selection.values())
     if as_json:
         payload = {"summary": summary, "cities": [city.model_dump() for city in listed]}
@@ -120,7 +119,7 @@ def results(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of tables.")] = False,
 ) -> None:
     """The measured results across every tile with physics: ranking, arrangement verdict, totals."""
-    catalog = CityCatalog.open(tile_paths.TILES_ROOT)
+    catalog = CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT)
     found = ResultsReport(catalog, tile_paths.TILES_ROOT.parent).collect()
     if as_json:
         console.print_json(found.model_dump_json())
@@ -150,7 +149,9 @@ def runs(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """What is generating or training right now, and whether its process is still alive."""
-    found = RunStatus(CityCatalog.open(tile_paths.TILES_ROOT), MODELS_ROOT).runs()
+    found = RunStatus(
+        CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT), tile_paths.MODELS_ROOT
+    ).runs()
     if as_json:
         console.print_json(json.dumps([run.model_dump() for run in found]))
         return
@@ -212,7 +213,7 @@ def plan(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """Plan an intervention over a tile and score it against doing nothing."""
-    service = PlanService(CityCatalog.open(tile_paths.TILES_ROOT))
+    service = PlanService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT))
     request = PlanRequest(target=city, tile=tile, kind=kind, budget_usd=budget)
     try:
         with console.status(f"[cyan]{city}[/]: baseline physics, then the plan"):
@@ -243,7 +244,7 @@ def run(
 
     The engine is a separate subprocess. A baseline already on disk is kept, not rerun.
     """
-    service = EngineService(CityCatalog.open(tile_paths.TILES_ROOT))
+    service = EngineService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT))
     try:
         with console.status(f"[cyan]{city}[/]: baseline physics"):
             outcome = service.run_baseline(BaselineRequest(target=city, tile=tile), NullProgress())

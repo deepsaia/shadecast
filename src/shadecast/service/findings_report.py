@@ -47,9 +47,9 @@ class FindingsReport:
         return findings
 
     def latest_assessment(self) -> Path | None:
-        """The most recently created assessed model across every tile, or None when none is."""
+        """The most recently created assessed model under the models root, or None when none is."""
         newest: tuple[str, Path] | None = None
-        for assessment in (self._root / "tiles").glob("*/*/models/*/assessment.json"):
+        for assessment in (self._root / "models").glob("*/assessment*.json"):
             created = str(read_object(assessment.parent / "manifest.json").get("created", ""))
             if newest is None or created > newest[0]:
                 newest = (created, assessment)

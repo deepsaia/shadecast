@@ -56,7 +56,9 @@ sdc surrogate treeshade train savannah --tiles all      # one model over every t
 ```
 
 A tile's directory is `data/tiles/<urban centre id>/<tile id>/`, and `sdc tile show <city>`
-prints it, so nobody needs to know the id.
+prints it, so nobody needs to know the id. Every model lives under `data/models/<model id>/`,
+whatever it learned from; its manifest names the tiles, so a model of one tile and one pooled
+over several are found the same way.
 
 ## The dashboard
 

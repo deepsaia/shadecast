@@ -16,6 +16,7 @@ from shadecast.corpus import tile_paths
 from shadecast.corpus.urban_centres import UrbanCentres
 from shadecast.service import experiment_service, plan_service
 from shadecast.service.city_catalog import CityCatalog
+from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
 from shadecast.sim.result import RunResult
@@ -71,6 +72,7 @@ def _offline_corpus(monkeypatch, tmp_path):
     monkeypatch.setenv("COLUMNS", "200")
     monkeypatch.setattr(cities, "corpus", _fixture_corpus)
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
+    monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
 
 
 def test_help_lists_every_command():
@@ -119,7 +121,10 @@ def test_build_rejects_an_unknown_city():
 
 def test_corpus_table_has_a_row_per_city(tmp_path):
     catalog = CityCatalog(
-        Selection.resolved(dict(FIXTURE)), _no_database, TileIndex(tmp_path, _no_tiles)
+        Selection.resolved(dict(FIXTURE)),
+        _no_database,
+        TileIndex(tmp_path, _no_tiles),
+        ModelCatalog(tmp_path / "models"),
     )
     table = corpus_table(catalog.cities())
     assert table.row_count == len(FIXTURE)

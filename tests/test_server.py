@@ -24,14 +24,17 @@ from shadecast.service.tile_reporter import TileReporter
 def _services(data_root: Path) -> Services:
     tiles_root = data_root / "tiles"
     catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, TileIndex(tiles_root, fixture_tiles)
+        Selection.resolved(fixture_corpus()),
+        fixture_centres,
+        TileIndex(tiles_root, fixture_tiles),
+        ModelCatalog(data_root / "models"),
     )
     return Services(
         catalog=catalog,
         reporter=TileReporter(catalog),
         results=ResultsReport(catalog, data_root),
         findings=FindingsReport(data_root),
-        models=ModelCatalog(tiles_root, data_root / "models"),
+        models=ModelCatalog(data_root / "models"),
         runs=RunStatus(catalog, data_root / "models"),
     )
 

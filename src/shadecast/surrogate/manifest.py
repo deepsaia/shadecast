@@ -118,7 +118,8 @@ def output() -> dict:
     }
 
 
-def _tile_record(surrogate_dir: Path, bundle: Path) -> dict:
+def tile_record(surrogate_dir: Path, bundle: Path) -> dict:
+    """What a model learned from one tile: the city, the tile, its centre and its design count."""
     provenance = json.loads((Path(bundle) / "provenance.json").read_text())
     return {
         "city": provenance.get("city", {}).get("key"),
@@ -140,7 +141,7 @@ def _design_families(pairs: list[tuple[Path, Path]]) -> dict[str, int]:
 def data_section(built: ManifestInputs) -> dict:
     report = built.report
     return {
-        "tiles": [_tile_record(surrogate_dir, bundle) for surrogate_dir, bundle in built.pairs],
+        "tiles": [tile_record(surrogate_dir, bundle) for surrogate_dir, bundle in built.pairs],
         "design_families": _design_families(built.pairs),
         "held_out_designs": report.get("held_out_designs", []),
         "holdout_mode": report.get("holdout_mode"),
