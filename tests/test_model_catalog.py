@@ -61,6 +61,23 @@ def test_models_come_oldest_first_across_tile_and_pooled_directories(tmp_path):
         "response-unet-ahmedabad-2tiles-20261024T090000",
     ]
     assert [model.tile for model in listed] == [TILE, TILE, None]
+    assert [model.urban_centres for model in listed] == [[CENTRE], [CENTRE], [CENTRE]]
+
+
+def test_models_across_cities_list_a_pooled_model_once_with_every_centre_it_serves(tmp_path):
+    _tile_model(tmp_path, "response-unet-ahmedabad-20261023T121739")
+    _pooled_model(
+        tmp_path / "models",
+        "response-unet-ahmedabad+lagos-20261024T090000",
+        "2026-10-24T09:00:00+00:00",
+        [CENTRE, 1289],
+    )
+    listed = ModelCatalog(tmp_path, tmp_path / "models").models_across([CENTRE, 1289])
+    assert [model.id for model in listed] == [
+        "response-unet-ahmedabad-20261023T121739",
+        "response-unet-ahmedabad+lagos-20261024T090000",
+    ]
+    assert listed[-1].urban_centres == [CENTRE, 1289]
     assert listed[-1].tiles_trained == 2 and listed[-1].channel == "treeshade"
 
 

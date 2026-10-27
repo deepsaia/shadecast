@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 class ModelSummary(BaseModel):
     id: str
+    urban_centres: list[int]
     created: str
     channel: str
     tile: str | None

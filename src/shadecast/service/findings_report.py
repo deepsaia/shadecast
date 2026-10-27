@@ -15,6 +15,13 @@ from .json_file import read_json, read_object
 
 logger = logging.getLogger(__name__)
 
+COMMANDS = {
+    "Corridor targeting": "sdc experiments targeting <city> [<city> ...]",
+    "De-paving": "sdc experiments channel <city> [<city> ...]",
+    "Surrogate": "sdc surrogate treeshade assess <city>",
+    "Factorial": "sdc experiments factorial <city> [<city> ...]",
+}
+
 
 class FindingsReport:
     """Answers what has been established so far, from the data root's experiment files."""
@@ -57,6 +64,8 @@ def surrogate_summary(assessment_path: Path | None, transfer_path: Path) -> dict
     speed = assessment.get("speed", {})
     return {
         "status": "done" if head else "pending",
+        "name": "Surrogate",
+        "command": COMMANDS.get("Surrogate", ""),
         "skill": head.get("mean_skill"),
         "ranking_spearman": assessment.get("ranking", {}).get("spearman"),
         "aggregate_error": head.get("mean_aggregate_relative_error"),
@@ -79,7 +88,7 @@ def factorial_summary(path: Path, verdict: dict) -> dict:
     """Which intervention type wins, by how much, and how that splits by city."""
     rows = read_json(path)
     if not isinstance(rows, list) or not rows:
-        return {"status": "pending"}
+        return {"status": "pending", "name": "Factorial", "command": COMMANDS.get("Factorial", "")}
     placed = [row for row in rows if row.get("units", 0) > 0]
     budgets = sorted({row.get("budget_usd") for row in placed})
     cities = sorted({str(row.get("city")) for row in placed})
@@ -124,6 +133,8 @@ def _spreads(placed: list[dict], budgets: list) -> list[dict]:
     return spreads
 
 
+# Four arguments because a pending finding is a name, a question, its hypotheses and what it
+# would take; the command that produces it is looked up by name.
 def pending(name: str, question: str, hypotheses: list[str], detail: str) -> dict:
     return {
         "status": "pending",
@@ -131,6 +142,7 @@ def pending(name: str, question: str, hypotheses: list[str], detail: str) -> dic
         "question": question,
         "hypotheses": hypotheses,
         "detail": detail,
+        "command": COMMANDS.get(name, ""),
     }
 
 

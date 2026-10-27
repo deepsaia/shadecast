@@ -5,9 +5,15 @@
 
 import {
   tileReport,
+  type ChannelSummary,
   type CitySummary,
+  type Findings,
   type Health,
+  type ModelSummary,
+  type RawResults,
+  type ReferenceGroup,
   type Results,
+  results,
   type TileReport,
   type TileStatistics,
   type TileSummary,
@@ -54,6 +60,11 @@ export const paths = {
     return `/cities/${encodeURIComponent(city)}/tiles/${encodeURIComponent(tile)}/fields/${field}${suffix}`;
   },
   results: () => "/results",
+  findings: () => "/findings",
+  references: () => "/references",
+  channels: () => "/channels",
+  models: (channel: string, city?: string) =>
+    `/channels/${encodeURIComponent(channel)}/models${city ? `?city=${encodeURIComponent(city)}` : ""}`,
 };
 
 export const api = {
@@ -65,5 +76,9 @@ export const api = {
     tileReport(await getJson<RawTileReport>(paths.report(city, tile))),
   cityReport: async (city: string): Promise<TileReport> =>
     tileReport(await getJson<RawTileReport>(paths.cityReport(city))),
-  results: () => getJson<Results>(paths.results()),
+  results: async (): Promise<Results> => results(await getJson<RawResults>(paths.results())),
+  findings: () => getJson<Findings>(paths.findings()),
+  references: () => getJson<ReferenceGroup[]>(paths.references()),
+  channels: () => getJson<ChannelSummary[]>(paths.channels()),
+  models: (channel: string, city?: string) => getJson<ModelSummary[]>(paths.models(channel, city)),
 };

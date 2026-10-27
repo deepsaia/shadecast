@@ -31,12 +31,19 @@ class ModelCatalog:
     def models(self, urban_centre: int) -> list[ModelSummary]:
         """Every model of the centre, oldest first, across tile and pooled directories."""
         found = [
-            _summary(model_dir, paths.tile.id)
+            _summary(model_dir, urban_centre, paths.tile.id)
             for paths in TilePaths.existing(self._tiles_root, urban_centre)
             for model_dir in _model_dirs(paths.models)
         ]
-        found.extend(_summary(model_dir, None) for model_dir in self._pooled(urban_centre))
+        found.extend(
+            _summary(model_dir, urban_centre, None) for model_dir in self._pooled(urban_centre)
+        )
         return sorted(found, key=_by_created)
+
+    def models_across(self, urban_centres: list[int]) -> list[ModelSummary]:
+        """Every model of the centres, oldest first, a pooled model once however many it serves."""
+        by_path = {model.path: model for centre in urban_centres for model in self.models(centre)}
+        return sorted(by_path.values(), key=_by_created)
 
     def newest(self, urban_centre: int) -> ModelSummary:
         found = self.models(urban_centre)
@@ -88,11 +95,12 @@ def _model_dirs(models: Path) -> list[Path]:
     )
 
 
-def _summary(model_dir: Path, tile: str | None) -> ModelSummary:
+def _summary(model_dir: Path, urban_centre: int, tile: str | None) -> ModelSummary:
     manifest = read_object(model_dir / MANIFEST)
     tiles = manifest.get("data", {}).get("tiles", [])
     return ModelSummary(
         id=model_dir.name,
+        urban_centres=_centres_of(tiles) or [urban_centre],
         created=model_created(model_dir),
         channel=CHANNEL,
         tile=tile,
@@ -102,6 +110,15 @@ def _summary(model_dir: Path, tile: str | None) -> ModelSummary:
         skill=manifest.get("metrics", {}).get("best_skill"),
         tiles_trained=len(tiles) if tiles else 1,
         manifest=manifest,
+    )
+
+
+def _centres_of(tiles: list[dict]) -> list[int]:
+    """The distinct urban centres a manifest's training tiles came from, in order."""
+    return list(
+        dict.fromkeys(
+            int(entry.get("urban_centre")) for entry in tiles if entry.get("urban_centre")
+        )
     )
 
 
