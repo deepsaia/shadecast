@@ -57,11 +57,12 @@
       <span>The code, the design in its issues, and the command line that runs the whole pipeline.</span></li>
   </ul>
 
-  <h2>The interactive walkthrough</h2>
-  <p>The walkthrough draws maps and charts from physics output in the browser, so hovering a pixel reads its
-  temperature. That output is gigabytes of local data, so the walkthrough runs on the machine that holds it,
-  from a checkout of the repository:</p>
-  <pre><code>uv run sdc dash</code></pre>
+  <h2>The interactive dashboard</h2>
+  <p>The dashboard draws maps and charts from physics output in the browser, so hovering a pixel reads its
+  temperature. That output is gigabytes of local data, so the dashboard runs on the machine that holds it,
+  from a checkout of the repository: build the client once, then serve it with the API.</p>
+  <pre><code>make frontend
+uv run sdc serve</code></pre>
 
   <footer>Apache-2.0. Physics by SOLWEIG, run as a separate process under its own license.</footer>
 </main>

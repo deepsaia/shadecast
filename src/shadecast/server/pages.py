@@ -8,6 +8,8 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 PAGES_DIR = Path(__file__).parent.parent / "pages"
+# The pages the landing page links. The publishing workflow refuses to run without every one.
+PAGES = ("model_pipeline.html", "proposal.html")
 PREFIX = "/pages"
 
 
