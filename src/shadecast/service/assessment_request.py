@@ -8,8 +8,8 @@ from pydantic import BaseModel
 
 
 class AssessmentRequest(BaseModel):
-    target: str  # a city key, or a model directory when ``surrogate_dir`` and ``bundle`` are given
-    surrogate_dir: Path | None = None
+    target: str  # a city key, or a model directory when ``physics_dir`` and ``bundle`` are given
+    physics_dir: Path | None = None
     bundle: Path | None = None
     model: str | None = None  # a model id of the city, else its newest model
     tile: str | None = None  # the tile to judge on, else the densest with physics

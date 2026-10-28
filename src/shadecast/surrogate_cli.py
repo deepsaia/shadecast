@@ -1,7 +1,7 @@
-"""Command line for the surrogate workflow.
+"""Command line for the surrogate: train a model on a tile's physics, assess it, describe it.
 
-Kept in its own module so the main command surface stays readable, and registered
-on the root app as a sub-command group.
+Kept in its own module so the main command surface stays readable, and registered on the
+root app as a sub-command group. The physics a model learns from comes from ``sdc simulate``.
 """
 
 from __future__ import annotations
@@ -17,17 +17,10 @@ from .console import console, error_console, pairs_table
 from .corpus import tile_paths
 from .service.assessment_request import AssessmentRequest
 from .service.assessment_service import AssessmentService
-from .service.city_catalog import CityCatalog
-from .service.generation_request import GenerationRequest
-from .service.generation_service import GenerationService, settings_for
-from .service.missing_stage import MissingStage
 from .service.null_progress import NullProgress
 from .service.training_request import TrainingRequest
 from .service.training_service import TrainingService
-from .service.unknown_city import UnknownCity
 from .surrogate import manifest
-from .surrogate.dataset import engine_threads
-from .surrogate.generation_progress import GenerationProgress
 from .surrogate.training_progress import TrainingProgress
 
 logger = logging.getLogger(__name__)
@@ -40,96 +33,10 @@ app = typer.Typer(
 )
 treeshade = typer.Typer(
     name="treeshade",
-    help="The tree shade surrogate: trees added to the canopy model. Generate, train, assess.",
+    help="The tree shade surrogate: trees added to the canopy model. Train, assess, describe.",
     no_args_is_help=True,
 )
 app.add_typer(treeshade, name="treeshade")
-
-KIND = "tree"  # the engine's intervention kind this surrogate learns
-LABEL = "tree shade"  # how the dashboard and the pages name it
-
-
-def resume_command(target: str, tile: str | None, out: Path | None, jobs: int) -> str:
-    """The exact command that continues this run after a stop."""
-    parts = ["sdc surrogate treeshade generate", target]
-    if tile:
-        parts += ["--tiles", tile]
-    if out:
-        parts += ["--out", str(out)]
-    if jobs != 1:
-        parts += ["--jobs", str(jobs)]
-    return " ".join(parts)
-
-
-@treeshade.command("generate")
-def generate_data(
-    target: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
-    tiles: Annotated[
-        str | None,
-        typer.Option(
-            "--tiles",
-            help="Built tile ids separated by commas, or 'all'. Default: the densest built tile.",
-        ),
-    ] = None,
-    out: Annotated[
-        Path | None, typer.Option("--out", help="Where to write responses, for one tile.")
-    ] = None,
-    jobs: Annotated[
-        int,
-        typer.Option(
-            "--jobs", "-j", help="Engine runs side by side. The baseline runs alone first."
-        ),
-    ] = 1,
-) -> None:
-    """Run the designed experiments through the physics engine, one tile at a time.
-
-    Each tile gets its own dashboard: a bar over the plan, a line per finished design with
-    its engine time, how to stop and how to resume. Designs already on disk are skipped, so
-    an interrupted run resumes where it stopped. Put -v before the command for debug logging.
-    """
-    request = GenerationRequest(target=target, tiles=tiles, out=out, jobs=jobs, kind=KIND)
-    service = GenerationService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT))
-    try:
-        chosen = service.tiles_for(request)
-    except (UnknownCity, MissingStage, ValueError) as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
-    failures: list[str] = []
-    for index, paths in enumerate(chosen, start=1):
-        if len(chosen) > 1:
-            console.print(f"[bold]tile {index} of {len(chosen)}[/]")
-        picked = paths.tile.id if tiles is not None else None
-        progress = GenerationProgress(
-            console,
-            jobs=jobs,
-            threads=engine_threads(settings_for(request)),
-            kind=LABEL,
-            resume_command=resume_command(target, picked, out, jobs),
-        )
-        try:
-            with progress:
-                outcome = service.generate(paths, request, progress)
-        except KeyboardInterrupt:
-            console.print(
-                f"\n[bold]stopped[/] with {progress.completed()} of {progress.total} designs on "
-                f"disk. Resume with: [cyan]{progress.resume_command}[/]"
-            )
-            raise typer.Exit(code=130) from None
-        except RuntimeError as error:
-            error_console.print(f"[red]{error}[/]")
-            failures.append(paths.tile.id)
-            continue
-        mean = progress.mean_seconds()
-        pace = f", {mean:.0f} s a design" if mean else ""
-        console.print(
-            f"[green]{outcome.entries}[/] responses in {outcome.destination}  "
-            f"({outcome.seconds / 60:.0f} min{pace})"
-        )
-    if failures:
-        error_console.print(
-            f"[red]{len(failures)} tile(s) had failed designs:[/] {', '.join(failures)}"
-        )
-        raise typer.Exit(code=1)
 
 
 def train_resume_command(request: TrainingRequest) -> str:
@@ -155,16 +62,16 @@ def train_resume_command(request: TrainingRequest) -> str:
 def train_model(
     target: Annotated[
         str | None,
-        typer.Argument(help="A city key such as savannah, or a directory of generated responses."),
+        typer.Argument(help="A city key such as savannah, or a tile's physics directory."),
     ] = None,
     bundle: Annotated[
-        Path | None, typer.Argument(help="The matching city bundle, when a directory was given.")
+        Path | None, typer.Argument(help="The matching tile bundle, when a directory was given.")
     ] = None,
     pair: Annotated[
         list[str] | None,
         typer.Option(
             "--pair",
-            help="Train across cities: a city key or SURROGATE_DIR=BUNDLE, repeatable.",
+            help="Train across cities: a city key or PHYSICS_DIR=BUNDLE, repeatable.",
         ),
     ] = None,
     tiles: Annotated[
@@ -254,16 +161,17 @@ def assess_model(
     target: Annotated[
         str, typer.Argument(help="A city key such as savannah, or a trained model directory.")
     ],
-    surrogate_dir: Annotated[
+    physics_dir: Annotated[
         Path | None,
-        typer.Argument(help="Directory of generated responses, with a model directory."),
+        typer.Argument(help="The tile's physics directory, when a model directory was given."),
     ] = None,
     bundle: Annotated[
-        Path | None, typer.Argument(help="The matching city bundle, with a model directory.")
+        Path | None,
+        typer.Argument(help="The matching tile bundle, when a model directory was given."),
     ] = None,
     model: Annotated[
         str | None,
-        typer.Option("--model", help="A model id under the tile's models/, else the newest."),
+        typer.Option("--model", help="A model id of the city, else its newest model."),
     ] = None,
     tile: Annotated[
         str | None, typer.Option("--tile", help="Which built tile, when the city has several.")
@@ -277,11 +185,11 @@ def assess_model(
 
     Reports skill against predicting nothing, whether the spillover tail survives,
     error in the plan score, and how well plans are ordered. A city key assesses its
-    newest model; a model directory needs the surrogate directory and bundle after it.
+    newest model; a model directory needs the physics directory and bundle after it.
     """
     request = AssessmentRequest(
         target=target,
-        surrogate_dir=surrogate_dir,
+        physics_dir=physics_dir,
         bundle=bundle,
         model=model,
         tile=tile,
@@ -315,7 +223,7 @@ def describe(
     ],
     model: Annotated[
         str | None,
-        typer.Option("--model", help="A model id under the tile's models/, else the newest."),
+        typer.Option("--model", help="A model id of the city, else its newest model."),
     ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Emit the manifest as JSON.")] = False,
 ) -> None:

@@ -31,10 +31,10 @@ bundle, offline, forever. A benchmark that requires three accounts is not a benc
 uv sync
 sdc cities                        # the selected cities, their strata and what each has; sdc is short for shadecast
 sdc build savannah                # assemble the densest tile's bundle, about a minute
-sdc run savannah                  # the baseline physics for that tile, kept beside its bundle
+sdc simulate baseline savannah    # the baseline physics for that tile, kept beside its bundle
 sdc tile show savannah            # where its tiles live and which stages have run; reads disk only
 sdc tile report savannah          # the tile's baseline, its physics run and every scored plan
-sdc surrogate treeshade generate savannah --jobs 4   # physics for the 17 tree designs, 4 at a time
+sdc simulate treeshade savannah --jobs 4   # physics for the 17 tree designs, 4 at a time
 sdc surrogate treeshade train savannah      # fit the tree shade surrogate on that tile
 sdc surrogate treeshade assess savannah     # judge the newest model against the engine
 sdc results                       # the measured results across every tile with physics
@@ -51,7 +51,7 @@ sdc tile list savannah                          # every tile of the centre, dens
 sdc build savannah --tiles t17N_488_3550,t17N_489_3550   # named tiles
 sdc build savannah --stratified 3               # three tiles spread over built-fraction terciles
 sdc build savannah --tiles all                  # every tile; about a minute each to build
-sdc surrogate treeshade generate savannah --tiles all --jobs 4   # physics for every built tile
+sdc simulate treeshade savannah --tiles all --jobs 4   # physics for every built tile
 sdc surrogate treeshade train savannah --tiles all      # one model over every tile with physics
 ```
 

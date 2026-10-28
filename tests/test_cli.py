@@ -172,9 +172,9 @@ def test_results_with_nothing_generated_say_so():
 
 
 def test_runs_list_what_is_generating_now(tmp_path):
-    surrogate = tmp_path / "6143" / "t43N_249_2547" / "surrogate"
-    surrogate.mkdir(parents=True)
-    (surrogate / ".generating.lock").write_text(str(os.getpid()))
+    physics = tmp_path / "6143" / "t43N_249_2547" / "physics"
+    physics.mkdir(parents=True)
+    (physics / ".generating.lock").write_text(str(os.getpid()))
     result = runner.invoke(app, ["runs", "--json"])
     assert result.exit_code == 0, result.output
     [run] = json.loads(result.stdout)
@@ -189,7 +189,7 @@ def test_runs_with_nothing_running_say_so():
     assert "nothing is running" in result.stdout
 
 
-def test_run_produces_the_baseline_physics_for_a_tile(tmp_path, monkeypatch):
+def test_simulate_baseline_produces_the_physics_for_a_tile(tmp_path, monkeypatch):
     def fake_run(base_path, date, **kwargs):
         tmrt = Path(base_path) / "output_folder" / "0_0" / "TMRT_0_0.tif"
         synthetic_tile.write_hourly_raster(tmrt)
@@ -198,11 +198,11 @@ def test_run_produces_the_baseline_physics_for_a_tile(tmp_path, monkeypatch):
     monkeypatch.setattr(dataset, "run", fake_run)
     monkeypatch.setattr(tile_cli, "load_centres", _no_database)
     tile = synthetic_tile.write_bundle(tmp_path)
-    result = runner.invoke(app, ["run", "ahmedabad", "--json"])
+    result = runner.invoke(app, ["simulate", "baseline", "ahmedabad", "--json"])
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout)["kept"] is False
-    assert (tile / "surrogate" / "baseline" / "tmrt_daylight.npy").exists()
-    again = runner.invoke(app, ["run", "ahmedabad"])
+    assert (tile / "physics" / "baseline" / "tmrt_daylight.npy").exists()
+    again = runner.invoke(app, ["simulate", "baseline", "ahmedabad"])
     assert again.exit_code == 0 and "kept" in again.stdout
 
 

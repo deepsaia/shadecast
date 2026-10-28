@@ -45,9 +45,9 @@ class ExperimentService:
             raise MissingStage("bundle", key, f"sdc build {key}")
         ready = [tile for tile in built if tile.stages.baseline]
         if not ready:
-            raise MissingStage("baseline", key, f"sdc run {key}")
+            raise MissingStage("baseline", key, f"sdc simulate baseline {key}")
         paths = self._catalog.tile_paths(key, ready[0].tile)
-        return f"{key}-{paths.tile.id}", paths.bundle, paths.surrogate
+        return f"{key}-{paths.tile.id}", paths.bundle, paths.physics
 
 
 def _run(request: ExperimentRequest, corpus: Corpus, out: Path) -> tuple[int, dict]:

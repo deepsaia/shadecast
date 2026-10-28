@@ -107,8 +107,8 @@ def run_factorial(cities: list[tuple[str, Path, Path]], out_path: Path) -> list[
     rows: list[dict] = []
     total = len(cities) * len(TYPES) * len(BUDGETS_USD)
     index = 0
-    for city, bundle, surrogate_dir in cities:
-        layers = city_layers(bundle, surrogate_dir)
+    for city, bundle, physics_dir in cities:
+        layers = city_layers(bundle, physics_dir)
         design_day = json.loads((Path(bundle) / "provenance.json").read_text())["met"]["design_day"]
         for spec in TYPES:
             for budget in BUDGETS_USD:

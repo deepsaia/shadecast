@@ -62,7 +62,7 @@ def test_the_factorial_runs_over_each_city_s_tile_with_a_baseline(tmp_path, serv
     outcome = service.run(ExperimentRequest(name="factorial", cities=["ahmedabad"]), progress)
     [(name, cities, out)] = SEEN
     assert name == "factorial" and out == tmp_path / "factorial.json"
-    assert cities == [(f"ahmedabad-{synthetic_tile.TILE_ID}", tile / "bundle", tile / "surrogate")]
+    assert cities == [(f"ahmedabad-{synthetic_tile.TILE_ID}", tile / "bundle", tile / "physics")]
     assert outcome.name == "factorial" and outcome.rows == 2 and outcome.out == str(out)
     assert outcome.verdict == {}
     assert (
@@ -89,7 +89,7 @@ def test_a_city_without_a_baseline_and_an_unknown_experiment_are_refused(tmp_pat
     with pytest.raises(MissingStage, match="sdc build ahmedabad"):
         service.run(ExperimentRequest(name="factorial", cities=["ahmedabad"]), RecordingProgress())
     synthetic_tile.write_bundle(tmp_path / "tiles")
-    with pytest.raises(MissingStage, match="sdc run ahmedabad"):
+    with pytest.raises(MissingStage, match="sdc simulate baseline ahmedabad"):
         service.run(ExperimentRequest(name="factorial", cities=["ahmedabad"]), RecordingProgress())
     _with_baseline(tmp_path)
     with pytest.raises(ValueError, match="nope"):

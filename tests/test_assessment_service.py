@@ -26,10 +26,10 @@ def _bundle(root: Path, tile_id: str) -> Path:
 
 
 def _physics(bundle: Path) -> Path:
-    surrogate = bundle.parent / "surrogate"
-    surrogate.mkdir()
-    (surrogate / "manifest.json").write_text("{}")
-    return surrogate
+    physics = bundle.parent / "physics"
+    physics.mkdir()
+    (physics / "manifest.json").write_text("{}")
+    return physics
 
 
 def _model(root: Path, tile_id: str, name: str) -> Path:
@@ -63,11 +63,11 @@ def service(tmp_path, monkeypatch) -> AssessmentService:
 
 def test_the_newest_model_and_the_densest_tile_with_physics_are_chosen(tmp_path, service):
     bundle = _bundle(tmp_path, "t43N_249_2547")
-    surrogate = _physics(bundle)
+    physics = _physics(bundle)
     _model(tmp_path, "t43N_249_2547", "response-unet-ahmedabad-20260826T143800")
     newest = _model(tmp_path, "t43N_249_2547", "response-unet-ahmedabad-20261023T121739")
     chosen = service.model_for("ahmedabad", None, None)
-    assert chosen == (newest, surrogate, bundle)
+    assert chosen == (newest, physics, bundle)
     named = service.model_for("ahmedabad", "response-unet-ahmedabad-20260826T143800", None)
     assert named[0].name == "response-unet-ahmedabad-20260826T143800"
     pooled = tmp_path / "models" / "response-unet-ahmedabad-2tiles-20261024T090000"
@@ -90,7 +90,7 @@ def test_refusals_name_the_training_command_the_unknown_model_and_the_missing_ph
     tmp_path, service
 ):
     bundle = _bundle(tmp_path, "t43N_249_2547")
-    with pytest.raises(MissingStage, match="generate"):
+    with pytest.raises(MissingStage, match="sdc simulate treeshade"):
         service.model_for("ahmedabad", None, None)
     _physics(bundle)
     with pytest.raises(MissingStage, match="sdc surrogate treeshade train"):
@@ -104,15 +104,15 @@ def test_refusals_name_the_training_command_the_unknown_model_and_the_missing_ph
 
 def test_assess_runs_the_model_on_its_tile_and_writes_the_report_beside_it(tmp_path, service):
     bundle = _bundle(tmp_path, "t43N_249_2547")
-    surrogate = _physics(bundle)
+    physics = _physics(bundle)
     model = _model(tmp_path, "t43N_249_2547", "response-unet-ahmedabad-20261023T121739")
     outcome = service.assess(
         AssessmentRequest(target="ahmedabad", design=["clustered_0105"]), NullProgress()
     )
     [inputs] = SEEN
-    assert (inputs.model_dir, inputs.surrogate_dir, inputs.bundle, inputs.only) == (
+    assert (inputs.model_dir, inputs.physics_dir, inputs.bundle, inputs.only) == (
         model,
-        surrogate,
+        physics,
         bundle,
         ["clustered_0105"],
     )
@@ -124,11 +124,11 @@ def test_assess_runs_the_model_on_its_tile_and_writes_the_report_beside_it(tmp_p
 
 def test_a_model_directory_with_its_tile_is_assessed_as_given(tmp_path, service):
     bundle = _bundle(tmp_path, "t43N_249_2547")
-    surrogate = _physics(bundle)
+    physics = _physics(bundle)
     model = tmp_path / "elsewhere" / "model"
     model.mkdir(parents=True)
-    request = AssessmentRequest(target=str(model), surrogate_dir=surrogate, bundle=bundle)
+    request = AssessmentRequest(target=str(model), physics_dir=physics, bundle=bundle)
     outcome = service.assess(request, NullProgress())
     assert Path(outcome.model_dir) == model and SEEN[0].bundle == bundle
-    with pytest.raises(ValueError, match="SURROGATE_DIR and BUNDLE"):
+    with pytest.raises(ValueError, match="PHYSICS_DIR and BUNDLE"):
         service.assess(AssessmentRequest(target=str(model)), NullProgress())

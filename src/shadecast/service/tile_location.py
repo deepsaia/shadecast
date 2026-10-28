@@ -13,7 +13,7 @@ class TileLocation(BaseModel):
     root: str
     bundle: str
     baseline: str
-    surrogate: str
+    physics: str
     plans: str
     results: str
     stages: TileStages

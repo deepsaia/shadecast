@@ -96,7 +96,7 @@ def predict_field(
 def predict_for_bundle(
     checkpoint: Path,
     bundle: Path,
-    surrogate_dir: Path,
+    physics_dir: Path,
     placement: np.ndarray,
     device: torch.device | None = None,
 ) -> tuple[np.ndarray, float]:
@@ -106,7 +106,7 @@ def predict_for_bundle(
     matters when comparing against a 162 second engine call.
     """
     model = load(checkpoint, device)
-    scene = Scene.load(bundle, surrogate_dir)
+    scene = Scene.load(bundle, physics_dir)
     names = CHANNEL_SETS[channel_set_for(model.in_channels)]
     features = select(stack(placement, scene), names)
     started = time.perf_counter()

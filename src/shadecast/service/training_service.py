@@ -38,7 +38,7 @@ class TrainingService:
         self._models_root = Path(models_root)
 
     def pairs_for(self, request: TrainingRequest) -> list[tuple[Path, Path]]:
-        """(surrogate directory, bundle) per tile: a city's tiles with physics, a pair, or pairs.
+        """(physics directory, bundle) per tile: a city's tiles with physics, a pair, or pairs.
 
         A city key alone means every tile with physics, narrowed by named tiles or a selection.
         """
@@ -49,7 +49,7 @@ class TrainingService:
                 pairs.append((Path(left), Path(right)))
             else:
                 found = tile_lookup.generated_tiles(item, None, self._tiles_root)
-                pairs.extend((paths.surrogate, paths.bundle) for paths in found)
+                pairs.extend((paths.physics, paths.bundle) for paths in found)
         if request.target is not None and request.bundle is not None:
             pairs.append((Path(request.target), request.bundle))
         elif request.target is not None:
@@ -57,9 +57,9 @@ class TrainingService:
             found = tile_lookup.generated_tiles(
                 request.target, request.tiles, self._tiles_root, selection
             )
-            pairs.extend((paths.surrogate, paths.bundle) for paths in found)
+            pairs.extend((paths.physics, paths.bundle) for paths in found)
         if not pairs:
-            raise ValueError("give a city key, SURROGATE_DIR and BUNDLE, or one or more --pair")
+            raise ValueError("give a city key, PHYSICS_DIR and BUNDLE, or one or more --pair")
         return pairs
 
     def train(self, request: TrainingRequest, progress: ProgressListener) -> TrainingOutcome:
@@ -153,7 +153,7 @@ def _record_start(destination: Path, pairs: list[tuple[Path, Path]], created: da
     record = destination / STARTED_NAME
     if record.exists():
         return
-    tiles = [manifest.tile_record(surrogate_dir, bundle) for surrogate_dir, bundle in pairs]
+    tiles = [manifest.tile_record(physics_dir, bundle) for physics_dir, bundle in pairs]
     started = {"started": created.isoformat(timespec="seconds"), "tiles": tiles}
     record.write_text(json.dumps(started, indent=2))
 

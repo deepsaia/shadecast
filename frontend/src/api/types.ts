@@ -605,6 +605,8 @@ export interface components {
             baseline: string;
             /** Bundle */
             bundle: string;
+            /** Physics */
+            physics: string;
             /** Plans */
             plans: string;
             /** Results */
@@ -612,8 +614,6 @@ export interface components {
             /** Root */
             root: string;
             stages: components["schemas"]["TileStages"];
-            /** Surrogate */
-            surrogate: string;
             /** Tile */
             tile: string;
             /** Urban Centre */

@@ -18,16 +18,16 @@ runner = CliRunner()
 def _pair(root: Path, key: str, tile_id: str) -> tuple[Path, Path]:
     tile = root / "6143" / tile_id
     bundle = tile / "bundle"
-    surrogate = tile / "surrogate"
-    (surrogate / "baseline").mkdir(parents=True)
+    physics = tile / "physics"
+    (physics / "baseline").mkdir(parents=True)
     bundle.mkdir()
     (bundle / "provenance.json").write_text(
         json.dumps({"city": {"key": key}, "tile": {"id": tile_id, "urban_centre": 6143}})
     )
-    (surrogate / "baseline" / "engine.json").write_text(
+    (physics / "baseline" / "engine.json").write_text(
         json.dumps({"engine": "solweig-gpu", "version": "solweig_gpu 2.0.0", "seconds": 185.1})
     )
-    (surrogate / "manifest.json").write_text(
+    (physics / "manifest.json").write_text(
         json.dumps(
             {
                 "manifest": [
@@ -37,8 +37,8 @@ def _pair(root: Path, key: str, tile_id: str) -> tuple[Path, Path]:
             }
         )
     )
-    (surrogate / "model.pt").write_bytes(b"weights")
-    return surrogate, bundle
+    (physics / "model.pt").write_bytes(b"weights")
+    return physics, bundle
 
 
 def _report() -> dict:
@@ -65,15 +65,15 @@ def _report() -> dict:
 
 
 def _inputs(tmp_path: Path) -> ManifestInputs:
-    surrogate, bundle = _pair(tmp_path, "ahmedabad", "t43N_249_2547")
+    physics, bundle = _pair(tmp_path, "ahmedabad", "t43N_249_2547")
     return ManifestInputs(
         model_id="response-unet-ahmedabad-20261023T120000",
         created="2026-10-23T12:00:00+00:00",
-        pairs=[(surrogate, bundle)],
+        pairs=[(physics, bundle)],
         report=_report(),
         patch_px=256,
         per_entry=24,
-        model_path=surrogate / "model.pt",
+        model_path=physics / "model.pt",
     )
 
 
@@ -152,9 +152,9 @@ def test_describe_refuses_a_model_without_a_manifest(tmp_path):
 
 
 def test_new_model_id_names_cities_and_the_time(tmp_path):
-    surrogate, bundle = _pair(tmp_path, "ahmedabad", "t43N_249_2547")
+    physics, bundle = _pair(tmp_path, "ahmedabad", "t43N_249_2547")
     created = datetime(2026, 10, 23, 12, 0, 0, tzinfo=UTC)
-    assert manifest.new_model_id([(surrogate, bundle)], created) == (
+    assert manifest.new_model_id([(physics, bundle)], created) == (
         "response-unet-ahmedabad-20261023T120000"
     )
 

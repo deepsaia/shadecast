@@ -32,9 +32,9 @@ class Scene:
     sun: SunNoon
 
     @classmethod
-    def load(cls, bundle: Path, surrogate_dir: Path) -> Scene:
+    def load(cls, bundle: Path, physics_dir: Path) -> Scene:
         """Read a bundle and the baseline run beside it."""
-        bundle, baseline_dir = Path(bundle), Path(surrogate_dir) / "baseline"
+        bundle, baseline_dir = Path(bundle), Path(physics_dir) / "baseline"
         provenance = json.loads((bundle / "provenance.json").read_text())
         building_dsm, _ = read_band(bundle / "Building_DSM.tif")
         terrain, _ = read_band(bundle / "DEM.tif")

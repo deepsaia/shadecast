@@ -25,12 +25,12 @@ def _bundle(root: Path, tile_id: str, key: str = "ahmedabad") -> Path:
 
 
 def _physics(bundle: Path) -> Path:
-    surrogate = bundle.parent / "surrogate"
-    (surrogate / "baseline").mkdir(parents=True)
-    (surrogate / "baseline" / "engine.json").write_text(
+    physics = bundle.parent / "physics"
+    (physics / "baseline").mkdir(parents=True)
+    (physics / "baseline" / "engine.json").write_text(
         json.dumps({"engine": "solweig-gpu", "version": "solweig_gpu 2.0.0", "seconds": 185.1})
     )
-    (surrogate / "manifest.json").write_text(
+    (physics / "manifest.json").write_text(
         json.dumps(
             {
                 "manifest": [
@@ -40,7 +40,7 @@ def _physics(bundle: Path) -> Path:
             }
         )
     )
-    return surrogate
+    return physics
 
 
 def _service(root: Path) -> TrainingService:
@@ -52,19 +52,19 @@ def test_pairs_accept_keys_paths_and_mixed_pairs(tmp_path):
     bundle = _bundle(tmp_path, "t43N_249_2547")
     with pytest.raises(ValueError, match="no generated physics"):
         service.pairs_for(TrainingRequest(target="ahmedabad"))
-    surrogate = _physics(bundle)
-    assert service.pairs_for(TrainingRequest(target="ahmedabad")) == [(surrogate, bundle)]
-    direct = TrainingRequest(target="a/surrogate", bundle=Path("a/bundle"))
-    assert service.pairs_for(direct) == [(Path("a/surrogate"), Path("a/bundle"))]
+    physics = _physics(bundle)
+    assert service.pairs_for(TrainingRequest(target="ahmedabad")) == [(physics, bundle)]
+    direct = TrainingRequest(target="a/physics", bundle=Path("a/bundle"))
+    assert service.pairs_for(direct) == [(Path("a/physics"), Path("a/bundle"))]
     mixed = service.pairs_for(TrainingRequest(pair=["ahmedabad", "x/s=x/b"]))
-    assert mixed == [(surrogate, bundle), (Path("x/s"), Path("x/b"))]
+    assert mixed == [(physics, bundle), (Path("x/s"), Path("x/b"))]
     second = _bundle(tmp_path, "t43N_250_2547")
-    assert service.pairs_for(TrainingRequest(target="ahmedabad")) == [(surrogate, bundle)]
+    assert service.pairs_for(TrainingRequest(target="ahmedabad")) == [(physics, bundle)]
     with pytest.raises(ValueError, match="has no generated physics"):
         service.pairs_for(TrainingRequest(target="ahmedabad", tiles="t43N_250_2547"))
     _physics(second)
     both = service.pairs_for(TrainingRequest(target="ahmedabad"))
-    assert both == [(surrogate, bundle), (second.parent / "surrogate", second)]
+    assert both == [(physics, bundle), (second.parent / "physics", second)]
     with pytest.raises(ValueError, match="give a city key"):
         service.pairs_for(TrainingRequest())
 
@@ -121,7 +121,7 @@ def _fake_report() -> dict:
     }
 
 
-def _fake_crop(surrogate_dir, bundle, settings):
+def _fake_crop(physics_dir, bundle, settings):
     inputs = np.zeros((4, 7, 8, 8), dtype="float32")
     targets = np.ones((4, 1, 8, 8), dtype="float32")
     return (

@@ -212,8 +212,8 @@ def _built(root: Path, tile_id: str, *, with_physics: bool) -> None:
     (tile / "bundle").mkdir(parents=True)
     (tile / "bundle" / "provenance.json").write_text("{}")
     if with_physics:
-        (tile / "surrogate" / "baseline").mkdir(parents=True)
-        (tile / "surrogate" / "baseline" / "tmrt_daylight.npy").write_bytes(b"")
+        (tile / "physics" / "baseline").mkdir(parents=True)
+        (tile / "physics" / "baseline" / "tmrt_daylight.npy").write_bytes(b"")
 
 
 def test_stats_report_k_of_n_per_stage(tmp_path):
@@ -302,7 +302,7 @@ def test_report_of_a_built_tile_without_physics_says_what_to_run_next(tmp_path):
     synthetic_tile.write_bundle(tmp_path)
     result = runner.invoke(app, ["tile", "report", "ahmedabad"])
     assert result.exit_code == 0, result.output
-    assert "sdc run" in result.stdout or "sdc surrogate treeshade generate" in result.stdout
+    assert "sdc simulate baseline" in result.stdout or "sdc simulate treeshade" in result.stdout
 
 
 def test_report_of_a_city_with_nothing_built_names_the_build_command():

@@ -32,11 +32,9 @@ from .corpus_cli import app as corpus_app
 from .experiments_cli import app as experiments_app
 from .logging_setup import configure
 from .serve_cli import serve
-from .service.baseline_request import BaselineRequest
 from .service.build_request import BuildRequest
 from .service.build_service import BuildService
 from .service.city_catalog import CityCatalog
-from .service.engine_service import EngineService
 from .service.missing_stage import MissingStage
 from .service.null_progress import NullProgress
 from .service.plan_request import PlanRequest
@@ -45,6 +43,7 @@ from .service.results_report import ResultsReport
 from .service.run_status import RunStatus
 from .service.unknown_city import UnknownCity
 from .service.unknown_tile import UnknownTile
+from .simulate_cli import app as simulate_app
 from .surrogate_cli import app as surrogate_app
 from .tile_build import build_tile
 from .tile_cli import app as tile_app
@@ -81,6 +80,7 @@ def entry() -> int:
 
 app.add_typer(corpus_app, name="corpus")
 app.add_typer(tile_app, name="tile")
+app.add_typer(simulate_app, name="simulate")
 app.add_typer(surrogate_app, name="surrogate")
 app.add_typer(experiments_app, name="experiments")
 app.command("serve")(serve)
@@ -126,7 +126,7 @@ def results(
         return
     if not found.cities:
         console.print(
-            "[dim]no tile with physics yet; run 'sdc surrogate treeshade generate <city>' first.[/]"
+            "[dim]no tile with physics yet; run 'sdc simulate treeshade <city>' first.[/]"
         )
         return
     console.print(ranking_table(found.ranking.rows))
@@ -229,37 +229,6 @@ def plan(
     console.print(
         f"[dim]engine {float(seconds.get('baseline', 0.0)):.0f}s baseline, "
         f"{float(seconds.get('plan', 0.0)):.0f}s plan, tier {outcome.result.get('tier')}.[/]"
-    )
-
-
-@app.command()
-def run(
-    city: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
-    tile: Annotated[
-        str | None, typer.Option("--tile", help="A tile id; else the densest built tile.")
-    ] = None,
-    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a line.")] = False,
-) -> None:
-    """Run the physics engine over a tile as it is, once, and keep the baseline beside its bundle.
-
-    The engine is a separate subprocess. A baseline already on disk is kept, not rerun.
-    """
-    service = EngineService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT))
-    try:
-        with console.status(f"[cyan]{city}[/]: baseline physics"):
-            outcome = service.run_baseline(BaselineRequest(target=city, tile=tile), NullProgress())
-    except (UnknownCity, UnknownTile, MissingStage) as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
-    if as_json:
-        console.print_json(outcome.model_dump_json())
-        return
-    if outcome.kept:
-        console.print(f"[green]{outcome.tile}[/]: baseline kept from disk at {outcome.destination}")
-        return
-    console.print(
-        f"[green]{outcome.tile}[/]: baseline for {outcome.design_day} in {outcome.seconds:.0f}s "
-        f"at {outcome.destination}"
     )
 
 

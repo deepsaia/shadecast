@@ -44,7 +44,7 @@ def test_build_without_a_tile_takes_the_densest_and_says_so():
     assert result.exit_code == 0, result.output
     assert [call[1] for call in CALLS] == ["t43N_249_2547"]
     assert "bundle at" in result.stdout and "6143/t43N_249_2547/bundle" in result.stdout
-    assert "next: sdc surrogate treeshade generate ahmedabad --jobs 4" in result.stdout
+    assert "next: sdc simulate treeshade ahmedabad --jobs 4" in result.stdout
     assert "1 of 6 tiles chosen" in result.stdout
 
 

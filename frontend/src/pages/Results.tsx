@@ -25,7 +25,7 @@ function Nothing() {
   return (
     <p className="mt-4 max-w-[60ch] text-muted-foreground">
       No tile has generated physics yet. Build a city, run the designs through the engine with{" "}
-      <code>sdc surrogate treeshade generate</code>, and the results appear here.
+      <code>sdc simulate treeshade</code>, and the results appear here.
     </p>
   );
 }

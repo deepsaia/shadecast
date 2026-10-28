@@ -1,8 +1,8 @@
 """One layout for everything a tile produces, keyed by urban centre id and tile id.
 
-``data/tiles/<uc_id>/<tile_id>/`` holds the bundle, the surrogate directory (the generated
-responses, with the baseline physics in ``surrogate/baseline`` as it always has, so the
-experiments keep reading it unchanged), the plans, and a results file. Models live apart, under
+``data/tiles/<uc_id>/<tile_id>/`` holds the bundle, the physics directory (the baseline run in
+``physics/baseline`` and one directory per design the engine ran), the plans, and a results
+file. Models live apart, under
 one root for all of them, ``data/models/<model id>/``, whatever tiles they learned from: their
 manifests name the tiles. Status is read from the files that prove a stage ran, never from a
 separate record: the directories are the record.
@@ -36,12 +36,12 @@ class TilePaths:
         return self.root / "bundle"
 
     @property
-    def surrogate(self) -> Path:
-        return self.root / "surrogate"
+    def physics(self) -> Path:
+        return self.root / "physics"
 
     @property
     def baseline(self) -> Path:
-        return self.surrogate / "baseline"
+        return self.physics / "baseline"
 
     @property
     def plans(self) -> Path:
@@ -64,7 +64,7 @@ class TilePaths:
         return TileStages(
             bundle=(self.bundle / "provenance.json").exists(),
             baseline=(self.baseline / "tmrt_daylight.npy").exists(),
-            physics=(self.surrogate / "manifest.json").exists(),
+            physics=(self.physics / "manifest.json").exists(),
             results=self.results.exists(),
         )
 
@@ -75,7 +75,7 @@ class TilePaths:
             "root": str(self.root),
             "bundle": str(self.bundle),
             "baseline": str(self.baseline),
-            "surrogate": str(self.surrogate),
+            "physics": str(self.physics),
             "plans": str(self.plans),
             "results": str(self.results),
         }

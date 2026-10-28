@@ -136,6 +136,6 @@ def test_results_findings_references_and_runs(client, data_root):
     references = client.get("/api/v1/references").json()
     assert references and "sources" in references[0]
     assert client.get("/api/v1/runs").json() == []
-    (data_root / "tiles" / "6143" / TILE / "surrogate" / ".generating.lock").write_text("")
+    (data_root / "tiles" / "6143" / TILE / "physics" / ".generating.lock").write_text("")
     [run] = client.get("/api/v1/runs").json()
     assert run["kind"] == "generation" and run["alive"] is False

@@ -88,5 +88,5 @@ it("tells a built tile without physics what to run", async () => {
   vi.stubGlobal("fetch", fetchFor({ ...REPORT, baseline: null, met: [], hourly: [], plans: [], physics: null, stages: { ...REPORT.stages, baseline: false, physics: false } }));
   renderTile();
   expect(await screen.findByText(/no baseline physics yet/)).toBeInTheDocument();
-  expect(screen.getByText("sdc run ahmedabad --tile t43N_249_2547")).toBeInTheDocument();
+  expect(screen.getByText("sdc simulate baseline ahmedabad --tile t43N_249_2547")).toBeInTheDocument();
 });

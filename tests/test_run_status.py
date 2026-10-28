@@ -36,18 +36,18 @@ def _unfinished(root, name: str, tiles: list[dict] | None = None):
     return model
 
 
-def _surrogate(root, designs: int):
-    surrogate = root / "6143" / TILE / "surrogate"
-    surrogate.mkdir(parents=True)
+def _physics(root, designs: int):
+    physics = root / "6143" / TILE / "physics"
+    physics.mkdir(parents=True)
     for index in range(designs):
-        (surrogate / f"clustered_{index:04d}").mkdir()
-        (surrogate / f"clustered_{index:04d}" / "response.npz").write_bytes(b"")
-    return surrogate
+        (physics / f"clustered_{index:04d}").mkdir()
+        (physics / f"clustered_{index:04d}" / "response.npz").write_bytes(b"")
+    return physics
 
 
 def test_a_live_lock_is_a_generation_run_with_its_progress(tmp_path):
-    surrogate = _surrogate(tmp_path, 3)
-    (surrogate / GENERATION_LOCK).write_text(str(os.getpid()))
+    physics = _physics(tmp_path, 3)
+    (physics / GENERATION_LOCK).write_text(str(os.getpid()))
     [run] = _status(tmp_path).runs()
     assert run.kind == "generation" and run.city == "ahmedabad" and run.tile == TILE
     assert run.alive is True and run.designs_done == 3 and run.designs_planned == 17
@@ -55,8 +55,8 @@ def test_a_live_lock_is_a_generation_run_with_its_progress(tmp_path):
 
 
 def test_a_stale_or_unreadable_lock_is_reported_as_not_alive(tmp_path):
-    surrogate = _surrogate(tmp_path, 1)
-    (surrogate / GENERATION_LOCK).write_text("")
+    physics = _physics(tmp_path, 1)
+    (physics / GENERATION_LOCK).write_text("")
     [run] = _status(tmp_path).runs()
     assert run.alive is False
 

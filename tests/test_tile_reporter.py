@@ -77,7 +77,7 @@ def test_the_second_report_is_read_from_the_cache_until_a_source_changes(tmp_pat
     assert cached.exists()
     cached.write_text(cached.read_text().replace('"designs":4', '"designs":99'))
     assert report_of(paths).physics.designs == 99
-    archive = paths.surrogate / "clustered_0101" / "response.npz"
+    archive = paths.physics / "clustered_0101" / "response.npz"
     later = archive.stat().st_mtime_ns + 1_000_000
     os.utime(archive, ns=(later, later))
     assert report_of(paths).physics.designs == first.physics.designs == 4

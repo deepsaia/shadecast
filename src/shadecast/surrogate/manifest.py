@@ -118,21 +118,21 @@ def output() -> dict:
     }
 
 
-def tile_record(surrogate_dir: Path, bundle: Path) -> dict:
+def tile_record(physics_dir: Path, bundle: Path) -> dict:
     """What a model learned from one tile: the city, the tile, its centre and its design count."""
     provenance = json.loads((Path(bundle) / "provenance.json").read_text())
     return {
         "city": provenance.get("city", {}).get("key"),
         "tile": provenance.get("tile", {}).get("id"),
         "urban_centre": provenance.get("tile", {}).get("urban_centre"),
-        "designs": len(entries(surrogate_dir)),
+        "designs": len(entries(physics_dir)),
     }
 
 
 def _design_families(pairs: list[tuple[Path, Path]]) -> dict[str, int]:
     counts: dict[str, int] = {}
-    for surrogate_dir, _ in pairs:
-        for meta in entries(surrogate_dir):
+    for physics_dir, _ in pairs:
+        for meta in entries(physics_dir):
             family = str(meta.get("family"))
             counts[family] = counts.get(family, 0) + 1
     return counts
@@ -141,7 +141,7 @@ def _design_families(pairs: list[tuple[Path, Path]]) -> dict[str, int]:
 def data_section(built: ManifestInputs) -> dict:
     report = built.report
     return {
-        "tiles": [tile_record(surrogate_dir, bundle) for surrogate_dir, bundle in built.pairs],
+        "tiles": [tile_record(physics_dir, bundle) for physics_dir, bundle in built.pairs],
         "design_families": _design_families(built.pairs),
         "held_out_designs": report.get("held_out_designs", []),
         "holdout_mode": report.get("holdout_mode"),
@@ -179,8 +179,8 @@ def metrics_section(report: dict) -> dict:
 
 
 def _engine_version(pairs: list[tuple[Path, Path]]) -> str | None:
-    for surrogate_dir, _ in pairs:
-        engine = Path(surrogate_dir) / "baseline" / "engine.json"
+    for physics_dir, _ in pairs:
+        engine = Path(physics_dir) / "baseline" / "engine.json"
         if engine.exists():
             return str(json.loads(engine.read_text()).get("version"))
     return None

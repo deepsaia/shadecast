@@ -90,7 +90,7 @@ class FakeEngine:
 def test_designs_run_side_by_side_and_the_manifest_keeps_plan_order(bundle, tmp_path, monkeypatch):
     engine = FakeEngine()
     monkeypatch.setattr(dataset, "run", engine)
-    out = tmp_path / "surrogate"
+    out = tmp_path / "physics"
     summary = dataset.generate(bundle, out, GenerationSettings(plan=PLAN, jobs=2))
     assert summary["entries"] == 3
     assert [m["id"] for m in summary["manifest"]] == [
@@ -111,7 +111,7 @@ def test_designs_run_side_by_side_and_the_manifest_keeps_plan_order(bundle, tmp_
 def test_a_second_run_resumes_without_touching_the_engine(bundle, tmp_path, monkeypatch):
     engine = FakeEngine()
     monkeypatch.setattr(dataset, "run", engine)
-    out = tmp_path / "surrogate"
+    out = tmp_path / "physics"
     dataset.generate(bundle, out, GenerationSettings(plan=PLAN))
     calls = len(engine.calls)
     progress = GenerationProgress.quiet()
@@ -124,7 +124,7 @@ def test_a_second_run_resumes_without_touching_the_engine(bundle, tmp_path, monk
 
 def test_a_stale_lock_is_removed_and_a_live_one_is_respected(bundle, tmp_path, monkeypatch):
     monkeypatch.setattr(dataset, "run", FakeEngine())
-    out = tmp_path / "surrogate"
+    out = tmp_path / "physics"
     out.mkdir()
     (out / ".generating.lock").write_text("999999999")
     dataset.generate(bundle, out, GenerationSettings(plan=PLAN[:1]))
@@ -135,7 +135,7 @@ def test_a_stale_lock_is_removed_and_a_live_one_is_respected(bundle, tmp_path, m
 
 def test_one_failed_design_does_not_stop_the_others(bundle, tmp_path, monkeypatch):
     monkeypatch.setattr(dataset, "run", FakeEngine(fail="clustered_0002"))
-    out = tmp_path / "surrogate"
+    out = tmp_path / "physics"
     progress = GenerationProgress.quiet()
     with pytest.raises(RuntimeError, match="clustered_0002"):
         dataset.generate(bundle, out, GenerationSettings(plan=PLAN, jobs=3), progress)
@@ -207,11 +207,11 @@ def test_an_interrupt_cancels_the_designs_not_yet_started(bundle, tmp_path, monk
     stopped = {"n": 0}
     monkeypatch.setattr(dataset, "stop_running_engines", lambda: stopped.__setitem__("n", 1) or 0)
     with pytest.raises(KeyboardInterrupt):
-        dataset.generate(bundle, tmp_path / "surrogate", GenerationSettings(plan=PLAN, jobs=1))
+        dataset.generate(bundle, tmp_path / "physics", GenerationSettings(plan=PLAN, jobs=1))
     # The baseline ran, and at most the one design that had already started.
     assert len(engine.calls) <= 2
     assert stopped["n"] == 1
-    assert not (tmp_path / "surrogate" / ".generating.lock").exists()
+    assert not (tmp_path / "physics" / ".generating.lock").exists()
 
 
 def test_tile_label_says_one_tile_of_the_centre():

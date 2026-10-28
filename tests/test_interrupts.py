@@ -71,12 +71,10 @@ def test_generate_stops_with_the_resume_line(tmp_path, monkeypatch):
         raise KeyboardInterrupt
 
     monkeypatch.setattr(generation_service, "generate", interrupted)
-    result = cli_runner.invoke(
-        app, ["surrogate", "treeshade", "generate", "ahmedabad", "--jobs", "4"]
-    )
+    result = cli_runner.invoke(app, ["simulate", "treeshade", "ahmedabad", "--jobs", "4"])
     assert result.exit_code == 130
     assert "3 of 17" in result.output
-    assert "sdc surrogate treeshade generate ahmedabad --jobs 4" in result.output
+    assert "sdc simulate treeshade ahmedabad --jobs 4" in result.output
 
 
 def test_train_resume_command_repeats_the_options():

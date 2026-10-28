@@ -171,13 +171,13 @@ def run_city(
 def run_targeting(cities: list[tuple[str, Path, Path]], out_path: Path, *, budget: float) -> dict:
     """Run the H8 comparison across cities and apply the pre-registered rule."""
     rows: list[dict] = []
-    for index, (city, bundle, surrogate_dir) in enumerate(cities, start=1):
+    for index, (city, bundle, physics_dir) in enumerate(cities, start=1):
         logger.info("[%d/%d] %s at %.1fM", index, len(cities), city, budget / 1e6)
         rows.append(
             run_city(
                 city,
                 bundle,
-                city_layers(bundle, surrogate_dir),
+                city_layers(bundle, physics_dir),
                 budget=budget,
                 aoi=aoi_from_provenance(bundle),
                 work_root=Path("out/targeting"),
