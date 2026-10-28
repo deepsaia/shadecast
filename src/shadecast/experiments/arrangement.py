@@ -1,7 +1,7 @@
 """Does spatial arrangement change what a fixed budget buys?
 
 This is the experiment the benchmark exists to make possible, and it needs no
-surrogate: the generated designs already contain matched pairs of plans that spend
+surrogate: the simulated designs already contain matched pairs of plans that spend
 the same money in different spatial patterns, each with a real engine response.
 
 Greedy, the standard "plant where it is hottest" heuristic, produces a clustered
@@ -28,7 +28,7 @@ from ..objectives import benefit, score
 
 logger = logging.getLogger(__name__)
 
-# Designs generated at matched coverage, differing only in spatial arrangement.
+# Designs simulated at matched coverage, differing only in spatial arrangement.
 MATCHED_PAIRS = (
     ("clustered_0105", "random_uniform_0205", "corridor_0305"),
     ("clustered_0110", "random_uniform_0210", "corridor_0310"),

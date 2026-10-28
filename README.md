@@ -38,12 +38,12 @@ sdc simulate treeshade savannah --jobs 4   # physics for the 17 tree designs, 4 
 sdc surrogate treeshade train savannah      # fit the tree shade surrogate on that tile
 sdc surrogate treeshade assess savannah     # judge the newest model against the engine
 sdc results                       # the measured results across every tile with physics
-sdc runs                          # what is generating or training right now, and whether it is alive
+sdc runs                          # what is simulating or training right now, and whether it is alive
 sdc serve                         # the API and the dashboard for whatever data is on disk
 ```
 
 Every command takes the city name and means its densest tile unless told otherwise. One
-generation run is one tile: the 17 designs are 17 engine runs over the same square kilometre.
+simulation run is one tile: the 17 designs are 17 engine runs over the same square kilometre.
 To study more of a city, choose tiles explicitly and the same options carry through:
 
 ```bash

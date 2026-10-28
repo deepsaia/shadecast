@@ -165,22 +165,22 @@ def test_results_report_every_tile_with_physics(tmp_path):
     assert "Ahmedabad" in table.stdout
 
 
-def test_results_with_nothing_generated_say_so():
+def test_results_with_nothing_simulated_say_so():
     result = runner.invoke(app, ["results"])
     assert result.exit_code == 0, result.output
     assert "no tile with physics" in result.stdout
 
 
-def test_runs_list_what_is_generating_now(tmp_path):
+def test_runs_list_what_is_simulating_now(tmp_path):
     physics = tmp_path / "6143" / "t43N_249_2547" / "physics"
     physics.mkdir(parents=True)
-    (physics / ".generating.lock").write_text(str(os.getpid()))
+    (physics / ".simulating.lock").write_text(str(os.getpid()))
     result = runner.invoke(app, ["runs", "--json"])
     assert result.exit_code == 0, result.output
     [run] = json.loads(result.stdout)
-    assert run["kind"] == "generation" and run["alive"] is True
+    assert run["kind"] == "simulation" and run["alive"] is True
     table = runner.invoke(app, ["runs"])
-    assert "generation" in table.stdout and "t43N_249_2547" in table.stdout
+    assert "simulation" in table.stdout and "t43N_249_2547" in table.stdout
 
 
 def test_runs_with_nothing_running_say_so():

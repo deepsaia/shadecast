@@ -25,7 +25,7 @@ class FieldStore:
     """The one place that knows how a tile's fields are stored.
 
     Bundle rasters are GeoTIFFs, the baseline physics is a NumPy array plus the engine's hourly
-    raster, and every generated design is a compressed archive. A missing source names the stage
+    raster, and every simulated design is a compressed archive. A missing source names the stage
     that writes it and the command that runs that stage.
     """
 
@@ -80,7 +80,7 @@ class FieldStore:
             return src.read()
 
     def manifest(self) -> list[dict]:
-        """One entry per design the engine ran, as the generation wrote them."""
+        """One entry per design the engine ran, as the simulation wrote them."""
         path = self._paths.physics / MANIFEST
         if not path.exists():
             raise MissingStage(

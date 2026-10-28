@@ -59,7 +59,7 @@ it("lists the trained models and names the cities with physics that have none", 
   );
   expect(await screen.findByText("0.735")).toBeInTheDocument();
   expect(screen.getByRole("cell", { name: "Ahmedabad" })).toBeInTheDocument();
-  expect(screen.getByText(/One city has generated physics and no model/)).toBeInTheDocument();
+  expect(screen.getByText(/One city has simulated physics and no model/)).toBeInTheDocument();
   expect(screen.getByText("sdc surrogate treeshade train lagos")).toBeInTheDocument();
   expect(screen.queryByText("London")).toBeNull();
 });

@@ -1,4 +1,4 @@
-"""What is generating or training now, read from the locks and checkpoints the operations leave."""
+"""What is simulating or training now, read from the locks and checkpoints the operations leave."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ..corpus.tile_paths import TilePaths
-from ..surrogate.dataset import GENERATION_LOCK, default_plan, lock_is_stale
+from ..surrogate.dataset import SIMULATION_LOCK, default_plan, lock_is_stale
 from ..surrogate.training_state import CHECKPOINT_NAME, STARTED_NAME
 from .city_catalog import CityCatalog
 from .field_store import RESPONSE_ARCHIVE
@@ -14,13 +14,13 @@ from .json_file import read_object
 from .model_catalog import MANIFEST
 from .run_summary import RunSummary
 
-GENERATION = "generation"
+SIMULATION = "simulation"
 TRAINING = "training"
 UNRECORDED = "unrecorded"
 
 
 class RunStatus:
-    """Answers which runs are in progress: generation per tile, training under the models root."""
+    """Answers which runs are in progress: simulation per tile, training under the models root."""
 
     def __init__(self, catalog: CityCatalog, models_root: Path) -> None:
         self._catalog = catalog
@@ -31,17 +31,17 @@ class RunStatus:
         for city in self._catalog.cities():
             for tile in self._catalog.tiles_on_disk(city.key):
                 paths = self._catalog.tile_paths(city.key, tile.tile)
-                lock = paths.physics / GENERATION_LOCK
+                lock = paths.physics / SIMULATION_LOCK
                 if lock.exists():
-                    found.append(_generation(city.key, paths, lock))
+                    found.append(_simulation(city.key, paths, lock))
         found.extend(_training(model_dir) for model_dir in _unfinished(self._models_root))
         return found
 
 
-def _generation(city: str, paths: TilePaths, lock: Path) -> RunSummary:
+def _simulation(city: str, paths: TilePaths, lock: Path) -> RunSummary:
     done = sum(1 for child in paths.physics.iterdir() if (child / RESPONSE_ARCHIVE).exists())
     return RunSummary(
-        kind=GENERATION,
+        kind=SIMULATION,
         city=city,
         tile=paths.tile.id,
         model=None,

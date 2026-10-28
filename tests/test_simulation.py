@@ -1,4 +1,4 @@
-"""Generation runs designs side by side, resumes from disk, and survives one failed run."""
+"""Simulation runs designs side by side, resumes from disk, and survives one failed run."""
 
 import json
 import os
@@ -16,9 +16,9 @@ from shadecast.sim.runner import thread_environment
 from shadecast.surrogate import dataset
 from shadecast.surrogate.assessment import designs_for_tile
 from shadecast.surrogate.engine_phase import design_phase, phase_bar
-from shadecast.surrogate.generation_progress import GenerationProgress, clock, sparkline
-from shadecast.surrogate.generation_settings import GenerationSettings
 from shadecast.surrogate.patches import tile_key
+from shadecast.surrogate.simulation_progress import SimulationProgress, clock, sparkline
+from shadecast.surrogate.simulation_settings import SimulationSettings
 
 SIDE = 24
 PLAN = [
@@ -91,7 +91,7 @@ def test_designs_run_side_by_side_and_the_manifest_keeps_plan_order(bundle, tmp_
     engine = FakeEngine()
     monkeypatch.setattr(dataset, "run", engine)
     out = tmp_path / "physics"
-    summary = dataset.generate(bundle, out, GenerationSettings(plan=PLAN, jobs=2))
+    summary = dataset.simulate(bundle, out, SimulationSettings(plan=PLAN, jobs=2))
     assert summary["entries"] == 3
     assert [m["id"] for m in summary["manifest"]] == [
         "random_uniform_0001",
@@ -105,17 +105,17 @@ def test_designs_run_side_by_side_and_the_manifest_keeps_plan_order(bundle, tmp_
     assert response["response"][response["placement"]].mean() == pytest.approx(5.0)
     assert summary["manifest"][1]["mean_response_C"] == pytest.approx(5.0)
     assert not (out / "clustered_0002" / "output_folder").exists()
-    assert not (out / ".generating.lock").exists()
+    assert not (out / ".simulating.lock").exists()
 
 
 def test_a_second_run_resumes_without_touching_the_engine(bundle, tmp_path, monkeypatch):
     engine = FakeEngine()
     monkeypatch.setattr(dataset, "run", engine)
     out = tmp_path / "physics"
-    dataset.generate(bundle, out, GenerationSettings(plan=PLAN))
+    dataset.simulate(bundle, out, SimulationSettings(plan=PLAN))
     calls = len(engine.calls)
-    progress = GenerationProgress.quiet()
-    summary = dataset.generate(bundle, out, GenerationSettings(plan=PLAN), progress)
+    progress = SimulationProgress.quiet()
+    summary = dataset.simulate(bundle, out, SimulationSettings(plan=PLAN), progress)
     assert len(engine.calls) == calls
     assert summary["entries"] == 3
     assert progress.done_at_start == 3
@@ -126,19 +126,19 @@ def test_a_stale_lock_is_removed_and_a_live_one_is_respected(bundle, tmp_path, m
     monkeypatch.setattr(dataset, "run", FakeEngine())
     out = tmp_path / "physics"
     out.mkdir()
-    (out / ".generating.lock").write_text("999999999")
-    dataset.generate(bundle, out, GenerationSettings(plan=PLAN[:1]))
-    (out / ".generating.lock").write_text(str(os.getpid()))
+    (out / ".simulating.lock").write_text("999999999")
+    dataset.simulate(bundle, out, SimulationSettings(plan=PLAN[:1]))
+    (out / ".simulating.lock").write_text(str(os.getpid()))
     with pytest.raises(RuntimeError, match="already holds"):
-        dataset.generate(bundle, out, GenerationSettings(plan=PLAN))
+        dataset.simulate(bundle, out, SimulationSettings(plan=PLAN))
 
 
 def test_one_failed_design_does_not_stop_the_others(bundle, tmp_path, monkeypatch):
     monkeypatch.setattr(dataset, "run", FakeEngine(fail="clustered_0002"))
     out = tmp_path / "physics"
-    progress = GenerationProgress.quiet()
+    progress = SimulationProgress.quiet()
     with pytest.raises(RuntimeError, match="clustered_0002"):
-        dataset.generate(bundle, out, GenerationSettings(plan=PLAN, jobs=3), progress)
+        dataset.simulate(bundle, out, SimulationSettings(plan=PLAN, jobs=3), progress)
     assert (out / "random_uniform_0001" / "response.npz").exists()
     assert (out / "sparse_probe_0003" / "response.npz").exists()
     assert not (out / "clustered_0002" / "response.npz").exists()
@@ -148,12 +148,12 @@ def test_one_failed_design_does_not_stop_the_others(bundle, tmp_path, monkeypatc
 
 
 def test_engine_threads_share_the_cores():
-    assert dataset.engine_threads(GenerationSettings(jobs=1)) is None
-    share = dataset.engine_threads(GenerationSettings(jobs=3))
+    assert dataset.engine_threads(SimulationSettings(jobs=1)) is None
+    share = dataset.engine_threads(SimulationSettings(jobs=3))
     assert share == max(1, (os.cpu_count() or 1) // 3)
-    assert dataset.engine_threads(GenerationSettings(jobs=3, engine_threads=4)) == 4
+    assert dataset.engine_threads(SimulationSettings(jobs=3, engine_threads=4)) == 4
     with pytest.raises(ValueError, match="jobs"):
-        GenerationSettings(jobs=0)
+        SimulationSettings(jobs=0)
 
 
 def test_thread_environment_caps_every_pool():
@@ -165,7 +165,7 @@ def test_thread_environment_caps_every_pool():
 
 
 def test_quiet_progress_counts_and_renders_nothing():
-    progress = GenerationProgress.quiet()
+    progress = SimulationProgress.quiet()
     with progress:
         progress.started("testville t43N_249_2547", total=3, done=1)
         progress.step_started("a", {})
@@ -207,11 +207,11 @@ def test_an_interrupt_cancels_the_designs_not_yet_started(bundle, tmp_path, monk
     stopped = {"n": 0}
     monkeypatch.setattr(dataset, "stop_running_engines", lambda: stopped.__setitem__("n", 1) or 0)
     with pytest.raises(KeyboardInterrupt):
-        dataset.generate(bundle, tmp_path / "physics", GenerationSettings(plan=PLAN, jobs=1))
+        dataset.simulate(bundle, tmp_path / "physics", SimulationSettings(plan=PLAN, jobs=1))
     # The baseline ran, and at most the one design that had already started.
     assert len(engine.calls) <= 2
     assert stopped["n"] == 1
-    assert not (tmp_path / "physics" / ".generating.lock").exists()
+    assert not (tmp_path / "physics" / ".simulating.lock").exists()
 
 
 def test_tile_label_says_one_tile_of_the_centre():
@@ -252,7 +252,7 @@ def test_running_designs_show_their_engine_phase_from_disk(tmp_path):
     assert design_phase(design) == 3
     assert phase_bar(2) == "▰ inputs  ▰ sky view  ▰ radiation  ▱ outputs"
     console = Console(file=StringIO(), width=120, force_terminal=False, color_system=None)
-    progress = GenerationProgress(console, jobs=2)
+    progress = SimulationProgress(console, jobs=2)
     progress.started("x", total=3, done=0)
     progress.step_started("clustered_0105", {"target": design})
     shown = progress._running_now().plain

@@ -9,7 +9,7 @@ from typer.testing import CliRunner
 from shadecast import simulate_cli
 from shadecast.cli import app
 from shadecast.corpus import tile_lookup, tile_paths
-from shadecast.service import generation_service
+from shadecast.service import simulation_service
 
 runner = CliRunner()
 
@@ -51,17 +51,17 @@ def test_one_built_tile_is_chosen_named_or_refused(tmp_path):
         tile_lookup.one_built_tile("ahmedabad", "t43N_251_2547", tmp_path)
 
 
-def test_generate_takes_a_city_name_and_writes_beside_its_bundle(tmp_path, monkeypatch):
+def test_simulate_takes_a_city_name_and_writes_beside_its_bundle(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
     bundle = _bundle(tmp_path, 6143, "t43N_249_2547")
     seen: dict = {}
 
-    def fake_generate(bundle_dir, destination, settings, progress):
+    def fake_simulate(bundle_dir, destination, settings, progress):
         seen.update(bundle=Path(bundle_dir), destination=Path(destination), jobs=settings.jobs)
         progress.started("ahmedabad t43N_249_2547", total=1, done=1)
         return {"entries": 1, "manifest": []}
 
-    monkeypatch.setattr(generation_service, "generate", fake_generate)
+    monkeypatch.setattr(simulation_service, "simulate", fake_simulate)
     result = runner.invoke(app, ["simulate", "treeshade", "ahmedabad", "--jobs", "3"])
     assert result.exit_code == 0, result.output
     assert seen["bundle"] == bundle
@@ -69,18 +69,18 @@ def test_generate_takes_a_city_name_and_writes_beside_its_bundle(tmp_path, monke
     assert seen["jobs"] == 3
 
 
-def test_generate_runs_each_listed_tile_or_all_of_them(tmp_path, monkeypatch):
+def test_simulate_runs_each_listed_tile_or_all_of_them(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
     first = _bundle(tmp_path, 6143, "t43N_249_2547")
     second = _bundle(tmp_path, 6143, "t43N_250_2547")
     seen: list[Path] = []
 
-    def fake_generate(bundle_dir, destination, settings, progress):
+    def fake_simulate(bundle_dir, destination, settings, progress):
         seen.append(Path(bundle_dir))
         progress.started("x", total=1, done=1)
         return {"entries": 1, "manifest": []}
 
-    monkeypatch.setattr(generation_service, "generate", fake_generate)
+    monkeypatch.setattr(simulation_service, "simulate", fake_simulate)
     result = runner.invoke(app, ["simulate", "treeshade", "ahmedabad", "--tiles", "t43N_250_2547"])
     assert result.exit_code == 0, result.output
     assert seen == [second]
@@ -91,7 +91,7 @@ def test_generate_runs_each_listed_tile_or_all_of_them(tmp_path, monkeypatch):
     assert "tile 1 of 2" in result.stdout and "tile 2 of 2" in result.stdout
 
 
-def test_generate_without_tiles_takes_the_densest_built_one(tmp_path, monkeypatch):
+def test_simulate_without_tiles_takes_the_densest_built_one(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
     _bundle(tmp_path, 6143, "t43N_249_2547")
     dense = _bundle(tmp_path, 6143, "t43N_250_2547")
@@ -110,7 +110,7 @@ def test_generate_without_tiles_takes_the_densest_built_one(tmp_path, monkeypatc
     assert tile_lookup.densest_built_tile("ahmedabad", tmp_path).bundle == dense
 
 
-def test_generate_refuses_a_city_without_a_bundle(tmp_path, monkeypatch):
+def test_simulate_refuses_a_city_without_a_bundle(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
     result = runner.invoke(app, ["simulate", "treeshade", "ahmedabad"])
     assert result.exit_code == 1

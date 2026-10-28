@@ -1,4 +1,4 @@
-"""One generated design scored as a plan: what it covers, what it costs and what it buys."""
+"""One simulated design scored as a plan: what it covers, what it costs and what it buys."""
 
 from __future__ import annotations
 

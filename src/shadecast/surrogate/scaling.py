@@ -9,7 +9,7 @@ cities buy transfer and the corpus should be scaled. A flat curve means the
 architecture is the limit, not the data, and no amount of physics will fix it.
 
 Each point is an independent training run, so the curve costs roughly five minutes
-per point plus the physics already generated for each city.
+per point plus the physics already simulated for each city.
 """
 
 from __future__ import annotations

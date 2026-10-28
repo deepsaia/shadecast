@@ -5,24 +5,24 @@ from __future__ import annotations
 import time
 
 from ..corpus.tile_paths import TilePaths
-from ..surrogate.dataset import default_plan, generate
-from ..surrogate.generation_settings import GenerationSettings
+from ..surrogate.dataset import default_plan, simulate
+from ..surrogate.simulation_settings import SimulationSettings
 from .city_catalog import CityCatalog
-from .generation_outcome import GenerationOutcome
-from .generation_request import GenerationRequest
 from .missing_stage import MissingStage
 from .progress_listener import ProgressListener
+from .simulation_outcome import SimulationOutcome
+from .simulation_request import SimulationRequest
 
 ALL = "all"
 
 
-class GenerationService:
-    """Chooses the tiles a request means and runs the generator over one tile at a time."""
+class SimulationService:
+    """Chooses the tiles a request means and runs the simulation over one tile at a time."""
 
     def __init__(self, catalog: CityCatalog) -> None:
         self._catalog = catalog
 
-    def tiles_for(self, request: GenerationRequest) -> list[TilePaths]:
+    def tiles_for(self, request: SimulationRequest) -> list[TilePaths]:
         """The built tiles the request means, densest first: one, the named ones, or all."""
         built = [
             tile for tile in self._catalog.ranked_on_disk(request.target) if tile.stages.bundle
@@ -39,14 +39,14 @@ class GenerationService:
             raise ValueError("an output directory applies to one tile")
         return [self._catalog.tile_paths(request.target, tile_id) for tile_id in chosen]
 
-    def generate(
-        self, paths: TilePaths, request: GenerationRequest, progress: ProgressListener
-    ) -> GenerationOutcome:
+    def simulate(
+        self, paths: TilePaths, request: SimulationRequest, progress: ProgressListener
+    ) -> SimulationOutcome:
         """Every design of the plan through the engine for one tile; designs on disk are kept."""
         destination = request.out if request.out is not None else paths.physics
         started = time.time()
-        summary = generate(paths.bundle, destination, settings_for(request), progress)
-        return GenerationOutcome(
+        summary = simulate(paths.bundle, destination, settings_for(request), progress)
+        return SimulationOutcome(
             tile=paths.tile.id,
             destination=str(destination),
             entries=int(summary.get("entries", 0)),
@@ -54,11 +54,11 @@ class GenerationService:
         )
 
 
-def settings_for(request: GenerationRequest) -> GenerationSettings:
-    return GenerationSettings(plan=default_plan(), kind=request.kind, jobs=request.jobs)
+def settings_for(request: SimulationRequest) -> SimulationSettings:
+    return SimulationSettings(plan=default_plan(), kind=request.kind, jobs=request.jobs)
 
 
-def _named(request: GenerationRequest, built: list[str]) -> list[str]:
+def _named(request: SimulationRequest, built: list[str]) -> list[str]:
     chosen = [part.strip() for part in str(request.tiles).split(",") if part.strip()]
     for tile_id in chosen:
         if tile_id not in built:

@@ -1,11 +1,11 @@
-"""Generate surrogate training data by running designed interventions through the physics.
+"""Simulate designed interventions through the physics to make the surrogate's training data.
 
 One entry is a (placement, delta Tmrt) pair over the whole study area, produced by
 one engine call. Sparse probe designs make each call yield many independent
 single-intervention responses rather than one, which is what keeps the physics
 budget affordable.
 
-Everything is written to disk as it completes, so a long generation run can be
+Everything is written to disk as it completes, so a long simulation run can be
 interrupted and resumed without losing work: designs already on disk are skipped, and a
 lock left by a process that no longer runs is removed. The baseline runs alone first,
 because every design needs it; the designs then run ``jobs`` at a time, each engine
@@ -34,17 +34,17 @@ from ..service.progress_listener import ProgressListener
 from ..sim.result import RunResult
 from ..sim.runner import run, stop_running_engines
 from . import designs
-from .generation_events import BASELINE, BASELINE_PHASE
-from .generation_settings import GenerationSettings
+from .simulation_events import BASELINE, BASELINE_PHASE
+from .simulation_settings import SimulationSettings
 from .tile_context import TileContext
 
 logger = logging.getLogger(__name__)
 
-GENERATION_LOCK = ".generating.lock"
+SIMULATION_LOCK = ".simulating.lock"
 
 
 def default_plan() -> list[dict]:
-    """The standard generation plan for one city.
+    """The standard simulation plan for one city.
 
     Four probe lattices at different offsets give clean isolated responses across
     varied geometry. The dense families then supply the interaction signal, which
@@ -93,28 +93,28 @@ def entry_id(family: str, seed: int) -> str:
     return f"{family}_{seed:04d}"
 
 
-def generate(
+def simulate(
     bundle: Path,
     out_dir: Path,
-    settings: GenerationSettings | None = None,
+    settings: SimulationSettings | None = None,
     progress: ProgressListener | None = None,
 ) -> dict:
     """Run every design in the plan and store the resulting response fields.
 
-    Holds an exclusive lock on the output directory. Two generators sharing one
+    Holds an exclusive lock on the output directory. Two simulations sharing one
     directory corrupt each other, because each deletes the engine scratch output
     after reading it and will happily delete the other's work in progress. That
     happened once and cost an hour of physics before it was noticed.
     """
     bundle, out_dir = Path(bundle), Path(out_dir)
-    settings = settings if settings is not None else GenerationSettings()
+    settings = settings if settings is not None else SimulationSettings()
     progress = progress if progress is not None else NullProgress()
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    lock = out_dir / GENERATION_LOCK
+    lock = out_dir / SIMULATION_LOCK
     acquire_lock(lock)
     try:
-        return _generate(bundle, out_dir, settings, progress)
+        return _simulate(bundle, out_dir, settings, progress)
     finally:
         lock.unlink(missing_ok=True)
 
@@ -130,7 +130,7 @@ def acquire_lock(lock: Path) -> None:
                 lock.unlink(missing_ok=True)
                 continue
             raise RuntimeError(
-                f"another generator already holds {lock}. Generation is not safe to run "
+                f"another simulation already holds {lock}. Simulating is not safe to run "
                 f"twice on one directory. Remove the lock only if none is running."
             ) from exc
         os.write(handle, str(os.getpid()).encode())
@@ -158,7 +158,7 @@ def lock_is_stale(lock: Path) -> bool:
 def tile_label(bundle: Path, provenance: dict) -> str:
     """``city, tile t..., one of N tiles`` for a tile bundle, else the bundle's directory name.
 
-    One generation run covers one tile: every design is an engine run over the same square
+    One simulation run covers one tile: every design is an engine run over the same square
     kilometre. The label says how many tiles the urban centre has, so nobody mistakes the
     designs for tiles.
     """
@@ -171,7 +171,7 @@ def tile_label(bundle: Path, provenance: dict) -> str:
     return bundle.name
 
 
-def engine_threads(settings: GenerationSettings) -> int | None:
+def engine_threads(settings: SimulationSettings) -> int | None:
     """Threads per engine process: an even share of the cores when several run at once."""
     if settings.engine_threads is not None:
         return settings.engine_threads
@@ -180,10 +180,10 @@ def engine_threads(settings: GenerationSettings) -> int | None:
     return max(1, (os.cpu_count() or 1) // settings.jobs)
 
 
-def _generate(
-    bundle: Path, out_dir: Path, settings: GenerationSettings, progress: ProgressListener
+def _simulate(
+    bundle: Path, out_dir: Path, settings: SimulationSettings, progress: ProgressListener
 ) -> dict:
-    """Body of :func:`generate`, run while the directory lock is held."""
+    """Body of :func:`simulate`, run while the directory lock is held."""
     provenance = json.loads((bundle / "provenance.json").read_text())
     design_day = provenance["met"]["design_day"]
     plan = settings.plan if settings.plan is not None else default_plan()
@@ -203,7 +203,7 @@ def _generate(
     for name, spec in zip(names, plan, strict=True):
         if (out_dir / name / "response.npz").exists():
             results[name] = json.loads((out_dir / name / "meta.json").read_text())
-            logger.debug("%s already generated, skipping", name)
+            logger.debug("%s already simulated, skipping", name)
         else:
             pending.append(spec)
     progress.started(tile_label(bundle, provenance), total=len(plan), done=len(results))
@@ -363,7 +363,7 @@ def run_design(context: TileContext, spec: dict, progress: ProgressListener) -> 
         meta["engine_seconds"],
     )
     # The engine writes a large multi-band stack per run; keep only what the
-    # surrogate needs so a full generation does not fill the disk.
+    # surrogate needs so a full simulation does not fill the disk.
     shutil.rmtree(target / "output_folder", ignore_errors=True)
     shutil.rmtree(target / "processed_inputs", ignore_errors=True)
     progress.step_done(name, float(meta["engine_seconds"]), meta)

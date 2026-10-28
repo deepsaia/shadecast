@@ -48,13 +48,13 @@ class TrainingService:
                 left, right = item.split("=", 1)
                 pairs.append((Path(left), Path(right)))
             else:
-                found = tile_lookup.generated_tiles(item, None, self._tiles_root)
+                found = tile_lookup.simulated_tiles(item, None, self._tiles_root)
                 pairs.extend((paths.physics, paths.bundle) for paths in found)
         if request.target is not None and request.bundle is not None:
             pairs.append((Path(request.target), request.bundle))
         elif request.target is not None:
             selection = TileSelection(request.densest, request.stratified)
-            found = tile_lookup.generated_tiles(
+            found = tile_lookup.simulated_tiles(
                 request.target, request.tiles, self._tiles_root, selection
             )
             pairs.extend((paths.physics, paths.bundle) for paths in found)

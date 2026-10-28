@@ -50,7 +50,7 @@ def _service(root: Path) -> TrainingService:
 def test_pairs_accept_keys_paths_and_mixed_pairs(tmp_path):
     service = _service(tmp_path)
     bundle = _bundle(tmp_path, "t43N_249_2547")
-    with pytest.raises(ValueError, match="no generated physics"):
+    with pytest.raises(ValueError, match="no simulated physics"):
         service.pairs_for(TrainingRequest(target="ahmedabad"))
     physics = _physics(bundle)
     assert service.pairs_for(TrainingRequest(target="ahmedabad")) == [(physics, bundle)]
@@ -60,7 +60,7 @@ def test_pairs_accept_keys_paths_and_mixed_pairs(tmp_path):
     assert mixed == [(physics, bundle), (Path("x/s"), Path("x/b"))]
     second = _bundle(tmp_path, "t43N_250_2547")
     assert service.pairs_for(TrainingRequest(target="ahmedabad")) == [(physics, bundle)]
-    with pytest.raises(ValueError, match="has no generated physics"):
+    with pytest.raises(ValueError, match="has no simulated physics"):
         service.pairs_for(TrainingRequest(target="ahmedabad", tiles="t43N_250_2547"))
     _physics(second)
     both = service.pairs_for(TrainingRequest(target="ahmedabad"))

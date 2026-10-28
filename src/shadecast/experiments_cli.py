@@ -1,7 +1,7 @@
 """Command line for the pre-registered experiments.
 
 Each command names an experiment and the cities to run it over; the experiment service pairs
-every city's densest tile with a baseline to its generated physics and applies the fixed verdict
+every city's densest tile with a baseline to its simulated physics and applies the fixed verdict
 rule. These commands only parse flags and render the outcome.
 """
 

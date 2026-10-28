@@ -1,4 +1,4 @@
-"""One run in progress: a generation holding its lock or a training that left a checkpoint."""
+"""One run in progress: a simulation holding its lock or a training that left a checkpoint."""
 
 from __future__ import annotations
 

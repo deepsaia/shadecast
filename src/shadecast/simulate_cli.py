@@ -17,14 +17,14 @@ from .corpus import tile_paths
 from .service.baseline_request import BaselineRequest
 from .service.city_catalog import CityCatalog
 from .service.engine_service import EngineService
-from .service.generation_request import GenerationRequest
-from .service.generation_service import GenerationService, settings_for
 from .service.missing_stage import MissingStage
 from .service.null_progress import NullProgress
+from .service.simulation_request import SimulationRequest
+from .service.simulation_service import SimulationService, settings_for
 from .service.unknown_city import UnknownCity
 from .service.unknown_tile import UnknownTile
 from .surrogate.dataset import engine_threads
-from .surrogate.generation_progress import GenerationProgress
+from .surrogate.simulation_progress import SimulationProgress
 
 app = typer.Typer(
     name="simulate",
@@ -93,8 +93,8 @@ def treeshade(
     its engine time, how to stop and how to resume. Designs already on disk are skipped, so
     an interrupted run resumes where it stopped. Put -v before the command for debug logging.
     """
-    request = GenerationRequest(target=target, tiles=tiles, out=out, jobs=jobs, kind=KIND)
-    service = GenerationService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT))
+    request = SimulationRequest(target=target, tiles=tiles, out=out, jobs=jobs, kind=KIND)
+    service = SimulationService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT))
     try:
         chosen = service.tiles_for(request)
     except (UnknownCity, MissingStage, ValueError) as exc:
@@ -105,7 +105,7 @@ def treeshade(
         if len(chosen) > 1:
             console.print(f"[bold]tile {index} of {len(chosen)}[/]")
         picked = paths.tile.id if tiles is not None else None
-        progress = GenerationProgress(
+        progress = SimulationProgress(
             console,
             jobs=jobs,
             threads=engine_threads(settings_for(request)),
@@ -114,7 +114,7 @@ def treeshade(
         )
         try:
             with progress:
-                outcome = service.generate(paths, request, progress)
+                outcome = service.simulate(paths, request, progress)
         except KeyboardInterrupt:
             console.print(
                 f"\n[bold]stopped[/] with {progress.completed()} of {progress.total} designs on "

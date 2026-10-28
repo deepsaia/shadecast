@@ -31,7 +31,7 @@ class ResultsReport:
         self._data_root = Path(data_root)
 
     def collect(self) -> Results:
-        """The results over every tile of every selected city that has generated physics."""
+        """The results over every tile of every selected city that has simulated physics."""
         reports = [
             report_of(self._catalog.tile_paths(city.key, tile.tile))
             for city in self._catalog.cities()

@@ -2,7 +2,7 @@
 
 from shadecast.service.null_progress import NullProgress
 from shadecast.service.progress_listener import ProgressListener
-from shadecast.surrogate.generation_progress import GenerationProgress
+from shadecast.surrogate.simulation_progress import SimulationProgress
 
 
 def _speak(listener: ProgressListener) -> None:
@@ -23,8 +23,8 @@ def test_the_null_listener_accepts_every_event():
     _speak(listener)
 
 
-def test_the_generation_dashboard_speaks_the_vocabulary_and_keeps_its_readings():
-    progress = GenerationProgress.quiet()
+def test_the_simulation_dashboard_speaks_the_vocabulary_and_keeps_its_readings():
+    progress = SimulationProgress.quiet()
     assert isinstance(progress, ProgressListener)
     with progress:
         _speak(progress)

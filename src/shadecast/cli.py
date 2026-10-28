@@ -148,7 +148,7 @@ def results(
 def runs(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
-    """What is generating or training right now, and whether its process is still alive."""
+    """What is simulating or training right now, and whether its process is still alive."""
     found = RunStatus(
         CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT), tile_paths.MODELS_ROOT
     ).runs()
@@ -156,7 +156,7 @@ def runs(
         console.print_json(json.dumps([run.model_dump() for run in found]))
         return
     if not found:
-        console.print("[dim]nothing is running: no generation lock and no unfinished training.[/]")
+        console.print("[dim]nothing is running: no simulation lock and no unfinished training.[/]")
         return
     console.print(runs_table(found))
 
