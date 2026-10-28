@@ -19,8 +19,6 @@ from datetime import datetime
 from pathlib import Path
 
 from rich.console import Console, Group, RenderableType
-from rich.live import Live
-from rich.panel import Panel
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, TaskID, TextColumn
 from rich.table import Table
 from rich.text import Text
@@ -28,36 +26,10 @@ from rich.text import Text
 from ..hardware import Hardware
 from ..surrogate.simulation_events import BASELINE, BASELINE_PHASE
 from .engine_phase import design_phase, phase_bar
-from .log_tail import LogTail
+from .live_display import LiveDisplay, clock, sparkline
 
-BLOCKS = "▁▂▃▄▅▆▇█"
 LAST_ROWS = 10
 logger = logging.getLogger(__name__)
-
-LOG_LINES = 10
-
-
-def sparkline(values: list[float]) -> str:
-    """Eight-level bars for a short series, the way a glance reads a trend."""
-    if not values:
-        return ""
-    low, high = min(values), max(values)
-    if high == low:
-        return BLOCKS[3] * len(values)
-    return "".join(BLOCKS[int((v - low) / (high - low) * (len(BLOCKS) - 1))] for v in values)
-
-
-def clock(seconds: float) -> str:
-    """Hours and minutes, or minutes and seconds under an hour."""
-    seconds = max(0, int(seconds))
-    if seconds >= 3600:
-        return f"{seconds // 3600}h {seconds % 3600 // 60:02d}m"
-    return f"{seconds // 60}m {seconds % 60:02d}s"
-
-
-def verbose_logging() -> bool:
-    """True when the command ran with -v, which sets the root logger to DEBUG."""
-    return logging.getLogger().getEffectiveLevel() <= logging.DEBUG
 
 
 @dataclass
@@ -78,12 +50,13 @@ class SimulationProgress:
     skipped: list[str] = field(default_factory=list)
     failed: list[str] = field(default_factory=list)
     state: str = "starting"
-    live: Live | None = None
     bar: Progress | None = None
     task: TaskID | None = None
-    tail: LogTail | None = None
-    saved_handlers: list[logging.Handler] = field(default_factory=list)
     lock: threading.Lock = field(default_factory=threading.Lock)
+    display: LiveDisplay = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.display = LiveDisplay(self.console, self.render)
 
     @classmethod
     def quiet(cls) -> SimulationProgress:
@@ -92,27 +65,16 @@ class SimulationProgress:
     # --- lifecycle --------------------------------------------------------------------
 
     def __enter__(self) -> SimulationProgress:
-        if self.console is None:
-            return self
-        self.bar = Progress(
-            TextColumn("designs"),
-            BarColumn(bar_width=30),
-            MofNCompleteColumn(),
-            TextColumn("{task.fields[pace]}"),
-            console=self.console,
-            auto_refresh=False,
-        )
-        # Records go into the rolling box instead of the terminal, so the display stays whole.
-        root = logging.getLogger()
-        self.saved_handlers = list(root.handlers)
-        for handler in self.saved_handlers:
-            root.removeHandler(handler)
-        self.tail = LogTail(logging.DEBUG if verbose_logging() else logging.WARNING, LOG_LINES)
-        root.addHandler(self.tail)
-        self.live = Live(
-            get_renderable=self.render, console=self.console, refresh_per_second=2, transient=False
-        )
-        self.live.start()
+        if self.console is not None:
+            self.bar = Progress(
+                TextColumn("designs"),
+                BarColumn(bar_width=30),
+                MofNCompleteColumn(),
+                TextColumn("{task.fields[pace]}"),
+                console=self.console,
+                auto_refresh=False,
+            )
+        self.display.start()
         return self
 
     def __exit__(self, exc_type: object, *exc: object) -> None:
@@ -120,15 +82,7 @@ class SimulationProgress:
             self.state = "stopped"
         else:
             self.state = "failed" if exc_type else "done"
-        if self.live is not None:
-            self.live.refresh()
-            self.live.stop()
-        if self.console is None:
-            return
-        root = logging.getLogger()
-        root.handlers.clear()
-        for handler in self.saved_handlers:
-            root.addHandler(handler)
+        self.display.stop()
 
     # --- events from the simulation -------------------------------------------------------
 
@@ -213,7 +167,7 @@ class SimulationProgress:
             parts.append(Text(""))
             parts.append(Text("failed: " + "; ".join(self.failed), style="red"))
         parts.extend([Text(""), self._controls()])
-        box = self._log_box()
+        box = self.display.log_box()
         if box is not None:
             parts.extend([Text(""), box])
         return Group(*parts)
@@ -340,17 +294,5 @@ class SimulationProgress:
         text.append("   designs on disk are skipped, the baseline is kept", style="dim")
         return text
 
-    def _log_box(self) -> Panel | None:
-        if self.tail is None or not self.tail.lines:
-            return None
-        title = "log" if verbose_logging() else "warnings"
-        return Panel(
-            Text("\n".join(self.tail.lines), style="dim"),
-            title=f"{title}, newest last",
-            title_align="left",
-            border_style="dim",
-        )
-
     def _advance(self) -> None:
-        if self.live is not None:
-            self.live.refresh()
+        self.display.refresh()

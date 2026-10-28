@@ -44,6 +44,9 @@ sdc serve                         # the API and the dashboard for whatever data 
 
 Every command takes the city name and means its densest tile unless told otherwise. One
 simulation run is one tile: the 17 designs are 17 engine runs over the same square kilometre.
+`sdc simulate treeshade` and `sdc surrogate treeshade train` show a live dashboard while they run;
+Ctrl-C stops either cleanly and prints the command that resumes it, and `-v` before the command
+fills the dashboard's log box.
 To study more of a city, choose tiles explicitly and the same options carry through:
 
 ```bash

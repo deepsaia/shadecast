@@ -215,7 +215,12 @@ def train(
     }
     trainables = Trainables(model, optimiser, schedule, generator)
     state = _fresh_or_resumed(checkpoint, trainables, fingerprint)
-    listener.started(f"{settings.epochs} epochs", settings.epochs, state.epoch)
+    listener.started(
+        f"{settings.epochs} epochs on {device} · {int(train_mask.sum())} train patches, "
+        f"{int(test_mask.sum())} held out across {len(held_designs)} designs",
+        settings.epochs,
+        state.epoch,
+    )
 
     started = time.time()
     interrupted = False

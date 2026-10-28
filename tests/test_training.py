@@ -176,6 +176,7 @@ def test_every_epoch_is_reported_through_the_listener(tmp_path):
     report = train(_patches(), _settings(epochs=3, patience=10), tmp_path / "model.pt", listener)
     kinds = [event[0] for event in listener.events]
     assert kinds[0] == "started" and listener.events[0][2:] == (3, 0)
+    assert "train patches" in listener.events[0][1] and "held out" in listener.events[0][1]
     assert [event[1] for event in listener.events if event[0] == "step_done"] == [
         "epoch 1",
         "epoch 2",

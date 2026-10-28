@@ -17,7 +17,7 @@ from shadecast.surrogate import dataset
 from shadecast.surrogate.assessment import designs_for_tile
 from shadecast.surrogate.engine_phase import design_phase, phase_bar
 from shadecast.surrogate.patches import tile_key
-from shadecast.surrogate.simulation_progress import SimulationProgress, clock, sparkline
+from shadecast.surrogate.simulation_progress import SimulationProgress
 from shadecast.surrogate.simulation_settings import SimulationSettings
 
 SIDE = 24
@@ -185,15 +185,7 @@ def test_quiet_progress_counts_and_renders_nothing():
     assert progress.completed() == 3
     assert progress.mean_seconds() == 10.0
     assert progress.state == "done"
-    assert progress.live is None
-
-
-def test_sparkline_and_clock():
-    assert sparkline([1.0, 2.0, 3.0]) == "▁▄█"
-    assert sparkline([2.0, 2.0]) == "▄▄"
-    assert sparkline([]) == ""
-    assert clock(65) == "1m 05s"
-    assert clock(3725) == "1h 02m"
+    assert progress.display.live is None
 
 
 def test_an_interrupt_cancels_the_designs_not_yet_started(bundle, tmp_path, monkeypatch):
