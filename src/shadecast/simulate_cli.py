@@ -15,6 +15,7 @@ import typer
 from .console import console, error_console
 from .corpus import tile_paths
 from .service.baseline_request import BaselineRequest
+from .service.channels import channel
 from .service.city_catalog import CityCatalog
 from .service.engine_service import EngineService
 from .service.missing_stage import MissingStage
@@ -32,8 +33,7 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-KIND = "tree"  # the engine's intervention kind the tree shade designs add
-LABEL = "tree shade"  # how the dashboard and the pages name the channel
+TREESHADE = channel("treeshade")
 
 
 @app.command("baseline")
@@ -93,7 +93,7 @@ def treeshade(
     its engine time, how to stop and how to resume. Designs already on disk are skipped, so
     an interrupted run resumes where it stopped. Put -v before the command for debug logging.
     """
-    request = SimulationRequest(target=target, tiles=tiles, out=out, jobs=jobs, kind=KIND)
+    request = SimulationRequest(target=target, tiles=tiles, out=out, jobs=jobs, kind=TREESHADE.kind)
     service = SimulationService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT))
     try:
         chosen = service.tiles_for(request)
@@ -109,7 +109,7 @@ def treeshade(
             console,
             jobs=jobs,
             threads=engine_threads(settings_for(request)),
-            kind=LABEL,
+            kind=TREESHADE.label,
             resume_command=resume_command(target, picked, out, jobs),
         )
         try:

@@ -17,11 +17,13 @@ from .console import console, error_console, pairs_table
 from .corpus import tile_paths
 from .service.assessment_request import AssessmentRequest
 from .service.assessment_service import AssessmentService
+from .service.channels import channel
 from .service.null_progress import NullProgress
 from .service.training_request import TrainingRequest
 from .service.training_service import TrainingService
 from .surrogate import manifest
 from .surrogate.training_progress import TrainingProgress
+from .surrogate.training_settings import TrainingSettings
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +39,8 @@ treeshade = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(treeshade, name="treeshade")
+
+TREESHADE = channel("treeshade")
 
 
 def train_resume_command(request: TrainingRequest) -> str:
@@ -116,6 +120,10 @@ def train_model(
     By default a whole design is held out, which measures generalisation to an unseen
     intervention pattern. With --holdout-city a whole city is held out instead, which
     measures transfer to unseen geometry. Those are different questions.
+
+    A dashboard shows the epochs as they run, with the best so far, how long the skill has
+    stalled against the patience, and how to stop and resume. Put -v before the command for
+    debug logging in its log box.
     """
     request = TrainingRequest(
         target=target,
@@ -132,8 +140,16 @@ def train_model(
         resume=resume,
     )
     service = TrainingService(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT)
+    progress = TrainingProgress(
+        console,
+        patience=TrainingSettings().patience,
+        kind=TREESHADE.label,
+        target=target or " ".join(request.pair),
+        resume_command=train_resume_command(request),
+    )
     try:
-        outcome = service.train(request, TrainingProgress(console))
+        with progress:
+            outcome = service.train(request, progress)
     except ValueError as exc:
         error_console.print(str(exc), style="red", markup=False)
         raise typer.Exit(code=1) from exc

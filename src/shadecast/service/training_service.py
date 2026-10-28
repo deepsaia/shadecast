@@ -85,7 +85,7 @@ class TrainingService:
             {
                 "patches": len(inputs),
                 "designs": len(set(origins)),
-                "cities": len(pairs),
+                "tiles": len(pairs),
                 "patch_px": request.patch,
             },
         )
