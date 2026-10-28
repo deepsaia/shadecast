@@ -14,16 +14,12 @@ LAGOS = 1289
 TILE = "t43N_249_2547"
 
 
-def _tile(tile: str = TILE, centre: int = CENTRE) -> dict:
-    return {
-        "city": "ahmedabad" if centre == CENTRE else "lagos",
-        "tile": tile,
-        "urban_centre": centre,
-    }
+def _tile(tile: str = TILE, centre: int = CENTRE) -> str:
+    return f"{centre}/{tile}"
 
 
 def _model(
-    root: Path, name: str, created: str | None, tiles: list[dict], weights: bool = True
+    root: Path, name: str, created: str | None, tiles: list[str], weights: bool = True
 ) -> Path:
     """A model directory; a created stamp means a manifest, and no stamp means weights alone."""
     model = root / name

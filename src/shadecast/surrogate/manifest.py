@@ -1,14 +1,17 @@
 """The manifest written beside every trained model.
 
-A checkpoint is a bag of weights; a manifest says what they are. It records the architecture
-and its size, every input channel and its scale, what the output means, which tiles and designs
-the model saw and which it was tested on, every training setting and how the kept epoch was
-chosen, the metrics, the engine and code that produced it, and a digest of the weights file.
-A reader with the manifest and no code can say what the model is and whether to trust it.
+A checkpoint is a bag of weights; a manifest says what they are, in under a kilobyte. It keeps
+what cannot be re-derived: the tiles and designs the model learned from and the designs it was
+tested on, every training setting and how the run went, the held-out metrics, and the engine,
+package and commit that produced it. What the code at that commit can recompute stays in the
+code: the architecture's size and reach, the channels' scales and meanings, what the output
+means. ``describe`` recomputes them from the manifest's four model fields. The training curve
+is not metadata and goes to a small table beside the weights.
 """
 
 from __future__ import annotations
 
+import csv
 import json
 import subprocess
 from datetime import UTC, datetime
@@ -17,91 +20,55 @@ from pathlib import Path
 
 import torch
 
+from ..corpus.tile_ref import ref_of
 from ..data.checksum import sha256
-from . import features
+from .features import CHANNEL_SETS
 from .manifest_inputs import ManifestInputs
-from .model import ResponseUNet
-from .patches import entries
+from .model import DEPTH, WIDTH, ResponseUNet
 
 MANIFEST_FILE = "manifest.json"
+EPOCHS_FILE = "epochs.csv"
+EPOCH_COLUMNS = ("epoch", "train_loss", "test_mae_C", "skill")
+DECIMALS = 4  # enough for a training curve; a float prints seventeen digits otherwise
 REQUIRED_SECTIONS = (
     "model_id",
     "created",
-    "architecture",
-    "inputs",
-    "output",
+    "model",
     "data",
     "training",
     "metrics",
     "provenance",
-    "weights",
-    "licence",
-    "intended_use",
+    "weights_sha256",
 )
 INTENDED_USE = (
     "Predict the daylight-mean change in mean radiant temperature a tree planting plan causes "
     "on the tile it was trained on or on tiles with similar morphology; verify any plan chosen "
     "with it against the physics engine before reporting it."
 )
-LAND_COVER_FLAGS = {
-    "is_water": {"worldcover_classes": [features.WATER_CLASS]},
-    "is_vegetated": {"worldcover_classes": list(features.VEGETATED_CLASSES)},
-}
 RESOLUTION_M = 1.0
-RECEPTIVE_FIELD_METHOD = (
-    "gradient probe of a one-dimensional analog over one pooling cell, every path open; "
-    "the field varies with the output pixel's place in the cell"
-)
-SCALES = {
-    "baseline_tmrt": features.TMRT_SCALE,
-    "building_height": features.HEIGHT_SCALE,
-    "canopy_height": features.CANOPY_SCALE,
-    "sun_noon_elevation": features.ELEVATION_SCALE,
-}
-DEFINITIONS = {
-    "sky_openness": (
-        f"1 minus mean obstruction height within {features.OPENNESS_RADIUS_M:.0f} m "
-        f"over {features.HEIGHT_SCALE:.0f} m, clipped to 0 to 1"
-    ),
-    "sky_view_factor": "the engine's ray-cast sky view factor from the baseline run, 0 to 1",
-    "sunlit_fraction": (
-        "share of the daylight hours, 08:00 to 18:00, in which the sun reaches the pixel, "
-        "from the baseline run's hourly shadow stack"
-    ),
-    "sun_noon_elevation": (
-        "solar noon elevation on the design day from latitude and Cooper's declination, "
-        "constant over the tile"
-    ),
-    "sun_noon_side": (
-        "+1 when the noon sun is to the south, -1 when to the north, constant over the tile"
-    ),
-}
 
 
-def architecture(in_channels: int) -> dict:
-    model = ResponseUNet(in_channels=in_channels)
+def build(built: ManifestInputs) -> dict:
     return {
-        "class": type(model).__name__,
-        "depth": model.depth,
-        "widths": [model.width * 2**level for level in range(model.depth)],
-        "bottleneck": model.width * 2**model.depth,
-        "parameters": sum(parameter.numel() for parameter in model.parameters()),
-        "receptive_field_m": round(model.receptive_field_m(RESOLUTION_M)),
-        "receptive_field_min_m": round(model.receptive_field_px()[0] * RESOLUTION_M),
-        "receptive_field_method": RECEPTIVE_FIELD_METHOD,
-        "output_constraint": "none, warming near a new tree is a measured effect",
+        "model_id": built.model_id,
+        "created": built.created,
+        "model": model_section(built.report),
+        "data": data_section(built),
+        "training": training_section(built.report),
+        "metrics": metrics_section(built.report),
+        "provenance": provenance_section(built),
+        "weights_sha256": sha256(built.model_path),
     }
 
 
-def inputs(channel_set: str) -> dict:
-    channels = []
-    for name in features.CHANNEL_SETS[channel_set]:
-        channel: dict = {"name": name, "scale": SCALES.get(name)}
-        channel.update(LAND_COVER_FLAGS.get(name, {}))
-        if name in DEFINITIONS:
-            channel["definition"] = DEFINITIONS[name]
-        channels.append(channel)
-    return {"resolution_m": RESOLUTION_M, "channel_set": channel_set, "channels": channels}
+def model_section(report: dict) -> dict:
+    """The four facts the code turns back into the network: class, width, depth, channel set."""
+    return {
+        "class": ResponseUNet.__name__,
+        "width": WIDTH,
+        "depth": DEPTH,
+        "channel_set": channel_set_of(report),
+    }
 
 
 def channel_set_of(report: dict) -> str:
@@ -109,43 +76,11 @@ def channel_set_of(report: dict) -> str:
     return str(report.get("settings", {}).get("channels", "base"))
 
 
-def output() -> dict:
-    return {
-        "quantity": "baseline minus plan mean radiant temperature, daylight mean",
-        "daylight_window": "08:00 to 18:00 local",
-        "units": "degrees Celsius",
-        "sign": "positive is cooling",
-    }
-
-
-def tile_record(physics_dir: Path, bundle: Path) -> dict:
-    """What a model learned from one tile: the city, the tile, its centre and its design count."""
-    provenance = json.loads((Path(bundle) / "provenance.json").read_text())
-    return {
-        "city": provenance.get("city", {}).get("key"),
-        "tile": provenance.get("tile", {}).get("id"),
-        "urban_centre": provenance.get("tile", {}).get("urban_centre"),
-        "designs": len(entries(physics_dir)),
-    }
-
-
-def _design_families(pairs: list[tuple[Path, Path]]) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for physics_dir, _ in pairs:
-        for meta in entries(physics_dir):
-            family = str(meta.get("family"))
-            counts[family] = counts.get(family, 0) + 1
-    return counts
-
-
 def data_section(built: ManifestInputs) -> dict:
     report = built.report
     return {
-        "tiles": [tile_record(physics_dir, bundle) for physics_dir, bundle in built.pairs],
-        "design_families": _design_families(built.pairs),
+        "tiles": [tile_ref(bundle) for _, bundle in built.pairs],
         "held_out_designs": report.get("held_out_designs", []),
-        "holdout_mode": report.get("holdout_mode"),
-        "holdout_city": report.get("holdout_city"),
         "patch_px": built.patch_px,
         "patches_per_design": built.per_entry,
         "train_patches": report.get("train_patches"),
@@ -153,28 +88,54 @@ def data_section(built: ManifestInputs) -> dict:
     }
 
 
+def tile_ref(bundle: Path) -> str:
+    """``<urban centre id>/<tile id>`` for a bundle, from the tile record in its provenance."""
+    tile = _provenance(bundle).get("tile", {})
+    centre, tile_id = tile.get("urban_centre"), tile.get("id")
+    if not centre or not tile_id:
+        raise ValueError(
+            f"{bundle} has no tile record in its provenance; rebuild it with 'sdc build'"
+        )
+    return ref_of(int(centre), str(tile_id))
+
+
+def city_keys(pairs: list[tuple[Path, Path]]) -> list[str]:
+    """Each city once, in training order, from the bundles' provenance."""
+    keys = [str(_provenance(bundle).get("city", {}).get("key")) for _, bundle in pairs]
+    return list(dict.fromkeys(keys))
+
+
+def _provenance(bundle: Path) -> dict:
+    return json.loads((Path(bundle) / "provenance.json").read_text())
+
+
 def training_section(report: dict) -> dict:
+    """Every setting the run was given, flat, and how the run went."""
     return {
-        "settings": report.get("settings", {}),
+        **report.get("settings", {}),
         "device": report.get("device"),
-        "torch": torch.__version__,
-        "selection": report.get("selection"),
         "best_epoch": report.get("best_epoch"),
         "last_epoch": report.get("last_epoch"),
-        "stopped_early": report.get("stopped_early"),
         "interrupted": report.get("interrupted", False),
         "resumed_from_epoch": report.get("resumed_from_epoch", 0),
         "train_seconds": report.get("train_seconds"),
-        "history": report.get("history", []),
     }
 
 
 def metrics_section(report: dict) -> dict:
     return {
         "best_skill": report.get("best_skill"),
-        "final_test_mae_C": report.get("final_test_mae_C"),
+        "test_mae_C": report.get("final_test_mae_C"),
         "zero_baseline_mae_C": report.get("zero_baseline_mae_C"),
-        "beats_predicting_nothing": report.get("beats_predicting_nothing"),
+    }
+
+
+def provenance_section(built: ManifestInputs) -> dict:
+    return {
+        "engine": _engine_version(built.pairs),
+        "shadecast": _package_version(),
+        "torch": torch.__version__,
+        "code_commit": _code_commit(),
     }
 
 
@@ -186,13 +147,6 @@ def _engine_version(pairs: list[tuple[Path, Path]]) -> str | None:
     return None
 
 
-def _code_commit() -> str:
-    completed = subprocess.run(
-        ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False
-    )
-    return completed.stdout.strip() if completed.returncode == 0 else "unknown"
-
-
 def _package_version() -> str:
     try:
         return version("shadecast")
@@ -200,30 +154,16 @@ def _package_version() -> str:
         return "unknown"
 
 
-def provenance_section(built: ManifestInputs) -> dict:
-    return {
-        "engine": _engine_version(built.pairs),
-        "shadecast": _package_version(),
-        "code_commit": _code_commit(),
-    }
-
-
-def weights_section(model_path: Path) -> dict:
-    path = Path(model_path)
-    return {
-        "file": path.name,
-        "format": "torch state_dict, pickle",
-        "sha256": sha256(path) if path.exists() else None,
-        "bytes": path.stat().st_size if path.exists() else None,
-    }
+def _code_commit() -> str:
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False
+    )
+    return completed.stdout.strip() if completed.returncode == 0 else "unknown"
 
 
 def new_model_id(pairs: list[tuple[Path, Path]], created: datetime) -> str:
     """response-unet-<cities>-<timestamp>, unique per training run and readable."""
-    keys = [
-        str(json.loads((Path(bundle) / "provenance.json").read_text()).get("city", {}).get("key"))
-        for _, bundle in pairs
-    ]
+    keys = [str(_provenance(bundle).get("city", {}).get("key")) for _, bundle in pairs]
     cities = "+".join(dict.fromkeys(keys))  # each city once, in order
     pooled = f"-{len(keys)}tiles" if len(keys) > len(set(keys)) else ""
     return f"response-unet-{cities}{pooled}-{created.strftime('%Y%m%dT%H%M%S')}"
@@ -231,23 +171,6 @@ def new_model_id(pairs: list[tuple[Path, Path]], created: datetime) -> str:
 
 def now() -> datetime:
     return datetime.now(UTC)
-
-
-def build(built: ManifestInputs) -> dict:
-    return {
-        "model_id": built.model_id,
-        "created": built.created,
-        "architecture": architecture(len(features.CHANNEL_SETS[channel_set_of(built.report)])),
-        "inputs": inputs(channel_set_of(built.report)),
-        "output": output(),
-        "data": data_section(built),
-        "training": training_section(built.report),
-        "metrics": metrics_section(built.report),
-        "provenance": provenance_section(built),
-        "weights": weights_section(built.model_path),
-        "licence": "Apache-2.0",
-        "intended_use": INTENDED_USE,
-    }
 
 
 def check(manifest: dict) -> None:
@@ -275,8 +198,47 @@ def read(model_dir: Path) -> dict:
     return manifest
 
 
+def save_epochs(history: list[dict], path: Path) -> Path:
+    """The training curve as a four-column table, one row per epoch, rounded."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=EPOCH_COLUMNS)
+        writer.writeheader()
+        for row in history:
+            writer.writerow(_epoch_row(row))
+    return path
+
+
+def _epoch_row(row: dict) -> dict:
+    rounded = {name: round(float(row.get(name, 0.0)), DECIMALS) for name in EPOCH_COLUMNS[1:]}
+    return {"epoch": int(row.get("epoch", 0)), **rounded}
+
+
+def channel_names(manifest: dict) -> tuple[str, ...]:
+    """The input channels, in order, from the channel set the manifest names."""
+    return CHANNEL_SETS[str(manifest.get("model", {}).get("channel_set"))]
+
+
+def architecture(model: dict) -> dict:
+    """Size and reach recomputed from the model section, as the code at the commit defines them."""
+    channels = CHANNEL_SETS[str(model.get("channel_set"))]
+    network = ResponseUNet(
+        in_channels=len(channels),
+        width=int(model.get("width", WIDTH)),
+        depth=int(model.get("depth", DEPTH)),
+    )
+    smallest, largest = network.receptive_field_px()
+    return {
+        "parameters": sum(parameter.numel() for parameter in network.parameters()),
+        "receptive_field_m": round(largest * RESOLUTION_M),
+        "receptive_field_min_m": round(smallest * RESOLUTION_M),
+        "channels": list(channels),
+    }
+
+
 def receptive_field_text(architecture: dict) -> str:
-    """The field as a range when the manifest has both ends, else the one figure it has."""
+    """The field as a range when both ends are known, else the one figure there is."""
     largest = architecture.get("receptive_field_m")
     smallest = architecture.get("receptive_field_min_m")
     if smallest is None or smallest == largest:
@@ -285,24 +247,20 @@ def receptive_field_text(architecture: dict) -> str:
 
 
 def summary(manifest: dict) -> dict:
-    """The dozen facts a reader wants first, for a table."""
-    architecture = manifest.get("architecture", {})
+    """The dozen facts a reader wants first, for a table; size and reach are recomputed."""
+    derived = architecture(manifest.get("model", {}))
     data = manifest.get("data", {})
-    weights = manifest.get("weights", {})
     return {
         "created": manifest.get("created"),
-        "architecture": architecture.get("class"),
-        "parameters": architecture.get("parameters"),
-        "receptive field": receptive_field_text(architecture),
-        "inputs": ", ".join(
-            c.get("name", "") for c in manifest.get("inputs", {}).get("channels", [])
-        ),
-        "tiles": ", ".join(f"{t.get('city')} {t.get('tile')}" for t in data.get("tiles", [])),
+        "architecture": manifest.get("model", {}).get("class"),
+        "parameters": derived.get("parameters"),
+        "receptive field": receptive_field_text(derived),
+        "inputs": ", ".join(derived.get("channels", [])),
+        "tiles": ", ".join(str(ref) for ref in data.get("tiles", [])),
         "held out": ", ".join(data.get("held_out_designs", [])),
         "best epoch": manifest.get("training", {}).get("best_epoch"),
         "best skill": manifest.get("metrics", {}).get("best_skill"),
         "engine": manifest.get("provenance", {}).get("engine"),
         "code commit": str(manifest.get("provenance", {}).get("code_commit"))[:12],
-        "weights": f"{weights.get('file')} {str(weights.get('sha256'))[:12]}",
-        "licence": manifest.get("licence"),
+        "weights": str(manifest.get("weights_sha256"))[:12],
     }

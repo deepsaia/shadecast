@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ..corpus.tile_paths import TilePaths
+from ..corpus.tile_ref import tile_of
 from ..surrogate.dataset import SIMULATION_LOCK, default_plan, lock_is_stale
 from ..surrogate.training_state import CHECKPOINT_NAME, STARTED_NAME
 from .city_catalog import CityCatalog
@@ -55,12 +56,12 @@ def _simulation(city: str, paths: TilePaths, lock: Path) -> RunSummary:
 def _training(model_dir: Path) -> RunSummary:
     """An unfinished run, named for the tiles its start record lists; older runs left none."""
     record = read_object(model_dir / STARTED_NAME)
-    tiles: list[dict] = record.get("tiles", [])
-    cities = list(dict.fromkeys(str(entry.get("city")) for entry in tiles if entry.get("city")))
+    tiles = [str(ref) for ref in record.get("tiles", [])]
+    cities = [str(city) for city in record.get("cities", [])]
     return RunSummary(
         kind=TRAINING,
         city=", ".join(cities) or UNRECORDED,
-        tile=str(tiles[0].get("tile")) if len(tiles) == 1 and tiles[0].get("tile") else None,
+        tile=tile_of(tiles[0]) if len(tiles) == 1 else None,
         model=model_dir.name,
         started=str(record.get("started") or _stamp(model_dir / CHECKPOINT_NAME)),
         alive=None,

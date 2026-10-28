@@ -238,7 +238,7 @@ def describe(
         console.print_json(json.dumps(found))
         return
     console.print(pairs_table(found.get("model_id", "model"), manifest.summary(found)))
-    console.print(f"[dim]{found.get('intended_use')}[/]")
+    console.print(f"[dim]{manifest.INTENDED_USE}[/]")
 
 
 def _model_dir(target: str, model: str | None) -> Path:

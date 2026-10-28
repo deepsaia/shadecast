@@ -1,5 +1,6 @@
 """Training is addressed by city and tile, or by pairs; the service crops, fits and writes."""
 
+import csv
 import json
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from shadecast.service import training_service
 from shadecast.service.null_progress import NullProgress
 from shadecast.service.training_request import TrainingRequest
 from shadecast.service.training_service import TrainingService, unfinished_model
+from shadecast.surrogate.manifest import EPOCHS_FILE
 from shadecast.surrogate.training_state import CHECKPOINT_NAME, STARTED_NAME
 
 CENTRE = 6143
@@ -131,12 +133,17 @@ def _fake_crop(physics_dir, bundle, settings):
     )
 
 
+STARTED: list[dict] = []
+
+
 def _fake_train(patches, settings, out_path=None, progress=None):
+    """Stands in for the trainer and keeps the start record as it stood while training ran."""
+    STARTED.append(json.loads((Path(out_path).parent / STARTED_NAME).read_text()))
     Path(out_path).write_bytes(b"weights")
     return _fake_report()
 
 
-def test_train_crops_fits_and_writes_the_model_its_report_and_its_manifest(tmp_path, monkeypatch):
+def test_train_crops_fits_and_writes_the_model_its_manifest_and_its_curve(tmp_path, monkeypatch):
     _physics(_bundle(tmp_path, "t43N_249_2547"))
     monkeypatch.setattr(training_service, "crop_batch", _fake_crop)
     monkeypatch.setattr(training_service, "train", _fake_train)
@@ -145,14 +152,18 @@ def test_train_crops_fits_and_writes_the_model_its_report_and_its_manifest(tmp_p
     )
     destination = Path(outcome.destination)
     assert destination.parent == tmp_path / "models"
-    started = json.loads((destination / STARTED_NAME).read_text())
-    assert started["tiles"] == [
-        {"city": "ahmedabad", "tile": "t43N_249_2547", "urban_centre": CENTRE, "designs": 2}
-    ]
+    started = STARTED[-1]
+    assert started["cities"] == ["ahmedabad"] and started["tiles"] == [f"{CENTRE}/t43N_249_2547"]
+    assert not (destination / STARTED_NAME).exists(), "the manifest replaces the start record"
     assert destination.name.startswith("response-unet-ahmedabad-")
-    assert (destination / "model.pt").exists() and (destination / "manifest.json").exists()
-    report = json.loads((destination / "training_report.json").read_text())
-    assert report["patch_px"] == 256 and report["target_stats"]["max_C"] == 1.0
+    assert (destination / "model.pt").exists() and not (
+        destination / "training_report.json"
+    ).exists()
+    written = json.loads((destination / "manifest.json").read_text())
+    assert written["data"]["tiles"] == [f"{CENTRE}/t43N_249_2547"]
+    assert written["data"]["patch_px"] == 256 and written["training"]["best_epoch"] == 4
+    with (destination / EPOCHS_FILE).open() as handle:
+        assert [row["epoch"] for row in csv.DictReader(handle)] == ["1"]
     assert outcome.patches == 4 and outcome.designs == 2 and outcome.cities == 1
     assert outcome.skill == 0.71 and outcome.beats_nothing is True and outcome.interrupted is False
 

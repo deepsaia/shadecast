@@ -53,6 +53,7 @@ def test_one_built_tile_is_chosen_named_or_refused(tmp_path):
 
 def test_simulate_takes_a_city_name_and_writes_beside_its_bundle(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
+    monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
     bundle = _bundle(tmp_path, 6143, "t43N_249_2547")
     seen: dict = {}
 
@@ -71,6 +72,7 @@ def test_simulate_takes_a_city_name_and_writes_beside_its_bundle(tmp_path, monke
 
 def test_simulate_runs_each_listed_tile_or_all_of_them(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
+    monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
     first = _bundle(tmp_path, 6143, "t43N_249_2547")
     second = _bundle(tmp_path, 6143, "t43N_250_2547")
     seen: list[Path] = []
@@ -93,6 +95,7 @@ def test_simulate_runs_each_listed_tile_or_all_of_them(tmp_path, monkeypatch):
 
 def test_simulate_without_tiles_takes_the_densest_built_one(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
+    monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
     _bundle(tmp_path, 6143, "t43N_249_2547")
     dense = _bundle(tmp_path, 6143, "t43N_250_2547")
     with pytest.raises(ValueError, match=r"no tiles\.json"):
@@ -112,6 +115,7 @@ def test_simulate_without_tiles_takes_the_densest_built_one(tmp_path, monkeypatc
 
 def test_simulate_refuses_a_city_without_a_bundle(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
+    monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
     result = runner.invoke(app, ["simulate", "treeshade", "ahmedabad"])
     assert result.exit_code == 1
     assert "sdc build ahmedabad" in result.output

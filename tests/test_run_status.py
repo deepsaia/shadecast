@@ -26,12 +26,13 @@ def _status(root) -> RunStatus:
     return RunStatus(catalog, root / "models")
 
 
-def _unfinished(root, name: str, tiles: list[dict] | None = None):
+def _unfinished(root, name: str, record: dict | None = None):
+    """A checkpoint without a manifest; a record is the cities and tiles its start wrote."""
     model = root / "models" / name
     model.mkdir(parents=True)
     (model / CHECKPOINT_NAME).write_bytes(b"c")
-    if tiles is not None:
-        started = {"started": "2026-10-23T12:17:39+00:00", "tiles": tiles}
+    if record is not None:
+        started = {"started": "2026-10-23T12:17:39+00:00", **record}
         (model / STARTED_NAME).write_text(json.dumps(started))
     return model
 
@@ -65,12 +66,12 @@ def test_a_checkpoint_without_a_manifest_is_a_training_run_named_by_its_start_re
     one = _unfinished(
         tmp_path,
         "response-unet-ahmedabad-20261023T121739",
-        [{"city": "ahmedabad", "tile": TILE, "urban_centre": 6143}],
+        {"cities": ["ahmedabad"], "tiles": [f"6143/{TILE}"]},
     )
     pooled = _unfinished(
         tmp_path,
         "response-unet-ahmedabad+lagos-20261024T090000",
-        [{"city": "ahmedabad", "tile": TILE}, {"city": "lagos", "tile": "t31N_537_714"}],
+        {"cities": ["ahmedabad", "lagos"], "tiles": [f"6143/{TILE}", "1289/t31N_537_714"]},
     )
     bare = _unfinished(tmp_path, "response-unet-x-20261024T100000")
     finished = _unfinished(tmp_path, "response-unet-ahmedabad-20261023T100000")

@@ -36,7 +36,7 @@ def _model(root: Path, tile_id: str, name: str) -> Path:
     model = root / "models" / name
     model.mkdir(parents=True)
     (model / "model.pt").write_bytes(b"w")
-    tiles = [{"city": "ahmedabad", "tile": tile_id, "urban_centre": CENTRE}]
+    tiles = [f"{CENTRE}/{tile_id}"]
     (model / "manifest.json").write_text(json.dumps({"data": {"tiles": tiles}}))
     return model
 
@@ -77,7 +77,7 @@ def test_the_newest_model_and_the_densest_tile_with_physics_are_chosen(tmp_path,
         json.dumps(
             {
                 "created": "2026-10-24T09:00:00+00:00",
-                "data": {"tiles": [{"urban_centre": CENTRE}, {"urban_centre": CENTRE}]},
+                "data": {"tiles": [f"{CENTRE}/t43N_249_2547", f"{CENTRE}/t43N_250_2547"]},
             }
         )
     )

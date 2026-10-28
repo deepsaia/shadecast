@@ -549,38 +549,37 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
 
 <section id="manifest">
   <h2><i>10</i>The manifest</h2>
-  <p>Every trained model lives in its own directory with a file named <code>manifest.json</code>. The manifest says what the model is. A reader with the manifest and no code can decide whether to trust it.</p>
+  <p>Every trained model lives in its own directory with a file named <code>manifest.json</code>, under a kilobyte. It keeps what cannot be recomputed: what the model learned from, how it was trained, how it scored, and what produced it. What the code at the recorded commit can recompute stays in the code, and <code>describe</code> recomputes it: the network's size and reach from four model fields, the channels' scales and meanings from the channel set.</p>
   <div class="scroll"><table>
     <thead><tr><th>Section</th><th>What it holds</th></tr></thead>
     <tbody>
       <tr><td><code>model_id</code>, <code>created</code></td><td>response-unet, the cities, the time of training</td></tr>
-      <tr><td><code>architecture</code></td><td>class, depth, widths, bottleneck, parameters, receptive field, output constraint</td></tr>
-      <tr><td><code>inputs</code></td><td>the seven channels in order, each scale, the land cover classes behind the flags</td></tr>
-      <tr><td><code>output</code></td><td>quantity, daylight window, units, sign</td></tr>
-      <tr><td><code>data</code></td><td>tiles trained on, design families, designs held out, patch size, patch counts</td></tr>
-      <tr><td><code>training</code></td><td>every setting, device, torch version, selection rule, best and last epoch, the full history</td></tr>
+      <tr><td><code>model</code></td><td>class, width, depth and channel set: the four facts the code turns back into the network</td></tr>
+      <tr><td><code>data</code></td><td>the tiles as <code>&lt;urban centre id&gt;/&lt;tile id&gt;</code>, the designs held out, patch size and counts</td></tr>
+      <tr><td><code>training</code></td><td>every setting, flat, with the device, the best and last epoch and the seconds spent</td></tr>
       <tr><td><code>metrics</code></td><td>best skill, held-out error, the zero baseline it is read against</td></tr>
-      <tr><td><code>provenance</code></td><td>engine version, package version, code commit</td></tr>
-      <tr><td><code>weights</code></td><td>file, format, SHA-256 digest, size</td></tr>
-      <tr><td><code>licence</code>, <code>intended_use</code></td><td>Apache-2.0, and what the model is for</td></tr>
+      <tr><td><code>provenance</code></td><td>engine version, package version, torch version, code commit</td></tr>
+      <tr><td><code>weights_sha256</code></td><td>the digest of <code>model.pt</code></td></tr>
     </tbody>
   </table></div>
+  <p>The training curve is not metadata. It is a four-column table beside the weights, <code>epochs.csv</code>: epoch, training loss, held-out error, skill.</p>
   <p>Read a manifest with one command.</p>
-  <pre>sdc surrogate treeshade describe ahmedabad --model response-unet-ahmedabad-20260826T143800</pre>
+  <pre>sdc surrogate treeshade describe recife</pre>
   <pre>{
-  "model_id": "response-unet-ahmedabad-20260826T143800",
-  "architecture": {"class": "ResponseUNet", "depth": 4, "widths": [32, 64, 128, 256],
-                   "bottleneck": 512, "parameters": 7764193, "receptive_field_m": 204,
-                   "receptive_field_min_m": 188},
-  "data": {"tiles": [{"city": "ahmedabad", "tile": "t43N_249_2547", "urban_centre": 6143, "designs": 17}],
+  "model_id": "response-unet-recife-20261027T154220",
+  "created": "2026-10-27T15:48:53+00:00",
+  "model": {"class": "ResponseUNet", "width": 32, "depth": 4, "channel_set": "engine"},
+  "data": {"tiles": ["8388/t25S_290_9113"],
            "held_out_designs": ["clustered_0105", "clustered_0110", "random_uniform_0205", "random_uniform_0210"],
-           "patch_px": 256, "patches_per_design": 32, "train_patches": 416, "test_patches": 128},
-  "training": {"best_epoch": 36, "last_epoch": 40, "train_seconds": 233.3, "device": "mps"},
-  "metrics": {"best_skill": 0.7687, "final_test_mae_C": 0.41, "zero_baseline_mae_C": 1.78},
-  "provenance": {"engine": "solweig_gpu 2.0.0"},
-  "weights": {"file": "model.pt", "format": "torch state_dict, pickle"}
+           "patch_px": 256, "patches_per_design": 24, "train_patches": 312, "test_patches": 96},
+  "training": {"epochs": 60, "batch_size": 8, "learning_rate": 0.002, "holdout": 0.25, "holdout_city": null,
+               "seed": 0, "patience": 10, "device": "mps", "loss": "huber", "huber_delta": 1.0,
+               "channels": "engine", "best_epoch": 57, "last_epoch": 60, "train_seconds": 487.3},
+  "metrics": {"best_skill": 0.8042, "test_mae_C": 0.2638, "zero_baseline_mae_C": 1.3436},
+  "provenance": {"engine": "solweig_gpu 2.0.0", "shadecast": "0.1.0", "torch": "2.9.0", "code_commit": "86cc394"},
+  "weights_sha256": "9f3a..."
 }</pre>
-  <div class="note"><p>The two models trained on 2026-08-26 predate the manifest. Their manifests were rebuilt from their training reports and say so in a note. Their weights are the last epoch, not the best. Their patches-per-design figure was corrected to 32 on 2026-10-23 from the recorded patch counts, and their receptive field from the estimate of 152 m to the probed 188 to 204 m.</p></div>
+  <div class="note"><p>The two models trained on 2026-08-26 predate the manifest; theirs were rebuilt from their training reports. Their weights are the last epoch, not the best.</p></div>
 </section>
 
 <section id="storage">
@@ -590,7 +589,8 @@ svg .tick{font-family:var(--f-m);font-size:10px;fill:var(--ink-3)}
   bundle/        the five layers, provenance.json
   physics/       baseline/ and one directory per design
 data/models/&lt;model id&gt;/
-  model.pt, manifest.json, started.json, training_report.json, assessment.json</pre>
+  model.pt, manifest.json, epochs.csv, assessment.json</pre>
+  <p>A start record, <code>started.json</code>, exists only while a training run is unfinished, so the runs table can name it.</p>
   <p>Storing models elsewhere is an option, never a requirement. A model store interface will have three backends: a local directory, which is the default, the Hugging Face Hub, and a git-lfs repository. Each holds the same files. Fetching from a public store needs no account. Publishing needs the credential that store asks for, at build time. This is issue 103.</p>
 </section>
 

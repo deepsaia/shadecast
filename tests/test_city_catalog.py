@@ -60,7 +60,7 @@ def _model_of(root: Path, tile_id: str, urban_centre: int) -> None:
     """A finished model under the models root whose manifest names the tile."""
     model = root / "models" / f"response-unet-{tile_id}"
     model.mkdir(parents=True, exist_ok=True)
-    tiles = [{"tile": tile_id, "urban_centre": urban_centre}]
+    tiles = [f"{urban_centre}/{tile_id}"]
     (model / "manifest.json").write_text(json.dumps({"data": {"tiles": tiles}}))
 
 
