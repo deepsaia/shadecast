@@ -1,4 +1,4 @@
-"""A tile reports what it has: facts always, the baseline when run, the plans when generated."""
+"""A tile reports what it has: facts always, the baseline when run, the plans when simulated."""
 
 import os
 

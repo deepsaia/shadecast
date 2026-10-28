@@ -1,4 +1,4 @@
-"""What is generating or training right now."""
+"""What is simulating or training right now."""
 
 from __future__ import annotations
 

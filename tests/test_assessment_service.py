@@ -98,7 +98,7 @@ def test_refusals_name_the_training_command_the_unknown_model_and_the_missing_ph
     _model(tmp_path, "t43N_249_2547", "response-unet-ahmedabad-20261023T121739")
     with pytest.raises(UnknownModel, match="nope"):
         service.model_for("ahmedabad", "nope", None)
-    with pytest.raises(ValueError, match="no generated physics"):
+    with pytest.raises(ValueError, match="no simulated physics"):
         service.model_for("ahmedabad", None, "t43N_250_2547")
 
 

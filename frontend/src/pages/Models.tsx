@@ -50,7 +50,7 @@ function Untrained({ channelKey, cities }: { channelKey: string; cities: CitySum
   return (
     <div className="mt-6 max-w-[64ch] rounded-md border border-dashed p-4 text-sm">
       <p>
-        {waiting.length === 1 ? "One city has" : `${waiting.length} cities have`} generated physics and no model
+        {waiting.length === 1 ? "One city has" : `${waiting.length} cities have`} simulated physics and no model
         yet. Train one per city with:
       </p>
       <ul className="mt-2 grid gap-1 sm:grid-cols-2">

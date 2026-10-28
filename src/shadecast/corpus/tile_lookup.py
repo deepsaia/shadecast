@@ -71,10 +71,10 @@ def _ranked_ids(tiles_json: Path) -> list[str]:
     return [str(row.get("id")) for row in rows]
 
 
-def generated_tiles(
+def simulated_tiles(
     text: str, tiles: str | None, tiles_root: Path, selection: TileSelection | None = None
 ) -> list[TilePaths]:
-    """Tiles of the city with generated physics: all by default, named ones, or a K selection.
+    """Tiles of the city with simulated physics: all by default, named ones, or a K selection.
 
     A city plans across every kind of area, so its model learns from every tile that has
     physics, which is exactly what simulate produced. Names narrow that set, and a named tile
@@ -87,7 +87,7 @@ def generated_tiles(
     ]
     if not with_physics:
         raise ValueError(
-            f"{text} has no generated physics yet; run 'sdc simulate treeshade {text}' first"
+            f"{text} has no simulated physics yet; run 'sdc simulate treeshade {text}' first"
         )
     if selection is not None and selection.wants():
         return _selected(text, with_physics, selection)
@@ -99,7 +99,7 @@ def generated_tiles(
         if not match:
             have = ", ".join(paths.tile.id for paths in with_physics)
             raise ValueError(
-                f"{text} tile {tile_id} has no generated physics; tiles with physics: {have}"
+                f"{text} tile {tile_id} has no simulated physics; tiles with physics: {have}"
             )
         chosen.extend(match)
     return chosen
@@ -119,9 +119,9 @@ def _densest_of(text: str, found: list[TilePaths], option: str) -> TilePaths:
     )
 
 
-def densest_generated_tile(text: str, tiles_root: Path) -> TilePaths:
+def densest_simulated_tile(text: str, tiles_root: Path) -> TilePaths:
     """The tile with physics and most residents, to assess a city's model against."""
-    return _densest_of(text, generated_tiles(text, None, tiles_root), "--tile")
+    return _densest_of(text, simulated_tiles(text, None, tiles_root), "--tile")
 
 
 def _selected(text: str, found: list[TilePaths], selection: TileSelection) -> list[TilePaths]:

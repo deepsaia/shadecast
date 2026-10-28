@@ -1,4 +1,4 @@
-"""Turn generated response fields into training patches.
+"""Turn simulated response fields into training patches.
 
 One engine call produces a full square kilometre of response, which is a million
 pixels of signal. Cropping it into patches turns each call into thousands of
@@ -47,7 +47,7 @@ def tile_key(bundle: Path) -> str:
 
 
 def entries(physics_dir: Path) -> list[dict]:
-    """Every generated response in a surrogate directory."""
+    """Every simulated response in a physics directory."""
     manifest = Path(physics_dir) / "manifest.json"
     if manifest.exists():
         return json.loads(manifest.read_text())["manifest"]
@@ -125,5 +125,5 @@ def crop_batch(
             origins.append(meta["id"])
 
     if not inputs:
-        raise RuntimeError(f"no generated responses found in {physics_dir}")
+        raise RuntimeError(f"no simulated responses found in {physics_dir}")
     return np.stack(inputs), np.stack(targets), origins

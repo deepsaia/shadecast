@@ -1,4 +1,4 @@
-"""Everything one generation run is told, in one object, so callers pass one thing."""
+"""Everything one simulation run is told, in one object, so callers pass one thing."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
-class GenerationSettings:
+class SimulationSettings:
     plan: list[dict] | None = None  # None means the default plan
     kind: str = "tree"
     jobs: int = 1  # engine runs side by side; the baseline always runs alone first

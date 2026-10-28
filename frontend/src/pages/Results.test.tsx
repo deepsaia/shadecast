@@ -65,5 +65,5 @@ it("draws one facet, the matched comparison, the ranking and every plan for one 
 it("invites a run when nothing has physics", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => Response.json({ ...RESULTS, cities: [], totals: { cities: 0, plans: 0, budget_min_m: null, budget_max_m: null }, arrangement: { ratios: {}, cities_compared: 0, scattered_wins: 0, ratio_min: null, ratio_max: null }, ranking: { rows: [], spread: null } })));
   renderPage();
-  expect(await screen.findByText(/No tile has generated physics yet/)).toBeInTheDocument();
+  expect(await screen.findByText(/No tile has simulated physics yet/)).toBeInTheDocument();
 });

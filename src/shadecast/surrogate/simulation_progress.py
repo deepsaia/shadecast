@@ -26,7 +26,7 @@ from rich.table import Table
 from rich.text import Text
 
 from ..hardware import Hardware
-from ..surrogate.generation_events import BASELINE, BASELINE_PHASE
+from ..surrogate.simulation_events import BASELINE, BASELINE_PHASE
 from .engine_phase import design_phase, phase_bar
 from .log_tail import LogTail
 
@@ -61,7 +61,7 @@ def verbose_logging() -> bool:
 
 
 @dataclass
-class GenerationProgress:
+class SimulationProgress:
     console: Console | None
     jobs: int = 1
     threads: int | None = None
@@ -86,12 +86,12 @@ class GenerationProgress:
     lock: threading.Lock = field(default_factory=threading.Lock)
 
     @classmethod
-    def quiet(cls) -> GenerationProgress:
+    def quiet(cls) -> SimulationProgress:
         return cls(console=None)
 
     # --- lifecycle --------------------------------------------------------------------
 
-    def __enter__(self) -> GenerationProgress:
+    def __enter__(self) -> SimulationProgress:
         if self.console is None:
             return self
         self.bar = Progress(
@@ -130,7 +130,7 @@ class GenerationProgress:
         for handler in self.saved_handlers:
             root.addHandler(handler)
 
-    # --- events from the generator -------------------------------------------------------
+    # --- events from the simulation -------------------------------------------------------
 
     def started(self, label: str, total: int, done: int) -> None:
         """Open the display: ``done`` designs already exist on disk and count as finished."""

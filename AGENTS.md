@@ -117,7 +117,7 @@ The checklist from the last chapter of *Clean Code*, trimmed to what we meet in 
 
 ### 2.11 Concurrency
 
-- Keep concurrency code in a few small places (`sim/runner.py`, the generation lock in `surrogate/dataset.py`),
+- Keep concurrency code in a few small places (`sim/runner.py`, the simulation lock in `surrogate/dataset.py`),
   not spread out.
 - Limit shared mutable state and guard what remains with one lock per resource, taken in a fixed order.
 - Enter and exit a context (a lock, a subprocess, an async context) in the same task. Hold long-lived contexts in

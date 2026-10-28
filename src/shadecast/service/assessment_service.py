@@ -73,14 +73,14 @@ class AssessmentService:
 
     def _assessment_tile(self, target: str, tile: str | None) -> TilePaths:
         try:
-            found = tile_lookup.generated_tiles(target, None, self._tiles_root)
+            found = tile_lookup.simulated_tiles(target, None, self._tiles_root)
         except ValueError as exc:
             raise MissingStage("physics", target, f"sdc simulate treeshade {target}") from exc
         if tile is None:
-            return tile_lookup.densest_generated_tile(target, self._tiles_root)
+            return tile_lookup.densest_simulated_tile(target, self._tiles_root)
         chosen = [paths for paths in found if paths.tile.id == tile]
         if not chosen:
-            raise ValueError(f"{target} tile {tile} has no generated physics")
+            raise ValueError(f"{target} tile {tile} has no simulated physics")
         return chosen[0]
 
 

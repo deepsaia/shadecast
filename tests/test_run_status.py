@@ -1,4 +1,4 @@
-"""What is generating or training now is read from the locks and checkpoints runs leave."""
+"""What is simulating or training now is read from the locks and checkpoints runs leave."""
 
 import json
 import os
@@ -10,7 +10,7 @@ from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.run_status import RunStatus
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
-from shadecast.surrogate.dataset import GENERATION_LOCK
+from shadecast.surrogate.dataset import SIMULATION_LOCK
 from shadecast.surrogate.training_state import CHECKPOINT_NAME, STARTED_NAME
 
 TILE = "t43N_249_2547"
@@ -45,18 +45,18 @@ def _physics(root, designs: int):
     return physics
 
 
-def test_a_live_lock_is_a_generation_run_with_its_progress(tmp_path):
+def test_a_live_lock_is_a_simulation_run_with_its_progress(tmp_path):
     physics = _physics(tmp_path, 3)
-    (physics / GENERATION_LOCK).write_text(str(os.getpid()))
+    (physics / SIMULATION_LOCK).write_text(str(os.getpid()))
     [run] = _status(tmp_path).runs()
-    assert run.kind == "generation" and run.city == "ahmedabad" and run.tile == TILE
+    assert run.kind == "simulation" and run.city == "ahmedabad" and run.tile == TILE
     assert run.alive is True and run.designs_done == 3 and run.designs_planned == 17
     assert run.started
 
 
 def test_a_stale_or_unreadable_lock_is_reported_as_not_alive(tmp_path):
     physics = _physics(tmp_path, 1)
-    (physics / GENERATION_LOCK).write_text("")
+    (physics / SIMULATION_LOCK).write_text("")
     [run] = _status(tmp_path).runs()
     assert run.alive is False
 

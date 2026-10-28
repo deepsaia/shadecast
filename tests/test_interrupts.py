@@ -9,7 +9,7 @@ from typer.testing import CliRunner
 from shadecast import cli, surrogate_cli
 from shadecast.cli import app
 from shadecast.corpus import tile_paths
-from shadecast.service import generation_service
+from shadecast.service import simulation_service
 from shadecast.service.training_request import TrainingRequest
 from shadecast.sim import runner
 
@@ -57,7 +57,7 @@ def test_entry_point_keeps_usage_errors_and_planned_exits(monkeypatch):
     assert cli.entry() == 3
 
 
-def test_generate_stops_with_the_resume_line(tmp_path, monkeypatch):
+def test_simulate_stops_with_the_resume_line(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
     monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
     bundle = tmp_path / "6143" / "t43N_249_2547" / "bundle"
@@ -70,7 +70,7 @@ def test_generate_stops_with_the_resume_line(tmp_path, monkeypatch):
         progress.started("x", total=17, done=3)
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(generation_service, "generate", interrupted)
+    monkeypatch.setattr(simulation_service, "simulate", interrupted)
     result = cli_runner.invoke(app, ["simulate", "treeshade", "ahmedabad", "--jobs", "4"])
     assert result.exit_code == 130
     assert "3 of 17" in result.output
