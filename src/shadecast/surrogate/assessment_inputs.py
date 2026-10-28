@@ -9,6 +9,6 @@ from pathlib import Path
 @dataclass(frozen=True)
 class AssessmentInputs:
     model_dir: Path  # holds model.pt, training_report.json and manifest.json
-    surrogate_dir: Path  # holds the generated responses and the baseline
+    physics_dir: Path  # holds the baseline and the designs the engine ran
     bundle: Path
     only: list[str] | None = None  # designs to assess instead of the held-out set

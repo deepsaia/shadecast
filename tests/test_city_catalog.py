@@ -42,8 +42,8 @@ def _prove(root: Path, tile_id: str, *stages: str, urban_centre: int = 6143) -> 
     tile = root / str(urban_centre) / tile_id
     proofs = {
         "bundle": tile / "bundle" / "provenance.json",
-        "baseline": tile / "surrogate" / "baseline" / "tmrt_daylight.npy",
-        "physics": tile / "surrogate" / "manifest.json",
+        "baseline": tile / "physics" / "baseline" / "tmrt_daylight.npy",
+        "physics": tile / "physics" / "manifest.json",
         "results": tile / "results.json",
     }
     tile.mkdir(parents=True, exist_ok=True)
@@ -202,7 +202,7 @@ def test_the_furthest_tile_prefers_physics_over_baseline_over_bundle(root, catal
     _prove(root, "t43N_250_2546", "bundle", "baseline")
     _prove(root, SPARSEST, "bundle", "baseline", "physics")
     assert catalog.furthest_tile("ahmedabad").tile == SPARSEST
-    (root / "6143" / SPARSEST / "surrogate" / "manifest.json").unlink()
+    (root / "6143" / SPARSEST / "physics" / "manifest.json").unlink()
     assert catalog.furthest_tile("ahmedabad").tile == "t43N_250_2546"
 
 

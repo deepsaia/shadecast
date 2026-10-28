@@ -29,9 +29,9 @@ class AssessmentService:
         self._models = ModelCatalog(models_root)
 
     def assess(self, request: AssessmentRequest, progress: ProgressListener) -> AssessmentOutcome:
-        model_dir, surrogate_dir, bundle = self._inputs(request)
+        model_dir, physics_dir, bundle = self._inputs(request)
         progress.phase(PHASE)
-        report = assess(AssessmentInputs(model_dir, surrogate_dir, bundle, only=request.design))
+        report = assess(AssessmentInputs(model_dir, physics_dir, bundle, only=request.design))
         report_path = model_dir / assessment_name(model_dir, bundle)
         report_path.write_text(json.dumps(report, indent=2))
         progress.finished(report)
@@ -50,14 +50,14 @@ class AssessmentService:
     def model_for(
         self, target: str, model: str | None, tile: str | None
     ) -> tuple[Path, Path, Path]:
-        """For a city: the model directory, the surrogate directory and the bundle to judge it on.
+        """For a city: the model directory, the physics directory and the bundle to judge it on.
 
         Three answers because an assessment needs all three, and three arguments because the
         model and the tile are each optional refinements of the city.
         """
         paths = self._assessment_tile(target, tile)
         found = self.model_summary(target, model)
-        return Path(found.path), paths.surrogate, paths.bundle
+        return Path(found.path), paths.physics, paths.bundle
 
     def model_summary(self, target: str, model: str | None) -> ModelSummary:
         """The named model of the city, or its newest."""
@@ -66,18 +66,16 @@ class AssessmentService:
 
     def _inputs(self, request: AssessmentRequest) -> tuple[Path, Path, Path]:
         if Path(request.target).is_dir():
-            if request.surrogate_dir is None or request.bundle is None:
-                raise ValueError("a model directory needs SURROGATE_DIR and BUNDLE after it")
-            return Path(request.target), Path(request.surrogate_dir), Path(request.bundle)
+            if request.physics_dir is None or request.bundle is None:
+                raise ValueError("a model directory needs PHYSICS_DIR and BUNDLE after it")
+            return Path(request.target), Path(request.physics_dir), Path(request.bundle)
         return self.model_for(request.target, request.model, request.tile)
 
     def _assessment_tile(self, target: str, tile: str | None) -> TilePaths:
         try:
             found = tile_lookup.generated_tiles(target, None, self._tiles_root)
         except ValueError as exc:
-            raise MissingStage(
-                "physics", target, f"sdc surrogate treeshade generate {target}"
-            ) from exc
+            raise MissingStage("physics", target, f"sdc simulate treeshade {target}") from exc
         if tile is None:
             return tile_lookup.densest_generated_tile(target, self._tiles_root)
         chosen = [paths for paths in found if paths.tile.id == tile]

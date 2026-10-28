@@ -77,7 +77,7 @@ def generated_tiles(
     """Tiles of the city with generated physics: all by default, named ones, or a K selection.
 
     A city plans across every kind of area, so its model learns from every tile that has
-    physics, which is exactly what generate produced. Names narrow that set, and a named tile
+    physics, which is exactly what simulate produced. Names narrow that set, and a named tile
     without physics is refused rather than silently dropped. A selection picks the K densest,
     or K spread over built-fraction terciles, among the tiles with physics, ranked by the
     centre's tiles file.
@@ -87,8 +87,7 @@ def generated_tiles(
     ]
     if not with_physics:
         raise ValueError(
-            f"{text} has no generated physics yet; "
-            f"run 'sdc surrogate treeshade generate {text}' first"
+            f"{text} has no generated physics yet; run 'sdc simulate treeshade {text}' first"
         )
     if selection is not None and selection.wants():
         return _selected(text, with_physics, selection)

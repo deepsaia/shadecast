@@ -46,13 +46,13 @@ def tile_key(bundle: Path) -> str:
     return str(city or Path(bundle).name)
 
 
-def entries(surrogate_dir: Path) -> list[dict]:
+def entries(physics_dir: Path) -> list[dict]:
     """Every generated response in a surrogate directory."""
-    manifest = Path(surrogate_dir) / "manifest.json"
+    manifest = Path(physics_dir) / "manifest.json"
     if manifest.exists():
         return json.loads(manifest.read_text())["manifest"]
     found = []
-    for meta in sorted(Path(surrogate_dir).glob("*/meta.json")):
+    for meta in sorted(Path(physics_dir).glob("*/meta.json")):
         found.append(json.loads(meta.read_text()))
     return found
 
@@ -81,9 +81,9 @@ def crop_cities(
     all_inputs: list[np.ndarray] = []
     all_targets: list[np.ndarray] = []
     all_origins: list[str] = []
-    for index, (surrogate_dir, bundle) in enumerate(pairs):
+    for index, (physics_dir, bundle) in enumerate(pairs):
         inputs, targets, origins = crop_batch(
-            surrogate_dir, bundle, replace(settings, seed=settings.seed + index)
+            physics_dir, bundle, replace(settings, seed=settings.seed + index)
         )
         city = tile_key(bundle)
         all_inputs.append(inputs)
@@ -98,18 +98,18 @@ def crop_cities(
 
 
 def crop_batch(
-    surrogate_dir: Path, bundle: Path, settings: PatchSettings
+    physics_dir: Path, bundle: Path, settings: PatchSettings
 ) -> tuple[np.ndarray, np.ndarray, list[str]]:
     """Build an (N, channels, size, size) input array and its (N, 1, size, size) targets."""
-    scene = Scene.load(bundle, surrogate_dir)
+    scene = Scene.load(bundle, physics_dir)
     rng = np.random.default_rng(settings.seed)
     size = settings.size
     inputs: list[np.ndarray] = []
     targets: list[np.ndarray] = []
     origins: list[str] = []
 
-    for meta in entries(surrogate_dir):
-        payload = np.load(Path(surrogate_dir) / meta["id"] / "response.npz")
+    for meta in entries(physics_dir):
+        payload = np.load(Path(physics_dir) / meta["id"] / "response.npz")
         placement, response = payload["placement"], payload["response"]
         features = select(stack(placement, scene), settings.names)
         weights = sampling_weights(placement)
@@ -125,5 +125,5 @@ def crop_batch(
             origins.append(meta["id"])
 
     if not inputs:
-        raise RuntimeError(f"no generated responses found in {surrogate_dir}")
+        raise RuntimeError(f"no generated responses found in {physics_dir}")
     return np.stack(inputs), np.stack(targets), origins

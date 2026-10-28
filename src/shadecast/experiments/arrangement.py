@@ -36,7 +36,7 @@ MATCHED_PAIRS = (
 )
 
 
-def _layers(bundle: Path, surrogate_dir: Path) -> dict:
+def _layers(bundle: Path, physics_dir: Path) -> dict:
     def read(name: str) -> np.ndarray:
         with rasterio.open(Path(bundle) / name) as src:
             return src.read(1)
@@ -44,15 +44,15 @@ def _layers(bundle: Path, surrogate_dir: Path) -> dict:
     heights = np.maximum(read("Building_DSM.tif") - read("DEM.tif"), 0)
     population = read("population.tif")
     return {
-        "baseline": np.load(Path(surrogate_dir) / "baseline" / "tmrt_daylight.npy"),
+        "baseline": np.load(Path(physics_dir) / "baseline" / "tmrt_daylight.npy"),
         "outdoor": outdoor_mask(heights),
         "weights": outdoor_weights(population, heights),
     }
 
 
-def compare(bundle: Path, surrogate_dir: Path, res_m: float = 1.0) -> dict:
+def compare(bundle: Path, physics_dir: Path, res_m: float = 1.0) -> dict:
     """Score every matched arrangement pair against the do-nothing baseline."""
-    layers = _layers(bundle, surrogate_dir)
+    layers = _layers(bundle, physics_dir)
     baseline_score = score(
         np.where(layers["outdoor"], layers["baseline"], 0), layers["weights"], 0.0
     )
@@ -62,7 +62,7 @@ def compare(bundle: Path, surrogate_dir: Path, res_m: float = 1.0) -> dict:
         for design in group:
             if design is None:
                 continue
-            payload_path = Path(surrogate_dir) / design / "response.npz"
+            payload_path = Path(physics_dir) / design / "response.npz"
             if not payload_path.exists():
                 continue
             payload = np.load(payload_path)

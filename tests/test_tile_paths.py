@@ -14,8 +14,8 @@ def test_paths_are_keyed_by_urban_centre_and_tile(tmp_path):
     paths = TilePaths(tmp_path, 6143, TILE)
     assert paths.root == tmp_path / "6143" / "t43N_249_2546"
     assert paths.bundle == tmp_path / "6143" / "t43N_249_2546" / "bundle"
-    assert paths.surrogate == tmp_path / "6143" / "t43N_249_2546" / "surrogate"
-    assert paths.baseline == paths.surrogate / "baseline"
+    assert paths.physics == tmp_path / "6143" / "t43N_249_2546" / "physics"
+    assert paths.baseline == paths.physics / "baseline"
     assert paths.plans == tmp_path / "6143" / "t43N_249_2546" / "plans"
     assert paths.results == tmp_path / "6143" / "t43N_249_2546" / "results.json"
     assert paths.tiles_json == tmp_path / "6143" / "tiles.json"
@@ -28,7 +28,7 @@ def test_stage_presence_is_read_from_the_files_that_prove_it(tmp_path):
     (paths.bundle / "provenance.json").write_text("{}")
     paths.baseline.mkdir(parents=True)
     (paths.baseline / "tmrt_daylight.npy").write_bytes(b"")
-    (paths.surrogate / "manifest.json").write_text("{}")
+    (paths.physics / "manifest.json").write_text("{}")
     assert paths.stages() == TileStages(bundle=True, baseline=True, physics=True)
     assert paths.stages().with_model(True).model is True
 

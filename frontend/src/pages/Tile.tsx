@@ -50,7 +50,7 @@ export function TilePage() {
         <HeatPanel city={city} tile={tile} report={found} />
       ) : (
         <Panel title="The day's heat">
-          <NextStep missing="baseline physics" command={`sdc run ${city} --tile ${tile}`} />
+          <NextStep missing="baseline physics" command={`sdc simulate baseline ${city} --tile ${tile}`} />
         </Panel>
       )}
       {found.plans.length > 0 ? (
@@ -60,7 +60,7 @@ export function TilePage() {
           <Panel title="The plans">
             <NextStep
               missing="designed physics"
-              command={`sdc surrogate treeshade generate ${city} --tiles ${tile}`}
+              command={`sdc simulate treeshade ${city} --tiles ${tile}`}
             />
           </Panel>
         )

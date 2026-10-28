@@ -221,7 +221,7 @@ def show(
                 f"{centre} {item.tile}",
                 {
                     "bundle": item.bundle,
-                    "surrogate": item.surrogate,
+                    "physics": item.physics,
                     "results": item.results,
                     "stages run": stages_reached(item.stages),
                 },
@@ -256,7 +256,8 @@ def report(
     console.print(pairs_table(f"{found.name} {found.tile}", _fact_rows(found)))
     if found.baseline is None:
         console.print(
-            f"[dim]no baseline physics yet; run 'sdc run {centre} --tile {found.tile}' first.[/]"
+            f"[dim]no baseline physics yet; run 'sdc simulate baseline {centre} "
+            f"--tile {found.tile}' first.[/]"
         )
         return
     console.print(
@@ -267,7 +268,7 @@ def report(
     )
     if not found.plans:
         console.print(
-            f"[dim]no plans yet; run 'sdc surrogate treeshade generate {centre} "
+            f"[dim]no plans yet; run 'sdc simulate treeshade {centre} "
             f"--tiles {found.tile}' first.[/]"
         )
         return

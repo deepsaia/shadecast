@@ -20,7 +20,7 @@ class EngineService:
     def run_baseline(self, request: BaselineRequest, progress: ProgressListener) -> BaselineOutcome:
         paths = self._paths(request)
         design_day = str(FieldStore(paths).provenance().get("met", {}).get("design_day"))
-        result = run_baseline_once(paths.bundle, paths.surrogate, design_day, progress)
+        result = run_baseline_once(paths.bundle, paths.physics, design_day, progress)
         return BaselineOutcome(
             tile=paths.tile.id,
             design_day=design_day,

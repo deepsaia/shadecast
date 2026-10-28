@@ -41,7 +41,7 @@ def write_bundle(root: Path) -> Path:
 
 def write_baseline(tile: Path) -> Path:
     """The baseline physics: the daylight mean field and the 24 band hourly raster."""
-    baseline = Path(tile) / "surrogate" / "baseline"
+    baseline = Path(tile) / "physics" / "baseline"
     baseline.mkdir(parents=True, exist_ok=True)
     np.save(baseline / "tmrt_daylight.npy", np.full((SIZE, SIZE), BASELINE_C, dtype="float32"))
     write_hourly_raster(baseline / "output_folder" / "0_0" / "TMRT_0_0.tif")
@@ -58,11 +58,11 @@ def write_hourly_raster(path: Path) -> Path:
 
 def write_designs(tile: Path) -> Path:
     """Three plans and one probe, each with its archive, and the manifest that lists them."""
-    surrogate = Path(tile) / "surrogate"
+    physics = Path(tile) / "physics"
     entries = []
     for design_id, seconds in zip((*PLAN_IDS, PROBE_ID), ENGINE_SECONDS, strict=True):
         placement, response = design(design_id)
-        folder = surrogate / design_id
+        folder = physics / design_id
         folder.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(folder / "response.npz", placement=placement, response=response)
         entry = {
@@ -82,8 +82,8 @@ def write_designs(tile: Path) -> Path:
         "design_day": DESIGN_DAY,
         "manifest": entries,
     }
-    (surrogate / "manifest.json").write_text(json.dumps(manifest))
-    return surrogate
+    (physics / "manifest.json").write_text(json.dumps(manifest))
+    return physics
 
 
 def heights() -> np.ndarray:

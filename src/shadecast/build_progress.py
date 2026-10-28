@@ -38,7 +38,7 @@ class BuildProgress:
         city, tile = detail.get("city"), detail.get("tile")
         self._console.print(
             f"[green]{city}[/] {tile}: bundle at {detail.get('bundle')}\n"
-            f"  next: sdc surrogate treeshade generate {city}{pick} --jobs 4"
+            f"  next: sdc simulate treeshade {city}{pick} --jobs 4"
         )
 
     def step_skipped(self, name: str, reason: str) -> None:

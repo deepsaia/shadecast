@@ -43,7 +43,7 @@ class GenerationService:
         self, paths: TilePaths, request: GenerationRequest, progress: ProgressListener
     ) -> GenerationOutcome:
         """Every design of the plan through the engine for one tile; designs on disk are kept."""
-        destination = request.out if request.out is not None else paths.surrogate
+        destination = request.out if request.out is not None else paths.physics
         started = time.time()
         summary = generate(paths.bundle, destination, settings_for(request), progress)
         return GenerationOutcome(

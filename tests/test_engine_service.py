@@ -46,8 +46,8 @@ def test_the_baseline_runs_once_and_is_kept_the_second_time(tmp_path, service):
     first = service.run_baseline(BaselineRequest(target="ahmedabad"), progress)
     assert first.tile == synthetic_tile.TILE_ID and first.kept is False and first.seconds == 12.3
     assert first.design_day == synthetic_tile.DESIGN_DAY
-    assert Path(first.destination) == tile / "surrogate" / "baseline"
-    assert (tile / "surrogate" / "baseline" / "tmrt_daylight.npy").exists()
+    assert Path(first.destination) == tile / "physics" / "baseline"
+    assert (tile / "physics" / "baseline" / "tmrt_daylight.npy").exists()
     assert [date for _, date in RUNS] == [synthetic_tile.DESIGN_DAY]
     assert "baseline physics" in progress.names("phase") and progress.names("step_done") == [
         "baseline"

@@ -31,7 +31,7 @@ class RunStatus:
         for city in self._catalog.cities():
             for tile in self._catalog.tiles_on_disk(city.key):
                 paths = self._catalog.tile_paths(city.key, tile.tile)
-                lock = paths.surrogate / GENERATION_LOCK
+                lock = paths.physics / GENERATION_LOCK
                 if lock.exists():
                     found.append(_generation(city.key, paths, lock))
         found.extend(_training(model_dir) for model_dir in _unfinished(self._models_root))
@@ -39,7 +39,7 @@ class RunStatus:
 
 
 def _generation(city: str, paths: TilePaths, lock: Path) -> RunSummary:
-    done = sum(1 for child in paths.surrogate.iterdir() if (child / RESPONSE_ARCHIVE).exists())
+    done = sum(1 for child in paths.physics.iterdir() if (child / RESPONSE_ARCHIVE).exists())
     return RunSummary(
         kind=GENERATION,
         city=city,

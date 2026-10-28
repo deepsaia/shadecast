@@ -26,7 +26,7 @@ def _read(bundle: Path, name: str) -> np.ndarray:
         return src.read(1)
 
 
-def city_layers(bundle: Path, surrogate_dir: Path) -> dict:
+def city_layers(bundle: Path, physics_dir: Path) -> dict:
     """Every raster an experiment needs, plus the baseline daylight-mean Tmrt field."""
     heights = building_height(bundle)
     population = _read(bundle, "population.tif")
@@ -39,6 +39,6 @@ def city_layers(bundle: Path, surrogate_dir: Path) -> dict:
         "umep": to_umep(_read(bundle, "landcover.tif"), heights),
         "outdoor": outdoor_mask(heights),
         "weights": outdoor_weights(population, heights),
-        "baseline": np.load(Path(surrogate_dir) / "baseline" / "tmrt_daylight.npy"),
+        "baseline": np.load(Path(physics_dir) / "baseline" / "tmrt_daylight.npy"),
         "profile": profile,
     }

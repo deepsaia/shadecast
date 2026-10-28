@@ -61,7 +61,9 @@ class FieldStore:
         """The daylight mean radiant temperature of doing nothing."""
         path = self._paths.baseline / DAYLIGHT_FIELD
         if not path.exists():
-            raise MissingStage("baseline", self._tile, f"sdc run <city> --tile {self._tile}")
+            raise MissingStage(
+                "baseline", self._tile, f"sdc simulate baseline <city> --tile {self._tile}"
+            )
         return np.load(path)
 
     def has_hourly(self) -> bool:
@@ -71,18 +73,20 @@ class FieldStore:
         """The radiant temperature at every hour of the design day, hours first."""
         path = self._paths.baseline / HOURLY_RASTER
         if not path.exists():
-            raise MissingStage("baseline", self._tile, f"sdc run <city> --tile {self._tile}")
+            raise MissingStage(
+                "baseline", self._tile, f"sdc simulate baseline <city> --tile {self._tile}"
+            )
         with rasterio.open(path) as src:
             return src.read()
 
     def manifest(self) -> list[dict]:
         """One entry per design the engine ran, as the generation wrote them."""
-        path = self._paths.surrogate / MANIFEST
+        path = self._paths.physics / MANIFEST
         if not path.exists():
             raise MissingStage(
                 "physics",
                 self._tile,
-                f"sdc surrogate treeshade generate <city> --tiles {self._tile}",
+                f"sdc simulate treeshade <city> --tiles {self._tile}",
             )
         return json.loads(path.read_text()).get("manifest", [])
 
@@ -91,7 +95,7 @@ class FieldStore:
 
     def response(self, design_id: str) -> tuple[np.ndarray, np.ndarray]:
         """A design's placement mask and the cooling the engine measured for it."""
-        archive = np.load(self._paths.surrogate / design_id / RESPONSE_ARCHIVE)
+        archive = np.load(self._paths.physics / design_id / RESPONSE_ARCHIVE)
         return np.asarray(archive.get("placement")), np.asarray(archive.get("response"))
 
     def sources(self) -> list[Path]:
@@ -99,11 +103,11 @@ class FieldStore:
         listed = [
             self._paths.bundle / PROVENANCE,
             self._paths.baseline / DAYLIGHT_FIELD,
-            self._paths.surrogate / MANIFEST,
+            self._paths.physics / MANIFEST,
         ]
-        if (self._paths.surrogate / MANIFEST).exists():
+        if (self._paths.physics / MANIFEST).exists():
             listed.extend(
-                self._paths.surrogate / design_id / RESPONSE_ARCHIVE
+                self._paths.physics / design_id / RESPONSE_ARCHIVE
                 for design_id in self.design_ids()
             )
         return listed

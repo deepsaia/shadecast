@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from shadecast import surrogate_cli
+from shadecast import simulate_cli
 from shadecast.cli import app
 from shadecast.corpus import tile_lookup, tile_paths
 from shadecast.service import generation_service
@@ -62,10 +62,10 @@ def test_generate_takes_a_city_name_and_writes_beside_its_bundle(tmp_path, monke
         return {"entries": 1, "manifest": []}
 
     monkeypatch.setattr(generation_service, "generate", fake_generate)
-    result = runner.invoke(app, ["surrogate", "treeshade", "generate", "ahmedabad", "--jobs", "3"])
+    result = runner.invoke(app, ["simulate", "treeshade", "ahmedabad", "--jobs", "3"])
     assert result.exit_code == 0, result.output
     assert seen["bundle"] == bundle
-    assert seen["destination"] == bundle.parent / "surrogate"
+    assert seen["destination"] == bundle.parent / "physics"
     assert seen["jobs"] == 3
 
 
@@ -81,15 +81,11 @@ def test_generate_runs_each_listed_tile_or_all_of_them(tmp_path, monkeypatch):
         return {"entries": 1, "manifest": []}
 
     monkeypatch.setattr(generation_service, "generate", fake_generate)
-    result = runner.invoke(
-        app, ["surrogate", "treeshade", "generate", "ahmedabad", "--tiles", "t43N_250_2547"]
-    )
+    result = runner.invoke(app, ["simulate", "treeshade", "ahmedabad", "--tiles", "t43N_250_2547"])
     assert result.exit_code == 0, result.output
     assert seen == [second]
     seen.clear()
-    result = runner.invoke(
-        app, ["surrogate", "treeshade", "generate", "ahmedabad", "--tiles", "all"]
-    )
+    result = runner.invoke(app, ["simulate", "treeshade", "ahmedabad", "--tiles", "all"])
     assert result.exit_code == 0, result.output
     assert seen == [first, second]
     assert "tile 1 of 2" in result.stdout and "tile 2 of 2" in result.stdout
@@ -116,22 +112,22 @@ def test_generate_without_tiles_takes_the_densest_built_one(tmp_path, monkeypatc
 
 def test_generate_refuses_a_city_without_a_bundle(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
-    result = runner.invoke(app, ["surrogate", "treeshade", "generate", "ahmedabad"])
+    result = runner.invoke(app, ["simulate", "treeshade", "ahmedabad"])
     assert result.exit_code == 1
     assert "sdc build ahmedabad" in result.output
 
 
 def _physics(bundle: Path) -> Path:
-    surrogate = bundle.parent / "surrogate"
-    surrogate.mkdir()
-    (surrogate / "manifest.json").write_text("{}")
-    return surrogate
+    physics = bundle.parent / "physics"
+    physics.mkdir()
+    (physics / "manifest.json").write_text("{}")
+    return physics
 
 
 def test_resume_command_repeats_the_options():
-    assert surrogate_cli.resume_command("savannah", None, None, 4) == (
-        "sdc surrogate treeshade generate savannah --jobs 4"
+    assert simulate_cli.resume_command("savannah", None, None, 4) == (
+        "sdc simulate treeshade savannah --jobs 4"
     )
-    assert surrogate_cli.resume_command("x/bundle", "t1", Path("o"), 1) == (
-        "sdc surrogate treeshade generate x/bundle --tiles t1 --out o"
+    assert simulate_cli.resume_command("x/bundle", "t1", Path("o"), 1) == (
+        "sdc simulate treeshade x/bundle --tiles t1 --out o"
     )

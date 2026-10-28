@@ -98,9 +98,9 @@ def test_generate_runs_the_generator_beside_the_bundle_or_where_asked(
     monkeypatch.setattr(generation_service, "generate", fake_generate)
     [paths] = service.tiles_for(GenerationRequest(target="ahmedabad", jobs=3))
     outcome = service.generate(paths, GenerationRequest(target="ahmedabad", jobs=3), NullProgress())
-    assert seen == [(bundle, bundle.parent / "surrogate", 3, "tree")]
+    assert seen == [(bundle, bundle.parent / "physics", 3, "tree")]
     assert outcome.tile == DENSE and outcome.entries == 1
-    assert outcome.destination == str(bundle.parent / "surrogate")
+    assert outcome.destination == str(bundle.parent / "physics")
     service.generate(
         paths, GenerationRequest(target="ahmedabad", out=tmp_path / "o"), NullProgress()
     )

@@ -14,8 +14,8 @@ export function ModelsPage() {
     <section>
       <h1>Models</h1>
       <p className="mt-2 max-w-[60ch] text-muted-foreground">
-        A surrogate learns one physical channel from a city's generated physics and answers in a fraction of a
-        second what the engine answers in minutes. Generating physics writes what a model learns from; training
+        A surrogate learns one physical channel from a city's simulated physics and answers in a fraction of a
+        second what the engine answers in minutes. Simulating the designs writes what a model learns from; training
         is its own step. Every model is listed from its manifest.
       </p>
       <Loading query={channels} what="the channels" />
@@ -35,7 +35,7 @@ function ChannelModels({ channelKey, label, cities }: { channelKey: string; labe
       <Loading query={models} what="the models" />
       {models.data && (models.data.length ? <ModelTable models={models.data} names={names} /> : (
         <p className="mt-3 max-w-[60ch] text-sm text-muted-foreground">
-          No model trained yet. Generate a city's physics, then <code>sdc surrogate {channelKey} train &lt;city&gt;</code>.
+          No model trained yet. Simulate a city's physics, then <code>sdc surrogate {channelKey} train &lt;city&gt;</code>.
         </p>
       ))}
       {models.data && <Untrained channelKey={channelKey} cities={cities} />}

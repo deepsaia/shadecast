@@ -66,7 +66,7 @@ def channel_names(model_dir: Path, in_channels: int) -> tuple[str, ...]:
 
 def assess(inputs: AssessmentInputs, device: torch.device | None = None) -> dict:
     """Compare surrogate predictions against engine truth on the given designs."""
-    surrogate_dir, bundle = Path(inputs.surrogate_dir), Path(inputs.bundle)
+    physics_dir, bundle = Path(inputs.physics_dir), Path(inputs.bundle)
     checkpoint = Path(inputs.model_dir) / "model.pt"
     if not checkpoint.exists():
         raise FileNotFoundError(f"no trained model at {checkpoint}")
@@ -79,7 +79,7 @@ def assess(inputs: AssessmentInputs, device: torch.device | None = None) -> dict
     if not wanted:
         raise RuntimeError("no held-out designs recorded; train first")
 
-    scene = Scene.load(bundle, surrogate_dir)
+    scene = Scene.load(bundle, physics_dir)
     outdoor = outdoor_mask(scene.building_height)
     weights = outdoor_weights(scene.population, scene.building_height)
     model = load(checkpoint, device)
@@ -91,12 +91,12 @@ def assess(inputs: AssessmentInputs, device: torch.device | None = None) -> dict
     predicted_scores: list[float] = []
     total_seconds = 0.0
 
-    known = {meta["id"] for meta in entries(surrogate_dir)}
+    known = {meta["id"] for meta in entries(physics_dir)}
     for design_id in wanted:
         if design_id not in known:
-            logger.warning("design %s not present in %s, skipping", design_id, surrogate_dir)
+            logger.warning("design %s not present in %s, skipping", design_id, physics_dir)
             continue
-        payload = np.load(surrogate_dir / design_id / "response.npz")
+        payload = np.load(physics_dir / design_id / "response.npz")
         placement, truth = payload["placement"], payload["response"]
 
         features = select(stack(placement, scene), names)
