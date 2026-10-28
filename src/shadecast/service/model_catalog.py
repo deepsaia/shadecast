@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..corpus.tile_ref import centre_of, tile_of
 from .json_file import read_object
 from .missing_stage import MissingStage
 from .model_summary import ModelSummary
@@ -18,9 +19,10 @@ class ModelCatalog:
     """Answers which models exist, which learned from an urban centre, and which is newest.
 
     Every model lives under one root whatever it learned from, and its manifest records the tiles
-    it was trained on with their urban centres. Membership is read from the manifest, never from
-    where a directory sits. A directory with weights but no manifest is listed too, belonging to
-    no centre: training that did not finish, or a half copy, visible rather than hidden.
+    it was trained on as ``<urban centre id>/<tile id>`` references. Membership is read from the
+    manifest, never from where a directory sits. A directory with weights but no manifest is
+    listed too, belonging to no centre: training that did not finish, or a half copy, visible
+    rather than hidden.
     """
 
     def __init__(self, models_root: Path) -> None:
@@ -38,10 +40,10 @@ class ModelCatalog:
     def tiles_with_models(self, urban_centre: int) -> set[str]:
         """The centre's tiles that some finished model learned from."""
         return {
-            str(entry.get("tile"))
+            tile_of(ref)
             for model in self.all_models()
-            for entry in _tiles_of(model.manifest)
-            if entry.get("urban_centre") == urban_centre and entry.get("tile")
+            for ref in _tiles_of(model.manifest)
+            if centre_of(ref) == urban_centre
         }
 
     def newest(self, urban_centre: int) -> ModelSummary:
@@ -102,24 +104,18 @@ def _summary(model_dir: Path) -> ModelSummary:
     )
 
 
-def _tiles_of(manifest: dict) -> list[dict]:
-    return manifest.get("data", {}).get("tiles", [])
+def _tiles_of(manifest: dict) -> list[str]:
+    return [str(ref) for ref in manifest.get("data", {}).get("tiles", [])]
 
 
-def _only_tile(tiles: list[dict]) -> str | None:
+def _only_tile(tiles: list[str]) -> str | None:
     """The one tile a model learned from, or None for a pooled model or an unrecorded one."""
-    if len(tiles) == 1 and tiles[0].get("tile"):
-        return str(tiles[0].get("tile"))
-    return None
+    return tile_of(tiles[0]) if len(tiles) == 1 else None
 
 
-def _centres_of(tiles: list[dict]) -> list[int]:
+def _centres_of(tiles: list[str]) -> list[int]:
     """The distinct urban centres a manifest's training tiles came from, in order."""
-    return list(
-        dict.fromkeys(
-            int(entry.get("urban_centre")) for entry in tiles if entry.get("urban_centre")
-        )
-    )
+    return list(dict.fromkeys(centre_of(ref) for ref in tiles))
 
 
 def _by_created(model: ModelSummary) -> str:

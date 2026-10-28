@@ -16,7 +16,6 @@ Four questions, in the order that decides whether the surrogate is usable.
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 from pathlib import Path
@@ -57,11 +56,19 @@ def designs_for_tile(held_out: list[str], label: str) -> list[str]:
 
 def channel_names(model_dir: Path, in_channels: int) -> tuple[str, ...]:
     """The channels the model was trained on: from its manifest, else from its channel count."""
-    recorded = manifest.read(model_dir) if (Path(model_dir) / "manifest.json").exists() else {}
-    names = [c["name"] for c in recorded.get("inputs", {}).get("channels", [])]
-    if names:
-        return tuple(names)
+    if (Path(model_dir) / manifest.MANIFEST_FILE).exists():
+        return manifest.channel_names(manifest.read(model_dir))
     return CHANNEL_SETS[channel_set_for(in_channels)]
+
+
+def _held_out(model_dir: Path) -> list[str]:
+    """The designs the manifest says were held out; none when the model has no manifest."""
+    if not (Path(model_dir) / manifest.MANIFEST_FILE).exists():
+        return []
+    return [
+        str(design)
+        for design in manifest.read(model_dir).get("data", {}).get("held_out_designs", [])
+    ]
 
 
 def assess(inputs: AssessmentInputs, device: torch.device | None = None) -> dict:
@@ -71,11 +78,8 @@ def assess(inputs: AssessmentInputs, device: torch.device | None = None) -> dict
     if not checkpoint.exists():
         raise FileNotFoundError(f"no trained model at {checkpoint}")
 
-    report_path = Path(inputs.model_dir) / "training_report.json"
-    held_out = None
-    if report_path.exists():
-        held_out = json.loads(report_path.read_text()).get("held_out_designs")
-    wanted = inputs.only if inputs.only else designs_for_tile(held_out or [], tile_key(bundle))
+    held_out = _held_out(inputs.model_dir)
+    wanted = inputs.only if inputs.only else designs_for_tile(held_out, tile_key(bundle))
     if not wanted:
         raise RuntimeError("no held-out designs recorded; train first")
 

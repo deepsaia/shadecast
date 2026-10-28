@@ -10,7 +10,7 @@ from pathlib import Path
 class ManifestInputs:
     model_id: str
     created: str  # ISO 8601
-    pairs: list[tuple[Path, Path]]  # (surrogate directory, bundle) per tile trained on
+    pairs: list[tuple[Path, Path]]  # (physics directory, bundle) per tile trained on
     report: dict  # what train() returned
     patch_px: int
     per_entry: int  # patches cropped per design

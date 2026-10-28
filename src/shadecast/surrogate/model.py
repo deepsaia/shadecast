@@ -21,12 +21,16 @@ from torch.nn import functional
 from .features import IN_CHANNELS_ORDER
 
 IN_CHANNELS = len(IN_CHANNELS_ORDER)
+WIDTH = 32  # channels of the first encoder block; each level doubles it
+DEPTH = 4  # pooling levels, which set the receptive field
 
 
 class ResponseUNet(nn.Module):
     """Encoder-decoder predicting the cooling field from an intervention field."""
 
-    def __init__(self, in_channels: int = IN_CHANNELS, width: int = 32, depth: int = 4) -> None:
+    def __init__(
+        self, in_channels: int = IN_CHANNELS, width: int = WIDTH, depth: int = DEPTH
+    ) -> None:
         super().__init__()
         self.in_channels = in_channels
         self.depth = depth

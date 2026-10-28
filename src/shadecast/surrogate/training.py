@@ -18,7 +18,6 @@ training curve happened to end; a best-epoch model does not.
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 from collections.abc import Mapping
@@ -281,7 +280,6 @@ def train(
         "beats_predicting_nothing": bool(state.best_skill > 0),
         "train_seconds": round(elapsed, 1),
         "history": state.history,
-        "checkpoint": str(out_path) if out_path else None,
     }
     listener.finished(report)
     return report
@@ -308,8 +306,3 @@ def _save_best(out_path: Path | None, state: TrainingState, channels: int) -> No
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     torch.save({"state_dict": state.best_state, "in_channels": channels}, out_path)
-
-
-def save_report(report: dict, path: Path) -> None:
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    Path(path).write_text(json.dumps(report, indent=2))

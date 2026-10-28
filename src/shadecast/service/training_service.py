@@ -1,4 +1,8 @@
-"""Fit a surrogate for a city's tiles, or several pooled, and write it under the models root."""
+"""Fit a surrogate for a city's tiles, or several pooled, and write it under the models root.
+
+A finished model directory holds the weights, the manifest and the training curve. The start
+record exists only while the run is unfinished, so the runs table can name it.
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,7 @@ from ..surrogate.manifest_inputs import ManifestInputs
 from ..surrogate.patch_set import PatchSet
 from ..surrogate.patch_settings import PatchSettings
 from ..surrogate.patches import crop_batch, crop_cities
-from ..surrogate.training import save_report, train
+from ..surrogate.training import train
 from ..surrogate.training_settings import TrainingSettings
 from ..surrogate.training_state import CHECKPOINT_NAME, STARTED_NAME
 from .model_catalog import model_created
@@ -98,13 +102,8 @@ class TrainingService:
         report: dict = {
             **report,
             "patch_px": request.patch,
-            "cities": [str(bundle) for _, bundle in pairs],
-            "target_stats": {
-                "mean_C": round(float(np.mean(targets)), 4),
-                "max_C": round(float(np.max(targets)), 3),
-            },
         }
-        save_report(report, destination / "training_report.json")
+        manifest.save_epochs(report.get("history", []), destination / manifest.EPOCHS_FILE)
         inputs_for_manifest = ManifestInputs(
             model_id=model_id,
             created=created.isoformat(timespec="seconds"),
@@ -115,6 +114,7 @@ class TrainingService:
             model_path=destination / WEIGHTS,
         )
         manifest.write(destination, manifest.build(inputs_for_manifest))
+        (destination / STARTED_NAME).unlink(missing_ok=True)  # the manifest now says it all
         return TrainingOutcome(
             model_id=model_id,
             destination=str(destination),
@@ -148,13 +148,16 @@ class TrainingService:
 def _record_start(destination: Path, pairs: list[tuple[Path, Path]], created: datetime) -> None:
     """Write which tiles the run trains on before it starts, so an unfinished run can be named.
 
-    A resumed run keeps the record of its first start.
+    A resumed run keeps the record of its first start; the manifest replaces it at the end.
     """
     record = destination / STARTED_NAME
     if record.exists():
         return
-    tiles = [manifest.tile_record(physics_dir, bundle) for physics_dir, bundle in pairs]
-    started = {"started": created.isoformat(timespec="seconds"), "tiles": tiles}
+    started = {
+        "started": created.isoformat(timespec="seconds"),
+        "cities": manifest.city_keys(pairs),
+        "tiles": [manifest.tile_ref(bundle) for _, bundle in pairs],
+    }
     record.write_text(json.dumps(started, indent=2))
 
 
@@ -165,7 +168,7 @@ def unfinished_model(root: Path) -> Path | None:
     candidates = [
         child
         for child in Path(root).iterdir()
-        if (child / CHECKPOINT_NAME).exists() and not (child / "manifest.json").exists()
+        if (child / CHECKPOINT_NAME).exists() and not (child / manifest.MANIFEST_FILE).exists()
     ]
     return max(candidates, key=model_created) if candidates else None
 

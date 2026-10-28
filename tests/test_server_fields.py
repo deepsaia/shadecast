@@ -115,7 +115,7 @@ def test_channels_and_models(client, data_root):
     model = data_root / "models" / "response-unet-ahmedabad-20261023T121739"
     model.mkdir(parents=True)
     (model / "model.pt").write_bytes(b"w")
-    tiles = [{"city": "ahmedabad", "tile": TILE, "urban_centre": 6143}]
+    tiles = [f"6143/{TILE}"]
     (model / "manifest.json").write_text(json.dumps({"data": {"tiles": tiles}}))
     listed = client.get("/api/v1/channels/treeshade/models?city=ahmedabad").json()
     assert [entry["id"] for entry in listed] == [model.name] and listed[0]["tile"] == TILE
