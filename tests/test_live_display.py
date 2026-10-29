@@ -6,7 +6,9 @@ from io import StringIO
 from rich.console import Console
 from rich.text import Text
 
-from shadecast.surrogate.live_display import LiveDisplay, clock, sparkline
+from shadecast.surrogate.live_display import LiveDisplay
+from shadecast.surrogate.live_display import clock
+from shadecast.surrogate.live_display import sparkline
 
 
 def _console() -> Console:

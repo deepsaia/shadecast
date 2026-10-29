@@ -8,7 +8,9 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from support import synthetic_tile
-from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
+from support.fixtures import fixture_tiles
 
 from shadecast.server.app import build_app
 from shadecast.server.services import Services
@@ -76,18 +78,12 @@ def test_the_hourly_field_is_hours_first_and_shrinks_to_the_requested_size(clien
 
 def test_context_cooling_and_placement_read_back(client):
     heights = _array(client, f"/api/v1/cities/ahmedabad/tiles/{TILE}/fields/context")
-    assert (
-        heights.shape == (16, 16) and float(heights[0, 0]) == 10.0 and float(heights[15, 15]) == 0.0
-    )
+    assert heights.shape == (16, 16) and float(heights[0, 0]) == 10.0 and float(heights[15, 15]) == 0.0
     cooling = _array(client, f"/api/v1/cities/ahmedabad/tiles/{TILE}/fields/cooling")
     assert cooling.shape == (3, 16, 16)
-    one = _array(
-        client, f"/api/v1/cities/ahmedabad/tiles/{TILE}/fields/cooling?design=clustered_0101"
-    )
+    one = _array(client, f"/api/v1/cities/ahmedabad/tiles/{TILE}/fields/cooling?design=clustered_0101")
     assert one.shape == (16, 16) and float(one[10, 10]) == 1.0 and float(one[0, 0]) == 0.0
-    placement = _array(
-        client, f"/api/v1/cities/ahmedabad/tiles/{TILE}/fields/placement?design=clustered_0101"
-    )
+    placement = _array(client, f"/api/v1/cities/ahmedabad/tiles/{TILE}/fields/placement?design=clustered_0101")
     assert placement.dtype == np.bool_ and int(placement.sum()) == 16
     fraction = _array(
         client,
@@ -98,9 +94,7 @@ def test_context_cooling_and_placement_read_back(client):
 
 
 def test_an_unknown_field_is_refused_and_a_missing_stage_is_named(client, tmp_path):
-    assert (
-        client.get(f"/api/v1/cities/ahmedabad/tiles/{TILE}/fields/temperature").status_code == 422
-    )
+    assert client.get(f"/api/v1/cities/ahmedabad/tiles/{TILE}/fields/temperature").status_code == 422
     bare = synthetic_tile.write_bundle(tmp_path / "other" / "tiles")
     settings = ServerSettings(data_root=tmp_path / "other", static_dir=tmp_path / "static")
     client = TestClient(build_app(settings, _services(tmp_path / "other")))

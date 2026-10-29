@@ -134,9 +134,7 @@ def test_join_refuses_a_climate_theme_missing_an_urban_centre():
 def test_centroids_are_reprojected_from_mollweide_to_degrees(tmp_path):
     ucdb.csv_path(ucdb.GENERAL, tmp_path).parent.mkdir(parents=True)
     ucdb.csv_path(ucdb.GENERAL, tmp_path).write_text("ID_UC_G0\n6143\n")
-    points = gpd.GeoDataFrame(
-        {"ID_UC_G0": [6143]}, geometry=[Point(6912192.348, 2816722.055)], crs="ESRI:54009"
-    )
+    points = gpd.GeoDataFrame({"ID_UC_G0": [6143]}, geometry=[Point(6912192.348, 2816722.055)], crs="ESRI:54009")
     points.to_file(ucdb.geopackage_path(ucdb.GENERAL, tmp_path), layer=ucdb.CENTROID_LAYER)
     frame = ucdb.centroids(tmp_path)
     assert frame.loc[0, ucdb.LON] == pytest.approx(72.58, abs=0.05)

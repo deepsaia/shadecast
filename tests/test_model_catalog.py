@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 
 from shadecast.service.missing_stage import MissingStage
-from shadecast.service.model_catalog import ModelCatalog, model_created
+from shadecast.service.model_catalog import ModelCatalog
+from shadecast.service.model_catalog import model_created
 from shadecast.service.unknown_model import UnknownModel
 
 CENTRE = 6143
@@ -18,9 +19,7 @@ def _tile(tile: str = TILE, centre: int = CENTRE) -> str:
     return f"{centre}/{tile}"
 
 
-def _model(
-    root: Path, name: str, created: str | None, tiles: list[str], weights: bool = True
-) -> Path:
+def _model(root: Path, name: str, created: str | None, tiles: list[str], weights: bool = True) -> Path:
     """A model directory; a created stamp means a manifest, and no stamp means weights alone."""
     model = root / name
     model.mkdir(parents=True)
@@ -33,12 +32,8 @@ def _model(
 
 
 def test_a_centres_models_come_oldest_first_whatever_they_learned_from(tmp_path):
-    _model(
-        tmp_path, "response-unet-ahmedabad-20261023T121739", "2026-10-23T12:17:39+00:00", [_tile()]
-    )
-    _model(
-        tmp_path, "response-unet-ahmedabad-20260826T143800", "2026-08-26T14:38:00+00:00", [_tile()]
-    )
+    _model(tmp_path, "response-unet-ahmedabad-20261023T121739", "2026-10-23T12:17:39+00:00", [_tile()])
+    _model(tmp_path, "response-unet-ahmedabad-20260826T143800", "2026-08-26T14:38:00+00:00", [_tile()])
     _model(
         tmp_path,
         "response-unet-ahmedabad-2tiles-20261024T090000",
@@ -73,18 +68,13 @@ def test_every_model_is_listed_once_and_one_without_a_manifest_belongs_to_no_cit
     catalog = ModelCatalog(tmp_path)
     assert [model.id for model in catalog.all_models()] == [pooled.name, bare.name]
     assert catalog.all_models()[0].urban_centres == [CENTRE, LAGOS]
-    assert (
-        catalog.all_models()[1].urban_centres == []
-        and catalog.all_models()[1].has_manifest is False
-    )
+    assert catalog.all_models()[1].urban_centres == [] and catalog.all_models()[1].has_manifest is False
     assert [model.id for model in catalog.models(CENTRE)] == [pooled.name]
     assert [model.id for model in catalog.models(LAGOS)] == [pooled.name]
 
 
 def test_the_tiles_with_models_are_those_a_finished_model_learned_from(tmp_path):
-    _model(
-        tmp_path, "response-unet-ahmedabad-20261023T121739", "2026-10-23T12:17:39+00:00", [_tile()]
-    )
+    _model(tmp_path, "response-unet-ahmedabad-20261023T121739", "2026-10-23T12:17:39+00:00", [_tile()])
     _model(tmp_path, "response-unet-ahmedabad-20261025T090000", None, [])
     catalog = ModelCatalog(tmp_path)
     assert catalog.tiles_with_models(CENTRE) == {TILE}
@@ -92,12 +82,8 @@ def test_the_tiles_with_models_are_those_a_finished_model_learned_from(tmp_path)
 
 
 def test_the_newest_and_a_named_model_are_found(tmp_path):
-    older = _model(
-        tmp_path, "response-unet-ahmedabad-20260826T143800", "2026-08-26T14:38:00+00:00", [_tile()]
-    )
-    newest = _model(
-        tmp_path, "response-unet-ahmedabad-20261023T121739", "2026-10-23T12:17:39+00:00", [_tile()]
-    )
+    older = _model(tmp_path, "response-unet-ahmedabad-20260826T143800", "2026-08-26T14:38:00+00:00", [_tile()])
+    newest = _model(tmp_path, "response-unet-ahmedabad-20261023T121739", "2026-10-23T12:17:39+00:00", [_tile()])
     catalog = ModelCatalog(tmp_path)
     found = catalog.newest(CENTRE)
     assert found.id == newest.name and found.path == str(newest) and found.skill == 0.8
@@ -108,9 +94,7 @@ def test_an_unknown_name_and_a_city_without_models_are_refused(tmp_path):
     catalog = ModelCatalog(tmp_path)
     with pytest.raises(MissingStage, match="sdc surrogate treeshade train"):
         catalog.newest(CENTRE)
-    _model(
-        tmp_path, "response-unet-ahmedabad-20261023T121739", "2026-10-23T12:17:39+00:00", [_tile()]
-    )
+    _model(tmp_path, "response-unet-ahmedabad-20261023T121739", "2026-10-23T12:17:39+00:00", [_tile()])
     with pytest.raises(UnknownModel, match="nope"):
         catalog.named(CENTRE, "nope")
 
@@ -133,9 +117,7 @@ def test_model_created_sorts_named_and_manifested_models_together(tmp_path):
     assert model_created(bare) == "2026-10-23T12:17:39"
     with_manifest = tmp_path / "response-unet-ahmedabad-2tiles-20261024T090000"
     with_manifest.mkdir()
-    (with_manifest / "manifest.json").write_text(
-        json.dumps({"created": "2026-10-24T09:00:00+00:00"})
-    )
+    (with_manifest / "manifest.json").write_text(json.dumps({"created": "2026-10-24T09:00:00+00:00"}))
     assert model_created(with_manifest) == "2026-10-24T09:00:00"
     assert model_created(bare) < model_created(with_manifest)
     odd = tmp_path / "custom"

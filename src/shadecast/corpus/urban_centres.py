@@ -16,8 +16,12 @@ import pandas as pd
 
 from ..data import regions
 from . import ucdb
-from .legend import income_code, is_missing, koppen_code, koppen_symbol
-from .slugs import assign_slugs, slugify
+from .legend import income_code
+from .legend import is_missing
+from .legend import koppen_code
+from .legend import koppen_symbol
+from .slugs import assign_slugs
+from .slugs import slugify
 from .urban_centre import UrbanCentre
 
 NAME_SEPARATOR = ";"
@@ -95,9 +99,7 @@ class UrbanCentres:
     def by_slug(self, slug: str) -> UrbanCentre | None:
         return self._by_slug.get(slug)
 
-    def search(
-        self, text: str, *, country: str | None = None, min_population: int = 0
-    ) -> list[UrbanCentre]:
+    def search(self, text: str, *, country: str | None = None, min_population: int = 0) -> list[UrbanCentre]:
         """Centres whose names contain the text, most populous first.
 
         Three arguments because a search has three independent filters a caller may combine.
@@ -122,11 +124,7 @@ class UrbanCentres:
         exact_slug = self.by_slug(query.lower()) or self.by_slug(key)
         if exact_slug is not None:
             return exact_slug
-        exact_names = [
-            centre
-            for centre in self._by_id.values()
-            if any(slugify(name) == key for name in centre.names)
-        ]
+        exact_names = [centre for centre in self._by_id.values() if any(slugify(name) == key for name in centre.names)]
         if len(exact_names) == 1:
             return exact_names[0]
         found = exact_names or self.search(query)

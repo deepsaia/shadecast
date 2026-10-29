@@ -47,9 +47,7 @@ class AssessmentService:
             report=report,
         )
 
-    def model_for(
-        self, target: str, model: str | None, tile: str | None
-    ) -> tuple[Path, Path, Path]:
+    def model_for(self, target: str, model: str | None, tile: str | None) -> tuple[Path, Path, Path]:
         """For a city: the model directory, the physics directory and the bundle to judge it on.
 
         Three answers because an assessment needs all three, and three arguments because the

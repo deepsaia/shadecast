@@ -4,7 +4,8 @@ import networkx as nx
 import numpy as np
 
 from shadecast.aoi import AOI
-from shadecast.network import heat, routing
+from shadecast.network import heat
+from shadecast.network import routing
 
 AOI_TEST = AOI("synthetic", 23.03, 72.58, side_m=200, res_m=1.0)
 PITCH, NODES, OFFSET = 20.0, 9, 20.0

@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated
+from typing import Literal
 
 import numpy as np
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter
+from fastapi import Depends
+from fastapi import Query
 from fastapi.responses import Response
 
 from ...service.field_store import FieldStore
-from ...service.resample import downsample, downsample_stack
+from ...service.resample import downsample
+from ...service.resample import downsample_stack
 from ...service.tile_reporter import report_of
 from ..dependencies import services
 from ..npy_response import npy_response
@@ -27,9 +31,7 @@ def field(
     field: Field,
     *,
     found: Annotated[Services, Depends(services)],
-    design: Annotated[
-        str | None, Query(description="One design; else every plan, stacked.")
-    ] = None,
+    design: Annotated[str | None, Query(description="One design; else every plan, stacked.")] = None,
     size: Annotated[int | None, Query(ge=8, le=4096, description="Long side in pixels.")] = None,
 ) -> Response:
     """The field in NPY format, hours or plans first when stacked, shrunk to ``size`` when asked."""

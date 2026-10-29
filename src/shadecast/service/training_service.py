@@ -20,10 +20,12 @@ from ..surrogate.features import CHANNEL_SETS
 from ..surrogate.manifest_inputs import ManifestInputs
 from ..surrogate.patch_set import PatchSet
 from ..surrogate.patch_settings import PatchSettings
-from ..surrogate.patches import crop_batch, crop_cities
+from ..surrogate.patches import crop_batch
+from ..surrogate.patches import crop_cities
 from ..surrogate.training import train
 from ..surrogate.training_settings import TrainingSettings
-from ..surrogate.training_state import CHECKPOINT_NAME, STARTED_NAME
+from ..surrogate.training_state import CHECKPOINT_NAME
+from ..surrogate.training_state import STARTED_NAME
 from .model_catalog import model_created
 from .progress_listener import ProgressListener
 from .training_outcome import TrainingOutcome
@@ -58,9 +60,7 @@ class TrainingService:
             pairs.append((Path(request.target), request.bundle))
         elif request.target is not None:
             selection = TileSelection(request.densest, request.stratified)
-            found = tile_lookup.simulated_tiles(
-                request.target, request.tiles, self._tiles_root, selection
-            )
+            found = tile_lookup.simulated_tiles(request.target, request.tiles, self._tiles_root, selection)
             pairs.extend((paths.physics, paths.bundle) for paths in found)
         if not pairs:
             raise ValueError("give a city key, PHYSICS_DIR and BUNDLE, or one or more --pair")
@@ -73,9 +73,7 @@ class TrainingService:
             raise ValueError("a city holdout needs at least two cities")
         if request.channels not in CHANNEL_SETS:
             raise ValueError(f"channels must be one of {sorted(CHANNEL_SETS)}")
-        patch_settings = PatchSettings(
-            size=request.patch, per_entry=request.per_entry, channels=request.channels
-        )
+        patch_settings = PatchSettings(size=request.patch, per_entry=request.per_entry, channels=request.channels)
         progress.phase(CROPPING)
         started = time.time()
         inputs, targets, origins = _crop(pairs, patch_settings)
@@ -96,9 +94,7 @@ class TrainingService:
         settings = TrainingSettings(
             epochs=request.epochs, holdout_city=request.holdout_city, channels=request.channels
         )
-        report = train(
-            PatchSet(inputs, targets, origins), settings, destination / WEIGHTS, progress
-        )
+        report = train(PatchSet(inputs, targets, origins), settings, destination / WEIGHTS, progress)
         report: dict = {
             **report,
             "patch_px": request.patch,
@@ -173,9 +169,7 @@ def unfinished_model(root: Path) -> Path | None:
     return max(candidates, key=model_created) if candidates else None
 
 
-def _crop(
-    pairs: list[tuple[Path, Path]], settings: PatchSettings
-) -> tuple[np.ndarray, np.ndarray, list[str]]:
+def _crop(pairs: list[tuple[Path, Path]], settings: PatchSettings) -> tuple[np.ndarray, np.ndarray, list[str]]:
     if len(pairs) == 1:
         return crop_batch(pairs[0][0], pairs[0][1], settings)
     return crop_cities(pairs, settings)

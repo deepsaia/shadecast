@@ -3,7 +3,8 @@
 import json
 
 import pytest
-from support.fixtures import fixture_centres, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_tiles
 
 from shadecast.service.tile_index import TileIndex
 

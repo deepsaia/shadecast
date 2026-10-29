@@ -1,4 +1,4 @@
-line-length = 100
+line-length = 119
 target-version = "py312"
 
 [lint]
@@ -7,6 +7,9 @@ ignore = [
     "PLR0913",  # planning functions genuinely take many parameters
     "PLR2004",  # thresholds are explained in context
 ]
+
+[lint.isort]
+force-single-line = true
 
 [lint.per-file-ignores]
 "tests/*" = ["PLR2004", "ARG"]
@@ -19,5 +22,6 @@ ignore = [
 # set by what the command needs to expose, not by internal design.
 "src/shadecast/cli.py" = ["PLR0913", "PLR0917"]
 "src/shadecast/surrogate_cli.py" = ["PLR0913", "PLR0917"]
+"src/shadecast/simulate_cli.py" = ["PLR0913", "PLR0917"]
 "src/shadecast/experiments_cli.py" = ["PLR0913", "PLR0917"]
 "src/shadecast/tile_cli.py" = ["PLR0913", "PLR0917"]

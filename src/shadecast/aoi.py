@@ -6,7 +6,8 @@ import math
 from dataclasses import dataclass
 
 from affine import Affine
-from pyproj import CRS, Transformer
+from pyproj import CRS
+from pyproj import Transformer
 from rasterio.transform import from_origin
 
 

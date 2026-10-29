@@ -20,6 +20,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from itertools import pairwise
+from typing import cast
 
 import networkx as nx
 import numpy as np
@@ -65,9 +66,7 @@ def set_perceived(graph: nx.MultiDiGraph, *, beta: float = BETA) -> nx.MultiDiGr
     Edges with no Tmrt coverage take the network median rather than zero, so a gap in
     the raster cannot masquerade as a cool shortcut.
     """
-    values = np.array(
-        [d.get("tmrt", np.nan) for _, _, d in graph.edges(data=True)], dtype=np.float64
-    )
+    values = np.array([d.get("tmrt", np.nan) for _, _, d in graph.edges(data=True)], dtype=np.float64)
     fallback = float(np.nanmedian(values)) if np.isfinite(values).any() else TMRT_COMFORT_C
     for u, v, key, data in graph.edges(keys=True, data=True):
         tmrt = data.get("tmrt", np.nan)
@@ -87,15 +86,11 @@ def to_routable(graph: nx.MultiDiGraph) -> nx.DiGraph:
     for u, v, data in graph.edges(data=True):
         best = out.get_edge_data(u, v)
         if best is None or data["perceived"] < best["perceived"]:
-            out.add_edge(
-                u, v, perceived=data["perceived"], length=float(data["length"]), heat=data["heat"]
-            )
+            out.add_edge(u, v, perceived=data["perceived"], length=float(data["length"]), heat=data["heat"])
     return out
 
 
-def node_population(
-    graph: nx.DiGraph, pop: np.ndarray, aoi: AOI, *, radius_m: float = 100.0
-) -> dict[int, float]:
+def node_population(graph: nx.DiGraph, pop: np.ndarray, aoi: AOI, *, radius_m: float = 100.0) -> dict[int, float]:
     """People within walking reach of each node, used as trip weight.
 
     A node is a junction, not a home, so the population it represents is the people who
@@ -129,6 +124,13 @@ def sample_nodes(weights: dict[int, float], n: int, *, seed: int = 0) -> list[in
     return [int(nodes[i]) for i in chosen]
 
 
+def _paths(graph: nx.DiGraph, origin: int, weight: str) -> dict[int, list[int]]:
+    """Shortest paths from one origin by the named edge weight, keyed by the node reached."""
+    _, paths = nx.single_source_dijkstra(graph, origin, weight=weight)
+    # Without a target the function returns every path keyed by node; the stub types both cases.
+    return cast(dict[int, list[int]], paths)
+
+
 def _walk(path: list[int], graph: nx.DiGraph) -> tuple[float, float]:
     """Total length and total heat-metres along a node path."""
     length = 0.0
@@ -148,8 +150,8 @@ def evaluate(graph: nx.DiGraph, weights: dict[int, float], endpoints: list[int])
     corridor: dict[tuple[int, int], float] = {}
 
     for origin in endpoints:
-        _, cool_paths = nx.single_source_dijkstra(graph, origin, weight="perceived")
-        _, fast_paths = nx.single_source_dijkstra(graph, origin, weight="length")
+        cool_paths = _paths(graph, origin, "perceived")
+        fast_paths = _paths(graph, origin, "length")
         for target in endpoints:
             if target == origin:
                 continue

@@ -9,9 +9,17 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
-from . import errors, pages, spa
+from . import errors
+from . import pages
+from . import spa
 from .request_id import RequestIdMiddleware
-from .routes import channels, cities, fields, health, results, runs, tiles
+from .routes import channels
+from .routes import cities
+from .routes import fields
+from .routes import health
+from .routes import results
+from .routes import runs
+from .routes import tiles
 from .services import Services
 from .settings import ServerSettings
 

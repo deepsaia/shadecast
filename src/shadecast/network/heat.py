@@ -28,9 +28,7 @@ def _edge_line(graph: nx.MultiDiGraph, u: int, v: int, data: dict) -> LineString
     geom = data.get("geometry")
     if isinstance(geom, LineString):
         return geom
-    return LineString(
-        [(graph.nodes[u]["x"], graph.nodes[u]["y"]), (graph.nodes[v]["x"], graph.nodes[v]["y"])]
-    )
+    return LineString([(graph.nodes[u]["x"], graph.nodes[u]["y"]), (graph.nodes[v]["x"], graph.nodes[v]["y"])])
 
 
 def _sample(line: LineString, field: np.ndarray, aoi: AOI, step_m: float) -> float:
@@ -48,9 +46,7 @@ def _sample(line: LineString, field: np.ndarray, aoi: AOI, step_m: float) -> flo
     return float(np.nanmean(values)) if np.isfinite(values).any() else float("nan")
 
 
-def annotate(
-    graph: nx.MultiDiGraph, tmrt: np.ndarray, aoi: AOI, *, step_m: float = STEP_M
-) -> nx.MultiDiGraph:
+def annotate(graph: nx.MultiDiGraph, tmrt: np.ndarray, aoi: AOI, *, step_m: float = STEP_M) -> nx.MultiDiGraph:
     """Attach mean Tmrt to every edge, in place, and report coverage.
 
     Edges that fall entirely outside the raster keep NaN and are reported, rather than

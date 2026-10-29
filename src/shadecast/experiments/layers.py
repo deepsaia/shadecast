@@ -16,7 +16,8 @@ import rasterio
 
 from ..bundles import building_height
 from ..data.landcover import to_umep
-from ..exposure import outdoor_mask, outdoor_weights
+from ..exposure import outdoor_mask
+from ..exposure import outdoor_weights
 
 logger = logging.getLogger(__name__)
 

@@ -20,7 +20,8 @@ from pathlib import Path
 
 from .patch_set import PatchSet
 from .patch_settings import PatchSettings
-from .patches import crop_cities, tile_key
+from .patches import crop_cities
+from .patches import tile_key
 from .training import train
 from .training_settings import TrainingSettings
 

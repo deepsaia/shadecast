@@ -6,9 +6,12 @@ from functools import cached_property
 
 import numpy as np
 
-from ..exposure import outdoor_mask, outdoor_weights
+from ..exposure import outdoor_mask
+from ..exposure import outdoor_weights
 from ..interventions import cost
-from ..objectives import Score, benefit, score
+from ..objectives import Score
+from ..objectives import benefit
+from ..objectives import score
 from .baseline_score import BaselineScore
 from .field_store import FieldStore
 from .physics_facts import PhysicsFacts
@@ -30,9 +33,7 @@ class PlanScoring:
 
     def baseline(self) -> BaselineScore:
         scored = self._score(self._layers.baseline, 0.0)
-        return BaselineScore(
-            exposure=round(scored.exposure, 2), at_risk=round(scored.people_at_risk)
-        )
+        return BaselineScore(exposure=round(scored.exposure, 2), at_risk=round(scored.people_at_risk))
 
     def plans(self) -> list[Plan]:
         """Every plan, by arrangement then coverage, so like compares with like."""

@@ -73,9 +73,7 @@ def engine_bin() -> str:
 
 def engine_version() -> str:
     """Report the engine version string, for provenance."""
-    completed = subprocess.run(
-        [engine_bin(), "--version"], capture_output=True, text=True, check=False
-    )
+    completed = subprocess.run([engine_bin(), "--version"], capture_output=True, text=True, check=False)
     return (completed.stdout or completed.stderr).strip()
 
 
@@ -140,9 +138,7 @@ _RUNNING: set[subprocess.Popen] = set()
 _RUNNING_LOCK = threading.Lock()
 
 
-def run_registered(
-    command: list[str], timeout: int, environment: dict[str, str]
-) -> subprocess.CompletedProcess:
+def run_registered(command: list[str], timeout: int, environment: dict[str, str]) -> subprocess.CompletedProcess:
     """Run the engine as a child this process can stop; same result as subprocess.run."""
     with subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=environment
@@ -232,8 +228,7 @@ def run(
 
     if tmrt_path is None:
         raise RuntimeError(
-            f"engine produced no Tmrt for {base_path} (rc={completed.returncode}) "
-            f"after {elapsed:.0f}s:\n{tail}"
+            f"engine produced no Tmrt for {base_path} (rc={completed.returncode}) after {elapsed:.0f}s:\n{tail}"
         )
     if completed.returncode != 0:
         # The engine writes Tmrt before the derived comfort indices and can fail on

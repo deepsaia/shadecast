@@ -13,7 +13,8 @@ from pathlib import Path
 from .. import cities
 from .tile_paths import TilePaths
 from .tile_selection import TileSelection
-from .tiling import select_densest, select_stratified
+from .tiling import select_densest
+from .tiling import select_stratified
 from .urban_centres import UrbanCentres
 
 ALL = "all"
@@ -24,9 +25,7 @@ def centre_id(text: str) -> int:
     query = str(text).strip()
     if query.isdigit():
         return int(query)
-    keyed = {
-        str(entry.get("key")): int(str(entry.get("ucdb_id", 0))) for entry in cities.selection()
-    }
+    keyed = {str(entry.get("key")): int(str(entry.get("ucdb_id", 0))) for entry in cities.selection()}
     if query in keyed:
         return keyed[query]
     return UrbanCentres.load().resolve(query).id
@@ -82,13 +81,9 @@ def simulated_tiles(
     or K spread over built-fraction terciles, among the tiles with physics, ranked by the
     centre's tiles file.
     """
-    with_physics = [
-        paths for paths in TilePaths.existing(tiles_root, centre_id(text)) if paths.stages().physics
-    ]
+    with_physics = [paths for paths in TilePaths.existing(tiles_root, centre_id(text)) if paths.stages().physics]
     if not with_physics:
-        raise ValueError(
-            f"{text} has no simulated physics yet; run 'sdc simulate treeshade {text}' first"
-        )
+        raise ValueError(f"{text} has no simulated physics yet; run 'sdc simulate treeshade {text}' first")
     if selection is not None and selection.wants():
         return _selected(text, with_physics, selection)
     if tiles is None or tiles.strip().lower() in ("", ALL):
@@ -98,9 +93,7 @@ def simulated_tiles(
         match = [paths for paths in with_physics if paths.tile.id == tile_id]
         if not match:
             have = ", ".join(paths.tile.id for paths in with_physics)
-            raise ValueError(
-                f"{text} tile {tile_id} has no simulated physics; tiles with physics: {have}"
-            )
+            raise ValueError(f"{text} tile {tile_id} has no simulated physics; tiles with physics: {have}")
         chosen.extend(match)
     return chosen
 
@@ -114,9 +107,7 @@ def _densest_of(text: str, found: list[TilePaths], option: str) -> TilePaths:
             if paths.tile.id == tile_id:
                 return paths
     ids = ", ".join(paths.tile.id for paths in found)
-    raise ValueError(
-        f"{text} has {len(found)} tiles ({ids}) and no tiles.json to rank them; add {option}"
-    )
+    raise ValueError(f"{text} has {len(found)} tiles ({ids}) and no tiles.json to rank them; add {option}")
 
 
 def densest_simulated_tile(text: str, tiles_root: Path) -> TilePaths:
@@ -128,13 +119,9 @@ def _selected(text: str, found: list[TilePaths], selection: TileSelection) -> li
     """The K densest or K stratified tiles among ``found``, using the centre's tiles file."""
     tiles_json = found[0].tiles_json
     if not tiles_json.exists():
-        raise ValueError(
-            f"{text} has no tiles.json to rank tiles; run 'sdc tile list {text}' first"
-        )
+        raise ValueError(f"{text} has no tiles.json to rank tiles; run 'sdc tile list {text}' first")
     by_id = {paths.tile.id: paths for paths in found}
-    rows = [
-        row for row in json.loads(tiles_json.read_text()).get("tiles", []) if row.get("id") in by_id
-    ]
+    rows = [row for row in json.loads(tiles_json.read_text()).get("tiles", []) if row.get("id") in by_id]
     if selection.densest:
         picked = select_densest(rows, selection.densest)
     else:

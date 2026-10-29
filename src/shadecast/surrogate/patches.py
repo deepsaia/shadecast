@@ -19,7 +19,8 @@ from pathlib import Path
 import numpy as np
 from scipy import ndimage
 
-from .features import select, stack
+from .features import select
+from .features import stack
 from .patch_settings import PatchSettings
 from .scene import Scene
 
@@ -68,9 +69,7 @@ def sampling_weights(placement: np.ndarray, res_m: float = 1.0) -> np.ndarray:
     return weights / weights.sum()
 
 
-def crop_cities(
-    pairs: list[tuple[Path, Path]], settings: PatchSettings
-) -> tuple[np.ndarray, np.ndarray, list[str]]:
+def crop_cities(pairs: list[tuple[Path, Path]], settings: PatchSettings) -> tuple[np.ndarray, np.ndarray, list[str]]:
     """Crop patches from several cities into one training set.
 
     Origins are tagged ``city/design`` so a split can hold out either a design
@@ -82,9 +81,7 @@ def crop_cities(
     all_targets: list[np.ndarray] = []
     all_origins: list[str] = []
     for index, (physics_dir, bundle) in enumerate(pairs):
-        inputs, targets, origins = crop_batch(
-            physics_dir, bundle, replace(settings, seed=settings.seed + index)
-        )
+        inputs, targets, origins = crop_batch(physics_dir, bundle, replace(settings, seed=settings.seed + index))
         city = tile_key(bundle)
         all_inputs.append(inputs)
         all_targets.append(targets)
@@ -97,9 +94,7 @@ def crop_cities(
     )
 
 
-def crop_batch(
-    physics_dir: Path, bundle: Path, settings: PatchSettings
-) -> tuple[np.ndarray, np.ndarray, list[str]]:
+def crop_batch(physics_dir: Path, bundle: Path, settings: PatchSettings) -> tuple[np.ndarray, np.ndarray, list[str]]:
     """Build an (N, channels, size, size) input array and its (N, 1, size, size) targets."""
     scene = Scene.load(bundle, physics_dir)
     rng = np.random.default_rng(settings.seed)

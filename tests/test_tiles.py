@@ -7,15 +7,13 @@ from shapely.ops import transform as transform_geometry
 
 from shadecast.corpus.tile import Tile
 from shadecast.corpus.tile_rasters import TileRasters
-from shadecast.corpus.tiling import (
-    attributes,
-    select_densest,
-    select_ids,
-    select_random,
-    select_stratified,
-    tiles_of,
-    zone_of,
-)
+from shadecast.corpus.tiling import attributes
+from shadecast.corpus.tiling import select_densest
+from shadecast.corpus.tiling import select_ids
+from shadecast.corpus.tiling import select_random
+from shadecast.corpus.tiling import select_stratified
+from shadecast.corpus.tiling import tiles_of
+from shadecast.corpus.tiling import zone_of
 from shadecast.corpus.utm_zone import UtmZone
 from shadecast.data import ghs_grid
 from shadecast.data.raster_window import RasterWindow
@@ -93,9 +91,7 @@ def test_zone_of_a_boundary_is_the_zone_of_its_centroid():
 def test_tiles_of_a_boundary_are_the_squares_whose_centres_lie_inside():
     tiles = tiles_of(BLOCK)
     assert len(tiles) == 6
-    assert {(t.e_km, t.n_km) for t in tiles} == {
-        (e, n) for e in (249, 250, 251) for n in (2546, 2547)
-    }
+    assert {(t.e_km, t.n_km) for t in tiles} == {(e, n) for e in (249, 250, 251) for n in (2546, 2547)}
     assert all(t.zone == ZONE for t in tiles)
 
 

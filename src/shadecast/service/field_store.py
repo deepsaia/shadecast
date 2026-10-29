@@ -61,9 +61,7 @@ class FieldStore:
         """The daylight mean radiant temperature of doing nothing."""
         path = self._paths.baseline / DAYLIGHT_FIELD
         if not path.exists():
-            raise MissingStage(
-                "baseline", self._tile, f"sdc simulate baseline <city> --tile {self._tile}"
-            )
+            raise MissingStage("baseline", self._tile, f"sdc simulate baseline <city> --tile {self._tile}")
         return np.load(path)
 
     def has_hourly(self) -> bool:
@@ -73,9 +71,7 @@ class FieldStore:
         """The radiant temperature at every hour of the design day, hours first."""
         path = self._paths.baseline / HOURLY_RASTER
         if not path.exists():
-            raise MissingStage(
-                "baseline", self._tile, f"sdc simulate baseline <city> --tile {self._tile}"
-            )
+            raise MissingStage("baseline", self._tile, f"sdc simulate baseline <city> --tile {self._tile}")
         with rasterio.open(path) as src:
             return src.read()
 
@@ -106,10 +102,7 @@ class FieldStore:
             self._paths.physics / MANIFEST,
         ]
         if (self._paths.physics / MANIFEST).exists():
-            listed.extend(
-                self._paths.physics / design_id / RESPONSE_ARCHIVE
-                for design_id in self.design_ids()
-            )
+            listed.extend(self._paths.physics / design_id / RESPONSE_ARCHIVE for design_id in self.design_ids())
         return listed
 
     @property

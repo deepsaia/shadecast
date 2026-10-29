@@ -4,9 +4,17 @@ import json
 
 import pytest
 
-from shadecast import build, sources, validation
+from shadecast import build
+from shadecast import sources
+from shadecast import validation
 from shadecast.corpus import ucdb
-from shadecast.data import buildings, built, canopy, met, population, rasters, regions
+from shadecast.data import buildings
+from shadecast.data import built
+from shadecast.data import canopy
+from shadecast.data import met
+from shadecast.data import population
+from shadecast.data import rasters
+from shadecast.data import regions
 from shadecast.network import graph
 from shadecast.sim import runner
 
@@ -94,18 +102,14 @@ def test_unknown_key_is_an_error_naming_it():
 
 def test_grouped_keeps_registry_group_order_and_only_non_empty_groups():
     grouped = sources.grouped()
-    assert [group["key"] for group in grouped] == [
-        group["key"] for group in sources.registry()["groups"]
-    ]
+    assert [group["key"] for group in grouped] == [group["key"] for group in sources.registry()["groups"]]
     assert all(group["sources"] for group in grouped)
     assert grouped[0]["title"]
 
 
 def test_a_broken_registry_is_refused_naming_the_file(tmp_path):
     path = tmp_path / "cited_sources.json"
-    path.write_text(
-        json.dumps({"groups": [{"key": "data", "title": "Data"}], "sources": [{"key": "x"}]})
-    )
+    path.write_text(json.dumps({"groups": [{"key": "data", "title": "Data"}], "sources": [{"key": "x"}]}))
     with pytest.raises(ValueError, match=r"cited_sources\.json.*x"):
         sources.registry(path)
 

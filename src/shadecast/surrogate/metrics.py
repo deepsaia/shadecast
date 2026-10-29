@@ -22,16 +22,15 @@ from __future__ import annotations
 import logging
 
 import numpy as np
-from scipy import ndimage, stats
+from scipy import ndimage
+from scipy import stats
 
 logger = logging.getLogger(__name__)
 
 DISTANCE_BANDS_M = ((0, 0), (1, 2), (3, 5), (6, 10), (11, 20), (21, 40), (41, 80))
 
 
-def distance_bands(
-    truth: np.ndarray, predicted: np.ndarray, placement: np.ndarray, res_m: float = 1.0
-) -> list[dict]:
+def distance_bands(truth: np.ndarray, predicted: np.ndarray, placement: np.ndarray, res_m: float = 1.0) -> list[dict]:
     """Mean truth, mean prediction and error, banded by distance from an intervention."""
     distance = np.asarray(ndimage.distance_transform_edt(~placement), dtype="float64") * res_m
     rows: list[dict] = []

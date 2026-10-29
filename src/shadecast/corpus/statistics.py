@@ -7,7 +7,8 @@ the corpus the stratification actually covers.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
+from collections.abc import Iterable
 
 import numpy as np
 
@@ -37,9 +38,7 @@ def _group(centres: list[UrbanCentre], name: str, key: Callable[[UrbanCentre], s
     """
     groups: dict[str, dict] = {}
     for centre in centres:
-        row = groups.setdefault(
-            key(centre), {name: key(centre), "urban_centres": 0, "tiles": 0, "population_2025": 0}
-        )
+        row = groups.setdefault(key(centre), {name: key(centre), "urban_centres": 0, "tiles": 0, "population_2025": 0})
         row["urban_centres"] += 1
         row["tiles"] += centre.tiles
         row["population_2025"] += centre.population_2025
@@ -135,8 +134,5 @@ def tile_stats(rows: Iterable[dict]) -> dict:
             f"tiles with {threshold:,} people or more": sum(value >= threshold for value in people)
             for threshold in PEOPLE_THRESHOLDS
         },
-        "quantiles": {
-            field: _quantiles([float(row.get(field, 0.0)) for row in listed])
-            for field in QUANTILE_FIELDS
-        },
+        "quantiles": {field: _quantiles([float(row.get(field, 0.0)) for row in listed]) for field in QUANTILE_FIELDS},
     }

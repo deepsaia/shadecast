@@ -28,9 +28,7 @@ def _check_entry(entry: dict, group_keys: set[str], path: Path) -> None:
         raise ValueError(f"{path.name}: source {key!r} names unknown group {entry.get('group')!r}")
     access = entry.get("access")
     if access is not None and access not in ACCESS_KINDS:
-        raise ValueError(
-            f"{path.name}: source {key!r} has access {access!r}, not in {ACCESS_KINDS}"
-        )
+        raise ValueError(f"{path.name}: source {key!r} has access {access!r}, not in {ACCESS_KINDS}")
 
 
 def registry(path: Path = REGISTRY_PATH) -> dict:

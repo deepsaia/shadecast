@@ -17,16 +17,15 @@ from typing import Annotated
 import click
 import typer
 
-from . import cities, tile_cli
+from . import cities
+from . import tile_cli
 from .build_progress import BuildProgress
-from .console import (
-    console,
-    corpus_table,
-    error_console,
-    ranking_table,
-    result_table,
-    runs_table,
-)
+from .console import console
+from .console import corpus_table
+from .console import error_console
+from .console import ranking_table
+from .console import result_table
+from .console import runs_table
 from .corpus import tile_paths
 from .corpus_cli import app as corpus_app
 from .experiments_cli import app as experiments_app
@@ -88,7 +87,7 @@ app.command("serve")(serve)
 
 @app.callback()
 def main(
-    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Debug logging.")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", help="Debug logging.")] = False,
 ) -> None:
     """Configure logging before any command runs."""
     configure(verbose=verbose)
@@ -125,9 +124,7 @@ def results(
         console.print_json(found.model_dump_json())
         return
     if not found.cities:
-        console.print(
-            "[dim]no tile with physics yet; run 'sdc simulate treeshade <city>' first.[/]"
-        )
+        console.print("[dim]no tile with physics yet; run 'sdc simulate treeshade <city>' first.[/]")
         return
     console.print(ranking_table(found.ranking.rows))
     verdict = found.arrangement
@@ -149,9 +146,7 @@ def runs(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """What is simulating or training right now, and whether its process is still alive."""
-    found = RunStatus(
-        CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT), tile_paths.MODELS_ROOT
-    ).runs()
+    found = RunStatus(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT), tile_paths.MODELS_ROOT).runs()
     if as_json:
         console.print_json(json.dumps([run.model_dump() for run in found]))
         return
@@ -163,9 +158,7 @@ def runs(
 
 @app.command()
 def build(
-    city: Annotated[
-        str | None, typer.Argument(help="Selection key, for example ahmedabad.")
-    ] = None,
+    city: Annotated[str | None, typer.Argument(help="Selection key, for example ahmedabad.")] = None,
     build_all: Annotated[bool, typer.Option("--all", help="Build every selected city.")] = False,
     tiles: Annotated[
         str | None,
@@ -174,9 +167,7 @@ def build(
             help="Tile ids separated by commas, or 'all' for every tile. Default: the densest.",
         ),
     ] = None,
-    densest: Annotated[
-        int | None, typer.Option("--densest", help="The K tiles with most residents.")
-    ] = None,
+    densest: Annotated[int | None, typer.Option("--densest", help="The K tiles with most residents.")] = None,
     stratified: Annotated[
         int | None,
         typer.Option("--stratified", help="K tiles spread over built-fraction terciles."),
@@ -187,9 +178,7 @@ def build(
     One tile per city by default, the one with most residents. --tiles names tiles or asks
     for all of them; --densest and --stratified pick K the way the corpus selection does.
     """
-    request = BuildRequest(
-        city=city, build_all=build_all, tiles=tiles, densest=densest, stratified=stratified
-    )
+    request = BuildRequest(city=city, build_all=build_all, tiles=tiles, densest=densest, stratified=stratified)
     service = BuildService(tile_cli.catalog(), tile_paths.TILES_ROOT, build_tile)
     try:
         outcome = service.build(request, BuildProgress(console))
@@ -205,9 +194,7 @@ def build(
 @app.command()
 def plan(
     city: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
-    tile: Annotated[
-        str | None, typer.Option("--tile", help="A tile id; else the densest built tile.")
-    ] = None,
+    tile: Annotated[str | None, typer.Option("--tile", help="A tile id; else the densest built tile.")] = None,
     kind: Annotated[str, typer.Option("--kind", help="Intervention type.")] = "tree",
     budget: Annotated[float, typer.Option("--budget", help="Budget in USD.")] = 10_000_000,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,

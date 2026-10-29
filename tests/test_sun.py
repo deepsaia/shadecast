@@ -2,7 +2,8 @@
 
 import pytest
 
-from shadecast.surrogate.sun import SunNoon, declination_deg
+from shadecast.surrogate.sun import SunNoon
+from shadecast.surrogate.sun import declination_deg
 
 
 def test_declination_peaks_at_the_solstices():

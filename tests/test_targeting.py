@@ -2,7 +2,8 @@
 
 import numpy as np
 
-from shadecast.experiments.targeting import plan_overlap, verdict
+from shadecast.experiments.targeting import plan_overlap
+from shadecast.experiments.targeting import verdict
 
 
 def _row(overlap: float, area_drop: float, route_drop: float) -> dict:

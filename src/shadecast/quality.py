@@ -18,9 +18,7 @@ TIERS = {
 }
 
 
-def assess(
-    prov: dict, building_h: np.ndarray, canopy: np.ndarray, landcover: np.ndarray, pop_total: float
-) -> dict:
+def assess(prov: dict, building_h: np.ndarray, canopy: np.ndarray, landcover: np.ndarray, pop_total: float) -> dict:
     reasons: list[str] = []
     notes: list[str] = []
 
@@ -44,10 +42,7 @@ def assess(
         if wc_woody < 0.02:
             # Both sources agree there is nothing there. That is a real property
             # of the city, not a data defect, and it means maximum shade headroom.
-            notes.append(
-                f"genuinely treeless: canopy {canopy_cover:.2%}, "
-                f"independent land cover {wc_woody:.2%}"
-            )
+            notes.append(f"genuinely treeless: canopy {canopy_cover:.2%}, independent land cover {wc_woody:.2%}")
         else:
             reasons.append(
                 f"canopy model reports {canopy_cover:.2%} but land cover "

@@ -1,6 +1,7 @@
 """The selected cities resolve by key without the database, and to records only when asked."""
 
-from support.fixtures import fixture_centres, fixture_corpus
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
 
 from shadecast import cities
 from shadecast.corpus.urban_centres import UrbanCentres

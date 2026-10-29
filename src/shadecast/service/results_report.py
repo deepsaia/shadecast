@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from collections import Counter
-from datetime import UTC, datetime
+from datetime import UTC
+from datetime import datetime
 from pathlib import Path
 
 from ..objectives import TMRT_STRESS_C
@@ -100,9 +101,7 @@ def matched_pair(plans: list[Plan]) -> MatchedPair | None:
     scattered = [plan for plan in plans if plan.arrangement == SCATTERED]
     if not clustered or not scattered:
         return None
-    cluster_plan, scatter_plan = min(
-        ((c, s) for c in clustered for s in scattered), key=_by_coverage_gap_then_largest
-    )
+    cluster_plan, scatter_plan = min(((c, s) for c in clustered for s in scattered), key=_by_coverage_gap_then_largest)
     ratio = scatter_plan.efficiency / cluster_plan.efficiency if cluster_plan.efficiency else None
     return MatchedPair(
         clustered=cluster_plan,

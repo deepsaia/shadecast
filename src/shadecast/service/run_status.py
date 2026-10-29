@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC
+from datetime import datetime
 from pathlib import Path
 
 from ..corpus.tile_paths import TilePaths
 from ..corpus.tile_ref import tile_of
-from ..surrogate.dataset import SIMULATION_LOCK, default_plan, lock_is_stale
-from ..surrogate.training_state import CHECKPOINT_NAME, STARTED_NAME
+from ..surrogate.dataset import SIMULATION_LOCK
+from ..surrogate.dataset import default_plan
+from ..surrogate.dataset import lock_is_stale
+from ..surrogate.training_state import CHECKPOINT_NAME
+from ..surrogate.training_state import STARTED_NAME
 from .city_catalog import CityCatalog
 from .field_store import RESPONSE_ARCHIVE
 from .json_file import read_object
@@ -75,9 +79,7 @@ def _unfinished(models: Path) -> list[Path]:
     if not models.is_dir():
         return []
     return sorted(
-        child
-        for child in models.iterdir()
-        if (child / CHECKPOINT_NAME).exists() and not (child / MANIFEST).exists()
+        child for child in models.iterdir() if (child / CHECKPOINT_NAME).exists() and not (child / MANIFEST).exists()
     )
 
 

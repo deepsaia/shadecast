@@ -5,7 +5,8 @@ from __future__ import annotations
 import time
 
 from ..corpus.tile_paths import TilePaths
-from ..surrogate.dataset import default_plan, simulate
+from ..surrogate.dataset import default_plan
+from ..surrogate.dataset import simulate
 from ..surrogate.simulation_settings import SimulationSettings
 from .city_catalog import CityCatalog
 from .missing_stage import MissingStage
@@ -24,9 +25,7 @@ class SimulationService:
 
     def tiles_for(self, request: SimulationRequest) -> list[TilePaths]:
         """The built tiles the request means, densest first: one, the named ones, or all."""
-        built = [
-            tile for tile in self._catalog.ranked_on_disk(request.target) if tile.stages.bundle
-        ]
+        built = [tile for tile in self._catalog.ranked_on_disk(request.target) if tile.stages.bundle]
         if not built:
             raise MissingStage("bundle", request.target, f"sdc build {request.target}")
         if request.tiles is None:
@@ -39,9 +38,7 @@ class SimulationService:
             raise ValueError("an output directory applies to one tile")
         return [self._catalog.tile_paths(request.target, tile_id) for tile_id in chosen]
 
-    def simulate(
-        self, paths: TilePaths, request: SimulationRequest, progress: ProgressListener
-    ) -> SimulationOutcome:
+    def simulate(self, paths: TilePaths, request: SimulationRequest, progress: ProgressListener) -> SimulationOutcome:
         """Every design of the plan through the engine for one tile; designs on disk are kept."""
         destination = request.out if request.out is not None else paths.physics
         started = time.time()

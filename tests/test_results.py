@@ -4,7 +4,9 @@ import json
 from pathlib import Path
 
 from support import synthetic_tile
-from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
+from support.fixtures import fixture_tiles
 
 from shadecast.corpus.tile_stages import TileStages
 from shadecast.service.baseline_score import BaselineScore
@@ -18,9 +20,7 @@ from shadecast.service.tile_facts import TileFacts
 from shadecast.service.tile_index import TileIndex
 from shadecast.service.tile_report import TileReport
 
-PHYSICS = PhysicsFacts(
-    designs=2, engine_minutes=11.0, seconds_per_design_min=300, seconds_per_design_max=360
-)
+PHYSICS = PhysicsFacts(designs=2, engine_minutes=11.0, seconds_per_design_min=300, seconds_per_design_max=360)
 Row = tuple[str, float, float, float, int, float]
 
 
@@ -148,9 +148,7 @@ def test_a_tile_with_a_baseline_but_no_plans_is_left_off_the_page(tmp_path):
 
 
 def test_a_tile_without_both_arrangements_has_no_matched_pair(tmp_path):
-    results = _service(tmp_path).collect_from(
-        [_report("rio", [("corridor", 0.01, 1.0, 0.5, 10, 20.0)])]
-    )
+    results = _service(tmp_path).collect_from([_report("rio", [("corridor", 0.01, 1.0, 0.5, 10, 20.0)])])
     assert results.cities[0].matched is None
     assert results.arrangement.cities_compared == 0
     assert results.ranking.spread is None

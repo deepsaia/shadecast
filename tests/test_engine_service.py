@@ -4,7 +4,9 @@ from pathlib import Path
 
 import pytest
 from support import synthetic_tile
-from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
+from support.fixtures import fixture_tiles
 from support.recording_progress import RecordingProgress
 
 from shadecast.service.baseline_request import BaselineRequest
@@ -49,9 +51,7 @@ def test_the_baseline_runs_once_and_is_kept_the_second_time(tmp_path, service):
     assert Path(first.destination) == tile / "physics" / "baseline"
     assert (tile / "physics" / "baseline" / "tmrt_daylight.npy").exists()
     assert [date for _, date in RUNS] == [synthetic_tile.DESIGN_DAY]
-    assert "baseline physics" in progress.names("phase") and progress.names("step_done") == [
-        "baseline"
-    ]
+    assert "baseline physics" in progress.names("phase") and progress.names("step_done") == ["baseline"]
     second = service.run_baseline(BaselineRequest(target="ahmedabad"), RecordingProgress())
     assert second.kept is True and second.seconds is None and len(RUNS) == 1
 

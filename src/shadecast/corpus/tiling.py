@@ -10,7 +10,8 @@ draw. Selection writes nothing; building does.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
+from collections.abc import Sequence
 
 import numpy as np
 from shapely.geometry import Point
@@ -19,7 +20,8 @@ from shapely.ops import transform as transform_geometry
 from shapely.prepared import prep
 
 from ..data import ghs_grid
-from .tile import KM, Tile
+from .tile import KM
+from .tile import Tile
 from .tile_rasters import TileRasters
 from .utm_zone import UtmZone
 
@@ -75,9 +77,7 @@ def describe_tile(tile: Tile, rasters: TileRasters) -> dict:
         "n_km": tile.n_km,
         "population_2020": round(people, 1),
         "density_2020_per_km2": round(people, 1),
-        "built_fraction": round(
-            rasters.built_surface.sum_inside(footprint) / SQUARE_METRES_PER_TILE, 4
-        ),
+        "built_fraction": round(rasters.built_surface.sum_inside(footprint) / SQUARE_METRES_PER_TILE, 4),
         "mean_height_m": round(_mean_height_where_built(rasters, footprint), 2),
         "bounds_utm": list(tile.bounds),
         "bounds_wgs84": [round(value, 6) for value in tile.bounds_wgs84],

@@ -7,7 +7,8 @@ import pytest
 
 from shadecast.service import assessment_service
 from shadecast.service.assessment_request import AssessmentRequest
-from shadecast.service.assessment_service import AssessmentService, assessment_name
+from shadecast.service.assessment_service import AssessmentService
+from shadecast.service.assessment_service import assessment_name
 from shadecast.service.missing_stage import MissingStage
 from shadecast.service.null_progress import NullProgress
 from shadecast.service.unknown_model import UnknownModel
@@ -86,9 +87,7 @@ def test_the_newest_model_and_the_densest_tile_with_physics_are_chosen(tmp_path,
     assert assessment_name(newest, bundle) == "assessment.json"
 
 
-def test_refusals_name_the_training_command_the_unknown_model_and_the_missing_physics(
-    tmp_path, service
-):
+def test_refusals_name_the_training_command_the_unknown_model_and_the_missing_physics(tmp_path, service):
     bundle = _bundle(tmp_path, "t43N_249_2547")
     with pytest.raises(MissingStage, match="sdc simulate treeshade"):
         service.model_for("ahmedabad", None, None)
@@ -106,9 +105,7 @@ def test_assess_runs_the_model_on_its_tile_and_writes_the_report_beside_it(tmp_p
     bundle = _bundle(tmp_path, "t43N_249_2547")
     physics = _physics(bundle)
     model = _model(tmp_path, "t43N_249_2547", "response-unet-ahmedabad-20261023T121739")
-    outcome = service.assess(
-        AssessmentRequest(target="ahmedabad", design=["clustered_0105"]), NullProgress()
-    )
+    outcome = service.assess(AssessmentRequest(target="ahmedabad", design=["clustered_0105"]), NullProgress())
     [inputs] = SEEN
     assert (inputs.model_dir, inputs.physics_dir, inputs.bundle, inputs.only) == (
         model,

@@ -20,7 +20,8 @@ import logging
 
 import numpy as np
 
-from ..interventions import CATALOGUE, feasibility_mask
+from ..interventions import CATALOGUE
+from ..interventions import feasibility_mask
 from .greedy import rank_surface
 
 logger = logging.getLogger(__name__)

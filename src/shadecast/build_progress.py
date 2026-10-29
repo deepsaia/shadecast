@@ -7,7 +7,8 @@ from collections.abc import Mapping
 from rich.console import Console
 from rich.status import Status
 
-from .console import add_build_row, build_table
+from .console import add_build_row
+from .console import build_table
 
 
 class BuildProgress:

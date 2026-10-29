@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
+from fastapi import Depends
 
 from ... import sources
 from ...service.findings import Findings

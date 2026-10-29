@@ -2,7 +2,8 @@
 
 import csv
 import json
-from datetime import UTC, datetime
+from datetime import UTC
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -133,9 +134,7 @@ def test_the_training_curve_is_a_rounded_table(tmp_path):
     path = manifest.save_epochs(history, tmp_path / "model" / manifest.EPOCHS_FILE)
     with path.open() as handle:
         rows = list(csv.DictReader(handle))
-    assert rows == [
-        {"epoch": "1", "train_loss": "0.485", "test_mae_C": "1.1316", "skill": "0.1577"}
-    ]
+    assert rows == [{"epoch": "1", "train_loss": "0.485", "test_mae_C": "1.1316", "skill": "0.1577"}]
 
 
 def test_check_names_a_missing_section():
@@ -153,9 +152,7 @@ def test_write_and_read_round_trip(tmp_path):
 def test_describe_command_prints_the_manifest(tmp_path):
     built = manifest.build(_inputs(tmp_path))
     manifest.write(tmp_path / "model", built)
-    result = runner.invoke(
-        app, ["surrogate", "treeshade", "describe", str(tmp_path / "model"), "--json"]
-    )
+    result = runner.invoke(app, ["surrogate", "treeshade", "describe", str(tmp_path / "model"), "--json"])
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout)["model_id"] == built["model_id"]
     table = runner.invoke(app, ["surrogate", "treeshade", "describe", str(tmp_path / "model")])
@@ -172,15 +169,11 @@ def test_describe_refuses_a_model_without_a_manifest(tmp_path):
 def test_new_model_id_names_cities_and_the_time(tmp_path):
     physics, bundle = _pair(tmp_path, "ahmedabad", TILE)
     created = datetime(2026, 10, 23, 12, 0, 0, tzinfo=UTC)
-    assert manifest.new_model_id([(physics, bundle)], created) == (
-        "response-unet-ahmedabad-20261023T120000"
-    )
+    assert manifest.new_model_id([(physics, bundle)], created) == ("response-unet-ahmedabad-20261023T120000")
 
 
 def test_describe_shows_the_receptive_field_as_a_range():
-    assert manifest.receptive_field_text(
-        {"receptive_field_m": 204, "receptive_field_min_m": 188}
-    ) == ("188 to 204 m")
+    assert manifest.receptive_field_text({"receptive_field_m": 204, "receptive_field_min_m": 188}) == ("188 to 204 m")
     assert manifest.receptive_field_text({"receptive_field_m": 152}) == "152 m"
 
 
@@ -193,6 +186,4 @@ def test_new_model_id_names_each_city_once_and_counts_pooled_tiles(tmp_path):
     first = _pair(tmp_path, "ahmedabad", TILE)
     second = _pair(tmp_path, "ahmedabad", "t43N_250_2547")
     created = datetime(2026, 10, 23, 12, 0, 0, tzinfo=UTC)
-    assert manifest.new_model_id([first, second], created) == (
-        "response-unet-ahmedabad-2tiles-20261023T120000"
-    )
+    assert manifest.new_model_id([first, second], created) == ("response-unet-ahmedabad-2tiles-20261023T120000")

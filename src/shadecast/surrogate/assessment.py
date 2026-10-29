@@ -23,13 +23,23 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from ..exposure import outdoor_mask, outdoor_weights
+from ..exposure import outdoor_mask
+from ..exposure import outdoor_weights
 from . import manifest
 from .assessment_inputs import AssessmentInputs
-from .features import CHANNEL_SETS, channel_set_for, select, stack
-from .metrics import aggregate_error, distance_bands, ranking, skill, speedup
-from .patches import entries, tile_key
-from .predict import load, predict_field
+from .features import CHANNEL_SETS
+from .features import channel_set_for
+from .features import select
+from .features import stack
+from .metrics import aggregate_error
+from .metrics import distance_bands
+from .metrics import ranking
+from .metrics import skill
+from .metrics import speedup
+from .patches import entries
+from .patches import tile_key
+from .predict import load
+from .predict import predict_field
 from .scene import Scene
 
 logger = logging.getLogger(__name__)
@@ -65,10 +75,7 @@ def _held_out(model_dir: Path) -> list[str]:
     """The designs the manifest says were held out; none when the model has no manifest."""
     if not (Path(model_dir) / manifest.MANIFEST_FILE).exists():
         return []
-    return [
-        str(design)
-        for design in manifest.read(model_dir).get("data", {}).get("held_out_designs", [])
-    ]
+    return [str(design) for design in manifest.read(model_dir).get("data", {}).get("held_out_designs", [])]
 
 
 def assess(inputs: AssessmentInputs, device: torch.device | None = None) -> dict:
@@ -133,9 +140,7 @@ def assess(inputs: AssessmentInputs, device: torch.device | None = None) -> dict
         "device": str(target_device),
         "headline": {
             "mean_skill": round(float(np.mean([d["skill"]["skill"] for d in per_design])), 4),
-            "all_beat_predicting_nothing": all(
-                d["skill"]["beats_predicting_nothing"] for d in per_design
-            ),
+            "all_beat_predicting_nothing": all(d["skill"]["beats_predicting_nothing"] for d in per_design),
             "mean_aggregate_relative_error": round(
                 float(np.mean([d["aggregate"]["relative_error"] for d in per_design])), 4
             ),

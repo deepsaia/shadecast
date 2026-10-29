@@ -48,9 +48,7 @@ def test_meteorology_has_one_row_per_hour(paths):
 
 
 def test_a_missing_bundle_names_the_stage_and_the_command(tmp_path):
-    store = FieldStore(
-        TilePaths(tmp_path, 6143, TilePaths.of_root(tmp_path / "6143" / "t43N_249_2547").tile)
-    )
+    store = FieldStore(TilePaths(tmp_path, 6143, TilePaths.of_root(tmp_path / "6143" / "t43N_249_2547").tile))
     with pytest.raises(MissingStage, match="bundle") as caught:
         store.heights()
     assert "sdc build" in str(caught.value)

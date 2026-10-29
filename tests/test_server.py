@@ -5,7 +5,9 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from support import synthetic_tile
-from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
+from support.fixtures import fixture_tiles
 
 from shadecast.server.app import build_app
 from shadecast.server.services import Services

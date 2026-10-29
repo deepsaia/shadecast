@@ -22,9 +22,11 @@ from pathlib import Path
 import numpy as np
 import rasterio
 
-from ..exposure import outdoor_mask, outdoor_weights
+from ..exposure import outdoor_mask
+from ..exposure import outdoor_weights
 from ..interventions import cost
-from ..objectives import benefit, score
+from ..objectives import benefit
+from ..objectives import score
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +55,7 @@ def _layers(bundle: Path, physics_dir: Path) -> dict:
 def compare(bundle: Path, physics_dir: Path, res_m: float = 1.0) -> dict:
     """Score every matched arrangement pair against the do-nothing baseline."""
     layers = _layers(bundle, physics_dir)
-    baseline_score = score(
-        np.where(layers["outdoor"], layers["baseline"], 0), layers["weights"], 0.0
-    )
+    baseline_score = score(np.where(layers["outdoor"], layers["baseline"], 0), layers["weights"], 0.0)
 
     rows: list[dict] = []
     for group in MATCHED_PAIRS:

@@ -1,10 +1,14 @@
 """The build command builds tiles into the tile layout. No network: the build itself is a double."""
 
 import pytest
-from support.fixtures import fixture_centres, fixture_corpus, fixture_provenance, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
+from support.fixtures import fixture_provenance
+from support.fixtures import fixture_tiles
 from typer.testing import CliRunner
 
-from shadecast import cli, tile_cli
+from shadecast import cli
+from shadecast import tile_cli
 from shadecast.cli import app
 from shadecast.corpus import tile_paths
 from shadecast.corpus.tile import Tile
@@ -33,9 +37,7 @@ def _offline(monkeypatch, tmp_path):
 def test_build_a_named_tile_goes_into_the_tile_layout(tmp_path):
     result = runner.invoke(app, ["build", "ahmedabad", "--tiles", "t43N_250_2546"])
     assert result.exit_code == 0, result.output
-    assert [
-        ("ahmedabad", "t43N_250_2546", str(tmp_path / "6143" / "t43N_250_2546" / "bundle"))
-    ] == CALLS
+    assert [("ahmedabad", "t43N_250_2546", str(tmp_path / "6143" / "t43N_250_2546" / "bundle"))] == CALLS
     assert "t43N_250_2546" in result.stdout
 
 

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..corpus.tile_ref import centre_of, tile_of
+from ..corpus.tile_ref import centre_of
+from ..corpus.tile_ref import tile_of
 from .json_file import read_object
 from .missing_stage import MissingStage
 from .model_summary import ModelSummary
@@ -49,9 +50,7 @@ class ModelCatalog:
     def newest(self, urban_centre: int) -> ModelSummary:
         found = self.models(urban_centre)
         if not found:
-            raise MissingStage(
-                "model", f"urban centre {urban_centre}", "sdc surrogate treeshade train <city>"
-            )
+            raise MissingStage("model", f"urban centre {urban_centre}", "sdc surrogate treeshade train <city>")
         return found[-1]
 
     def named(self, urban_centre: int, model_id: str) -> ModelSummary:

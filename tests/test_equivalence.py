@@ -5,10 +5,13 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 from support import synthetic_tile
-from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
+from support.fixtures import fixture_tiles
 from typer.testing import CliRunner
 
-from shadecast import cities, tile_cli
+from shadecast import cities
+from shadecast import tile_cli
 from shadecast.cli import app
 from shadecast.corpus import tile_paths
 from shadecast.server.app import build_app
@@ -68,12 +71,7 @@ def test_a_city_s_tiles_agree_three_ways(everything):
 def test_a_tile_s_report_agrees_three_ways(everything):
     services, client = everything
     direct = services.reporter.report("ahmedabad", synthetic_tile.TILE_ID).model_dump(mode="json")
-    command = runner.invoke(
-        app, ["tile", "report", "ahmedabad", "--tile", synthetic_tile.TILE_ID, "--json"]
-    )
+    command = runner.invoke(app, ["tile", "report", "ahmedabad", "--tile", synthetic_tile.TILE_ID, "--json"])
     assert command.exit_code == 0, command.output
     assert json.loads(command.stdout) == direct
-    assert (
-        client.get(f"/api/v1/cities/ahmedabad/tiles/{synthetic_tile.TILE_ID}/report").json()
-        == direct
-    )
+    assert client.get(f"/api/v1/cities/ahmedabad/tiles/{synthetic_tile.TILE_ID}/report").json() == direct

@@ -4,7 +4,9 @@ import json
 from pathlib import Path
 
 import pytest
-from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
+from support.fixtures import fixture_tiles
 
 from shadecast.corpus.tile_stages import TileStages
 from shadecast.corpus.urban_centres import UrbanCentres
@@ -108,9 +110,7 @@ def test_tiles_come_densest_first_with_their_stages(root, catalog):
 
 def test_a_tiles_file_from_an_older_build_is_read_for_what_it_has(root):
     index = TileIndex(root, lambda centre: [{"id": "t43N_249_2547", "x_km": 6897, "people": 1}])
-    catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, index, ModelCatalog(root / "models")
-    )
+    catalog = CityCatalog(Selection.resolved(fixture_corpus()), fixture_centres, index, ModelCatalog(root / "models"))
     tiles = catalog.tiles("ahmedabad")
     assert [tile.id for tile in tiles] == ["t43N_249_2547"]
     assert tiles[0].population_2020 == 0.0
@@ -165,9 +165,7 @@ def test_statistics_carry_the_counts_the_quantiles_and_the_stages(root, catalog)
     statistics = catalog.statistics("ahmedabad")
     assert statistics.urban_centre == 6143 and statistics.name == "Ahmedabad"
     assert statistics.tiles == len(ROWS)
-    assert statistics.populated_tiles == sum(
-        float(row.get("population_2020", 0)) > 0 for row in ROWS
-    )
+    assert statistics.populated_tiles == sum(float(row.get("population_2020", 0)) > 0 for row in ROWS)
     assert "built_fraction" in statistics.quantiles
     assert statistics.stages.bundle == 1 and statistics.stages.baseline == 1
     assert statistics.stages.tiles == catalog.centre("ahmedabad").tiles
@@ -229,12 +227,8 @@ def test_tiles_on_disk_rank_by_the_tiles_file_when_it_exists(root, catalog):
 
 
 def test_a_tiles_file_from_an_older_build_with_old_ids_lists_without_failing(root):
-    index = TileIndex(
-        root, lambda centre: [{"id": "t6908_2818", "x_km": 6908, "population_2020": 5.0}]
-    )
-    catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), fixture_centres, index, ModelCatalog(root / "models")
-    )
+    index = TileIndex(root, lambda centre: [{"id": "t6908_2818", "x_km": 6908, "population_2020": 5.0}])
+    catalog = CityCatalog(Selection.resolved(fixture_corpus()), fixture_centres, index, ModelCatalog(root / "models"))
     [tile] = catalog.tiles("ahmedabad")
     assert tile.id == "t6908_2818" and tile.stages == TileStages()
 
@@ -243,9 +237,7 @@ def test_the_furthest_tile_needs_no_tiles_file(root):
     _prove(root, "t43N_250_2547", "bundle", "baseline")
     _prove(root, "t43N_249_2547", "bundle")
     index = TileIndex(root, _refuse_describe)
-    catalog = CityCatalog(
-        Selection.resolved(fixture_corpus()), _no_database, index, ModelCatalog(root / "models")
-    )
+    catalog = CityCatalog(Selection.resolved(fixture_corpus()), _no_database, index, ModelCatalog(root / "models"))
     assert catalog.furthest_tile("ahmedabad").tile == "t43N_250_2547"
 
 

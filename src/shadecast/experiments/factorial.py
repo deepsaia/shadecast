@@ -24,8 +24,10 @@ import rasterio
 
 from ..baselines import orchard
 from ..interventions import apply
-from ..objectives import benefit, score
-from ..pipeline import BUNDLE_FILES, daylight_mean
+from ..objectives import benefit
+from ..objectives import score
+from ..pipeline import BUNDLE_FILES
+from ..pipeline import daylight_mean
 from ..sim.runner import run
 from .layers import city_layers
 
@@ -79,9 +81,7 @@ def run_cell(
     result = run(work, design_day)
     tmrt = daylight_mean(result.tmrt_path)
 
-    baseline_score = score(
-        np.where(layers["outdoor"], layers["baseline"], 0), layers["weights"], 0.0
-    )
+    baseline_score = score(np.where(layers["outdoor"], layers["baseline"], 0), layers["weights"], 0.0)
     after = score(np.where(layers["outdoor"], tmrt, 0), layers["weights"], spent)
     gain = benefit(baseline_score, after)
 
@@ -113,9 +113,7 @@ def run_factorial(cities: list[tuple[str, Path, Path]], out_path: Path) -> list[
         for spec in TYPES:
             for budget in BUDGETS_USD:
                 index += 1
-                logger.info(
-                    "[%d/%d] %s %s at %.1fM", index, total, city, spec["kind"], budget / 1e6
-                )
+                logger.info("[%d/%d] %s %s at %.1fM", index, total, city, spec["kind"], budget / 1e6)
                 rows.append(
                     run_cell(
                         city,

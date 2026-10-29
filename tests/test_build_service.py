@@ -1,7 +1,10 @@
 """Building is addressed by city and tile: the densest, named tiles, all, or a selection."""
 
 import pytest
-from support.fixtures import fixture_centres, fixture_corpus, fixture_provenance, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
+from support.fixtures import fixture_provenance
+from support.fixtures import fixture_tiles
 from support.recording_progress import RecordingProgress
 
 from shadecast.service.build_request import BuildRequest
@@ -79,17 +82,11 @@ def test_refusals_name_what_was_wrong(service):
 
 def test_build_records_each_tile_and_reports_every_step(tmp_path, service):
     progress = RecordingProgress()
-    outcome = service.build(
-        BuildRequest(city="ahmedabad", tiles="t43N_249_2547,t43N_250_2546"), progress
-    )
+    outcome = service.build(BuildRequest(city="ahmedabad", tiles="t43N_249_2547,t43N_250_2546"), progress)
     assert [built.tile for built in outcome.built] == ["t43N_249_2547", "t43N_250_2546"]
     assert outcome.built[0].bundle == str(tmp_path / "6143" / "t43N_249_2547" / "bundle")
     assert outcome.built[0].tier == "A" and outcome.built[0].buildings == 1234
-    assert (
-        outcome.failed == []
-        and outcome.chosen == {"ahmedabad": 2}
-        and outcome.totals == {"ahmedabad": 6}
-    )
+    assert outcome.failed == [] and outcome.chosen == {"ahmedabad": 2} and outcome.totals == {"ahmedabad": 6}
     assert progress.names("step_started") == ["ahmedabad t43N_249_2547", "ahmedabad t43N_250_2546"]
     assert progress.names("step_done") == ["ahmedabad t43N_249_2547", "ahmedabad t43N_250_2546"]
     assert progress.events[0][0] == "started" and progress.events[-1][0] == "finished"
@@ -104,9 +101,7 @@ def test_one_failed_tile_does_not_stop_the_others(tmp_path):
     )
     service = BuildService(catalog, tmp_path, _failing_build_tile)
     progress = RecordingProgress()
-    outcome = service.build(
-        BuildRequest(city="ahmedabad", tiles="t43N_250_2546,t43N_249_2547"), progress
-    )
+    outcome = service.build(BuildRequest(city="ahmedabad", tiles="t43N_250_2546,t43N_249_2547"), progress)
     assert [built.tile for built in outcome.built] == ["t43N_249_2547"]
     assert outcome.failed == ["ahmedabad t43N_250_2546"]
     assert progress.names("step_failed") == ["ahmedabad t43N_250_2546"]

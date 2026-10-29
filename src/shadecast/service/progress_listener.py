@@ -9,7 +9,8 @@ operation is doing between steps.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Protocol, runtime_checkable
+from typing import Protocol
+from typing import runtime_checkable
 
 
 @runtime_checkable

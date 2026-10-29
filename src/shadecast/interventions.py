@@ -36,7 +36,11 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .data.landcover import ASPHALT, COBBLE, GRASS, ROOF, SOIL
+from .data.landcover import ASPHALT
+from .data.landcover import COBBLE
+from .data.landcover import GRASS
+from .data.landcover import ROOF
+from .data.landcover import SOIL
 
 # Extensions to the stock UMEP class table, installed into the engine by
 # sim.surfaces. Code 3 is deliberately skipped: solweig.py hardcodes `lc_grid == 3`
@@ -62,9 +66,7 @@ CATALOGUE = {
     "tree": InterventionSpec(
         "tree", unit_cost=40.0, maintenance_frac=0.08, plantable_on=(GRASS, SOIL, COBBLE, ASPHALT)
     ),
-    "cool_roof": InterventionSpec(
-        "cool_roof", unit_cost=12.0, maintenance_frac=0.05, plantable_on=(ROOF,)
-    ),
+    "cool_roof": InterventionSpec("cool_roof", unit_cost=12.0, maintenance_frac=0.05, plantable_on=(ROOF,)),
     "cool_paving": InterventionSpec(
         "cool_paving", unit_cost=25.0, maintenance_frac=0.04, plantable_on=(ASPHALT, COBBLE)
     ),
@@ -77,16 +79,12 @@ CATALOGUE = {
     # not bounce shortwave onto anyone, which is why it stays usable while the
     # albedo arms are quarantined. The residual albedo change is small and adverse
     # (0.18 -> 0.16), so measured cooling here is a lower bound.
-    "depave": InterventionSpec(
-        "depave", unit_cost=60.0, maintenance_frac=0.12, plantable_on=(ASPHALT,)
-    ),
+    "depave": InterventionSpec("depave", unit_cost=60.0, maintenance_frac=0.12, plantable_on=(ASPHALT,)),
     # Sealed surface replaced by lighter, rougher paving (Ts_deg 0.58 -> 0.37).
     # Carried mainly as the midpoint of the same channel: if the channel behaves,
     # its cooling must land between asphalt and grass. That ordering is a cheap
     # internal check on the channel itself, not a headline result.
-    "permeable": InterventionSpec(
-        "permeable", unit_cost=90.0, maintenance_frac=0.04, plantable_on=(ASPHALT,)
-    ),
+    "permeable": InterventionSpec("permeable", unit_cost=90.0, maintenance_frac=0.04, plantable_on=(ASPHALT,)),
 }
 
 
@@ -132,9 +130,7 @@ def apply(
     return cdsm, umep_lc
 
 
-def cost(
-    kind: str, placement: np.ndarray, res_m: float, *, years: int = 20, discount: float = 0.03
-) -> float:
+def cost(kind: str, placement: np.ndarray, res_m: float, *, years: int = 20, discount: float = 0.03) -> float:
     """Capital plus discounted maintenance over the planning horizon."""
     spec = CATALOGUE[kind]
     area = float(placement.sum()) * res_m * res_m

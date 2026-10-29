@@ -44,6 +44,4 @@ def test_wgs84_round_trip():
 
 
 def test_population_reader_uses_the_shared_grid():
-    assert population_tile_rc(23.0192, 72.5988) == ghs_grid.tile_rc(
-        *ghs_grid.to_mollweide(72.5988, 23.0192)
-    )
+    assert population_tile_rc(23.0192, 72.5988) == ghs_grid.tile_rc(*ghs_grid.to_mollweide(72.5988, 23.0192))

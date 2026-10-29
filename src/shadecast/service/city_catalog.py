@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from functools import cached_property, partial
+from functools import cached_property
+from functools import partial
 from pathlib import Path
 
 from ..cities import City
@@ -61,9 +62,7 @@ class CityCatalog:
         return cls(Selection.read(), UrbanCentres.load, index, ModelCatalog(models_root))
 
     @classmethod
-    def with_centres(
-        cls, centres: UrbanCentres, tiles_root: Path, models_root: Path
-    ) -> CityCatalog:
+    def with_centres(cls, centres: UrbanCentres, tiles_root: Path, models_root: Path) -> CityCatalog:
         """The catalog over the real selection and a database a command has already loaded."""
         index = TileIndex(tiles_root, tile_description.describe)
         return cls(Selection.read(), partial(_loaded, centres), index, ModelCatalog(models_root))
@@ -175,14 +174,9 @@ class CityCatalog:
         """The tiles present, densest first by the tiles file when it exists; no database needed."""
         urban_centre = self.urban_centre_id(text)
         rows = self._index.rows_if_present(urban_centre)
-        ranked = {
-            str(row.get("id")): index for index, row in enumerate(select_densest(rows, len(rows)))
-        }
+        ranked = {str(row.get("id")): index for index, row in enumerate(select_densest(rows, len(rows)))}
         modelled = self._models.tiles_with_models(urban_centre)
-        found = [
-            self._location(paths, modelled)
-            for paths in TilePaths.existing(self._index.tiles_root, urban_centre)
-        ]
+        found = [self._location(paths, modelled) for paths in TilePaths.existing(self._index.tiles_root, urban_centre)]
         return sorted(found, key=partial(_rank_then_id, ranked))
 
     def statistics(self, text: str) -> TileStatistics:
@@ -251,9 +245,7 @@ class CityCatalog:
         rows = payload.get("tiles", [])
         modelled = self._models.tiles_with_models(centre.id)
         return [
-            TileSummary.model_validate(
-                {**row, "stages": self._stages_of(centre.id, str(row.get("id")), modelled)}
-            )
+            TileSummary.model_validate({**row, "stages": self._stages_of(centre.id, str(row.get("id")), modelled)})
             for row in select_densest(rows, len(rows))
         ]
 

@@ -8,7 +8,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
+from fastapi.responses import JSONResponse
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 API = "api/"
@@ -26,9 +29,7 @@ def mount(app: FastAPI, static_dir: Path) -> None:
     assets = Path(static_dir) / "assets"
     if assets.is_dir():
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
-    app.add_api_route(
-        "/{path:path}", SpaFallback(Path(static_dir)), methods=["GET"], include_in_schema=False
-    )
+    app.add_api_route("/{path:path}", SpaFallback(Path(static_dir)), methods=["GET"], include_in_schema=False)
 
 
 class SpaFallback:

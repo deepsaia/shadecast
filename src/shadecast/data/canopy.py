@@ -18,7 +18,8 @@ import rasterio
 import requests
 from rasterio.enums import Resampling
 from rasterio.warp import reproject
-from shapely.geometry import box, shape
+from shapely.geometry import box
+from shapely.geometry import shape
 
 from ..aoi import AOI
 

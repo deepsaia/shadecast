@@ -25,7 +25,8 @@ from rasterio.warp import reproject
 
 from ..aoi import AOI
 from . import ghs_grid
-from .ghs_product import GhsProduct, local_tile
+from .ghs_product import GhsProduct
+from .ghs_product import local_tile
 
 logger = logging.getLogger(__name__)
 

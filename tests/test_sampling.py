@@ -1,13 +1,12 @@
 """Stratified sampling of urban centres is a reproducible command, not a judgement call."""
 
 from shadecast.corpus.draw import Draw
-from shadecast.corpus.sampling import sample, strata
+from shadecast.corpus.sampling import sample
+from shadecast.corpus.sampling import strata
 from shadecast.corpus.urban_centre import UrbanCentre
 
 
-def _centre(
-    centre_id: int, koppen: str | None, income: str | None, population_2025: int
-) -> UrbanCentre:
+def _centre(centre_id: int, koppen: str | None, income: str | None, population_2025: int) -> UrbanCentre:
     return UrbanCentre(
         id=centre_id,
         name=f"City {centre_id}",
@@ -59,8 +58,7 @@ def test_sample_is_deterministic_for_a_seed():
 
 def test_sample_changes_with_the_seed():
     draws = {
-        tuple(c.id for c in sample(CENTRES, Draw(per_stratum=1, min_population_2025=0, seed=s)))
-        for s in range(12)
+        tuple(c.id for c in sample(CENTRES, Draw(per_stratum=1, min_population_2025=0, seed=s))) for s in range(12)
     }
     assert len(draws) > 1
 

@@ -9,7 +9,8 @@ from __future__ import annotations
 from rich.console import Console
 from rich.table import Table
 
-from .corpus.tile_stages import STAGE_NAMES, TileStages
+from .corpus.tile_stages import STAGE_NAMES
+from .corpus.tile_stages import TileStages
 from .corpus.urban_centre import UrbanCentre
 from .service.city_summary import CitySummary
 from .service.plan import Plan
@@ -167,9 +168,7 @@ def centres_table(centres: list[UrbanCentre], matched: dict[int, str] | None = N
     table.add_column("tiles", justify="right", no_wrap=True)
     for centre in centres:
         alias = aliases.get(centre.id)
-        shown = (
-            centre.name if alias in (None, centre.name) else f"{centre.name} [dim](via {alias})[/]"
-        )
+        shown = centre.name if alias in (None, centre.name) else f"{centre.name} [dim](via {alias})[/]"
         table.add_row(
             str(centre.id),
             centre.slug,
@@ -320,7 +319,5 @@ def result_table(result: dict) -> Table:
     table.add_row("Tmrt drop where planted", "", "", f"{result['tmrt_drop_where_planted_C']:.2f} C")
     table.add_row("spillover to unplanted ground", "", "", f"{result['spillover_C']:.2f} C")
     table.add_row("cost", "", f"${result['plan']['cost_usd']:,.0f}", "")
-    table.add_row(
-        "excess reduced per 1,000 USD", "", "", f"{benefit['excess_reduced_per_1k_usd']:.2f}"
-    )
+    table.add_row("excess reduced per 1,000 USD", "", "", f"{benefit['excess_reduced_per_1k_usd']:.2f}")
     return table

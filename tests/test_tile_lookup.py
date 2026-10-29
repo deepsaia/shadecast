@@ -8,7 +8,8 @@ from typer.testing import CliRunner
 
 from shadecast import simulate_cli
 from shadecast.cli import app
-from shadecast.corpus import tile_lookup, tile_paths
+from shadecast.corpus import tile_lookup
+from shadecast.corpus import tile_paths
 from shadecast.service import simulation_service
 
 runner = CliRunner()
@@ -43,10 +44,7 @@ def test_one_built_tile_is_chosen_named_or_refused(tmp_path):
     _bundle(tmp_path, 6143, "t43N_250_2547")
     with pytest.raises(ValueError, match="add --tile"):
         tile_lookup.one_built_tile("ahmedabad", None, tmp_path)
-    assert (
-        tile_lookup.one_built_tile("ahmedabad", "t43N_250_2547", tmp_path).tile.id
-        == "t43N_250_2547"
-    )
+    assert tile_lookup.one_built_tile("ahmedabad", "t43N_250_2547", tmp_path).tile.id == "t43N_250_2547"
     with pytest.raises(ValueError, match="no built tile t43N_251_2547"):
         tile_lookup.one_built_tile("ahmedabad", "t43N_251_2547", tmp_path)
 
@@ -129,9 +127,7 @@ def _physics(bundle: Path) -> Path:
 
 
 def test_resume_command_repeats_the_options():
-    assert simulate_cli.resume_command("savannah", None, None, 4) == (
-        "sdc simulate treeshade savannah --jobs 4"
-    )
+    assert simulate_cli.resume_command("savannah", None, None, 4) == ("sdc simulate treeshade savannah --jobs 4")
     assert simulate_cli.resume_command("x/bundle", "t1", Path("o"), 1) == (
         "sdc simulate treeshade x/bundle --tiles t1 --out o"
     )

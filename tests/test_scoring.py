@@ -4,9 +4,15 @@ import numpy as np
 import pytest
 
 from shadecast import interventions as IV
-from shadecast.data.landcover import ASPHALT, GRASS, ROOF, WATER, to_umep
-from shadecast.exposure import outdoor_mask, outdoor_weights
-from shadecast.objectives import benefit, score
+from shadecast.data.landcover import ASPHALT
+from shadecast.data.landcover import GRASS
+from shadecast.data.landcover import ROOF
+from shadecast.data.landcover import WATER
+from shadecast.data.landcover import to_umep
+from shadecast.exposure import outdoor_mask
+from shadecast.exposure import outdoor_weights
+from shadecast.objectives import benefit
+from shadecast.objectives import score
 
 
 def _toy(n=60):

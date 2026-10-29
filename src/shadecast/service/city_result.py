@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import Field
 
 from .baseline_score import BaselineScore
 from .matched_pair import MatchedPair

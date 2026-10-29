@@ -1,6 +1,7 @@
 """A bundle carries its urban centre and the citation of every layer. No network, no engine."""
 
-from shadecast import build, sources
+from shadecast import build
+from shadecast import sources
 from shadecast.cities import City
 from shadecast.corpus import ucdb
 from shadecast.service.tile_facts import facts_from

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from ..aoi import AOI
-from .tile import KM, Tile
+from .tile import KM
+from .tile import Tile
 
 # Half a metre keeps the snapped grid origin on the tile's kilometre line after the centre
 # has been round-tripped through latitude and longitude.

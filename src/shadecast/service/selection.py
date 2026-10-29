@@ -18,9 +18,7 @@ LoadCentres = Callable[[], UrbanCentres]
 
 
 class Selection:
-    def __init__(
-        self, entries: list[dict], load_cities: Callable[[LoadCentres], dict[str, City]]
-    ) -> None:
+    def __init__(self, entries: list[dict], load_cities: Callable[[LoadCentres], dict[str, City]]) -> None:
         self._entries = entries
         self._load_cities = load_cities
 

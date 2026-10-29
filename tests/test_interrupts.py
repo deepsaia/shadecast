@@ -6,7 +6,8 @@ import sys
 import click
 from typer.testing import CliRunner
 
-from shadecast import cli, surrogate_cli
+from shadecast import cli
+from shadecast import surrogate_cli
 from shadecast.cli import app
 from shadecast.corpus import tile_paths
 from shadecast.service import simulation_service
@@ -62,9 +63,7 @@ def test_simulate_stops_with_the_resume_line(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
     bundle = tmp_path / "6143" / "t43N_249_2547" / "bundle"
     bundle.mkdir(parents=True)
-    (bundle / "provenance.json").write_text(
-        '{"city": {"key": "ahmedabad"}, "tile": {"id": "t43N_249_2547"}}'
-    )
+    (bundle / "provenance.json").write_text('{"city": {"key": "ahmedabad"}, "tile": {"id": "t43N_249_2547"}}')
 
     def interrupted(bundle_dir, destination, settings, progress):
         progress.started("x", total=17, done=3)
@@ -84,6 +83,5 @@ def test_train_resume_command_repeats_the_options():
         TrainingRequest(pair=["ahmedabad", "x/s=x/b"], holdout_city="rio", channels="base")
     )
     assert pooled == (
-        "sdc surrogate treeshade train --pair ahmedabad --pair x/s=x/b "
-        "--holdout-city rio --channels base --resume"
+        "sdc surrogate treeshade train --pair ahmedabad --pair x/s=x/b --holdout-city rio --channels base --resume"
     )

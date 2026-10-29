@@ -14,7 +14,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..interventions import cost, feasibility_mask
+from ..interventions import cost
+from ..interventions import feasibility_mask
 
 
 def rank_surface(tmrt: np.ndarray, weights: np.ndarray, threshold: float = 45.0) -> np.ndarray:

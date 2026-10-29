@@ -12,7 +12,8 @@ from typing import Annotated
 import typer
 import uvicorn
 
-from .console import console, error_console
+from .console import console
+from .console import error_console
 from .server.settings import ServerSettings
 
 FACTORY = "shadecast.server.app:create_app"
@@ -45,9 +46,7 @@ def serve(
     if open_browser:
         threading.Timer(1.0, webbrowser.open, args=(url,)).start()
     console.print(f"[green]shadecast[/] on {url}  (ctrl-c to stop)")
-    uvicorn.run(
-        FACTORY, factory=True, host=settings.host, port=settings.port, reload=settings.reload
-    )
+    uvicorn.run(FACTORY, factory=True, host=settings.host, port=settings.port, reload=settings.reload)
 
 
 def resolve(host: str | None, port: int | None, data: Path | None, reload: bool) -> ServerSettings:

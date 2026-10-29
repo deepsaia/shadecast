@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter
+from fastapi import Depends
+from fastapi import Query
 
 from ...service.channel_summary import ChannelSummary
 from ...service.channels import CHANNELS
@@ -35,8 +37,6 @@ def models(
 
 
 @router.get("/channels/{channel}/models/{model}", response_model=ModelSummary)
-def model(
-    channel: str, model: str, city: City, found: Annotated[Services, Depends(services)]
-) -> ModelSummary:
+def model(channel: str, model: str, city: City, found: Annotated[Services, Depends(services)]) -> ModelSummary:
     channel_of(channel)
     return found.models.named(found.catalog.urban_centre_id(city), model)

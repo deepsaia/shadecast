@@ -19,7 +19,10 @@ import numpy as np
 import torch
 
 from ..data.landcover import to_umep  # noqa: F401  (kept so callers can featurise)
-from .features import CHANNEL_SETS, channel_set_for, select, stack
+from .features import CHANNEL_SETS
+from .features import channel_set_for
+from .features import select
+from .features import stack
 from .model import ResponseUNet
 from .scene import Scene
 
@@ -57,9 +60,7 @@ def _forward(model: ResponseUNet, features: np.ndarray, device: torch.device) ->
         return model(tensor)[0, 0].cpu().numpy()
 
 
-def predict_field(
-    model: ResponseUNet, features: np.ndarray, device: torch.device | None = None
-) -> np.ndarray:
+def predict_field(model: ResponseUNet, features: np.ndarray, device: torch.device | None = None) -> np.ndarray:
     """Predict the response field for a full (7, H, W) feature stack."""
     target = device or next(model.parameters()).device
     _, rows, cols = features.shape

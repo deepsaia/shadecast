@@ -49,14 +49,10 @@ def _corners(aoi: AOI, step: int) -> list[tuple[int, int]]:
 
 
 def _url(template: str, lat: int, lon: int) -> str:
-    return template.format(
-        ns="N" if lat >= 0 else "S", lat=abs(lat), ew="E" if lon >= 0 else "W", lon=abs(lon)
-    )
+    return template.format(ns="N" if lat >= 0 else "S", lat=abs(lat), ew="E" if lon >= 0 else "W", lon=abs(lon))
 
 
-def _mosaic(
-    urls: list[str], aoi: AOI, resampling: Resampling, dtype: str, fill: float
-) -> np.ndarray:
+def _mosaic(urls: list[str], aoi: AOI, resampling: Resampling, dtype: str, fill: float) -> np.ndarray:
     out = np.full(aoi.shape, np.nan, dtype="float32")
     hit = 0
     for u in urls:

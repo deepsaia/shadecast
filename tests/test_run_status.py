@@ -3,7 +3,9 @@
 import json
 import os
 
-from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
+from support.fixtures import fixture_tiles
 
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.model_catalog import ModelCatalog
@@ -11,7 +13,8 @@ from shadecast.service.run_status import RunStatus
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
 from shadecast.surrogate.dataset import SIMULATION_LOCK
-from shadecast.surrogate.training_state import CHECKPOINT_NAME, STARTED_NAME
+from shadecast.surrogate.training_state import CHECKPOINT_NAME
+from shadecast.surrogate.training_state import STARTED_NAME
 
 TILE = "t43N_249_2547"
 

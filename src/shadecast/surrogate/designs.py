@@ -65,9 +65,7 @@ def sparse_probe(
                 continue
             # Nudge onto the nearest feasible pixel rather than dropping the probe,
             # otherwise the design silently under-samples built-up neighbourhoods.
-            window = feasible[
-                max(0, r - step // 4) : r + step // 4, max(0, c - step // 4) : c + step // 4
-            ]
+            window = feasible[max(0, r - step // 4) : r + step // 4, max(0, c - step // 4) : c + step // 4]
             if window.any():
                 offsets = np.argwhere(window)
                 pick = offsets[rng.integers(len(offsets))]
@@ -75,9 +73,7 @@ def sparse_probe(
     return placement
 
 
-def random_uniform(
-    feasible: np.ndarray, rng: np.random.Generator, *, coverage: float = 0.05
-) -> np.ndarray:
+def random_uniform(feasible: np.ndarray, rng: np.random.Generator, *, coverage: float = 0.05) -> np.ndarray:
     """Independent pixels at a target coverage of the feasible area."""
     options = np.argwhere(feasible)
     if len(options) == 0:

@@ -8,13 +8,17 @@ import pytest
 from support import synthetic_tile
 from typer.testing import CliRunner
 
-from shadecast import cities, tile_cli
+from shadecast import cities
+from shadecast import tile_cli
 from shadecast.cities import City
 from shadecast.cli import app
-from shadecast.console import build_table, corpus_table, result_table
+from shadecast.console import build_table
+from shadecast.console import corpus_table
+from shadecast.console import result_table
 from shadecast.corpus import tile_paths
 from shadecast.corpus.urban_centres import UrbanCentres
-from shadecast.service import experiment_service, plan_service
+from shadecast.service import experiment_service
+from shadecast.service import plan_service
 from shadecast.service.city_catalog import CityCatalog
 from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.selection import Selection
@@ -247,9 +251,7 @@ def test_experiments_run_over_a_city_by_name(tmp_path, monkeypatch):
     monkeypatch.setattr(experiment_service, "run_factorial", fake_factorial)
     tile = synthetic_tile.write_bundle(tmp_path)
     synthetic_tile.write_baseline(tile)
-    result = runner.invoke(
-        app, ["experiments", "factorial", "ahmedabad", "--out", str(tmp_path / "f.json"), "--json"]
-    )
+    result = runner.invoke(app, ["experiments", "factorial", "ahmedabad", "--out", str(tmp_path / "f.json"), "--json"])
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout)["rows"] == 1
     missing = runner.invoke(app, ["experiments", "targeting", "london"])

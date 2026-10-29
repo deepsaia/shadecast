@@ -18,8 +18,10 @@ import rasterio
 from . import interventions
 from .baselines.greedy import select as greedy_select
 from .data.landcover import to_umep
-from .exposure import outdoor_mask, outdoor_weights
-from .objectives import benefit, score
+from .exposure import outdoor_mask
+from .exposure import outdoor_weights
+from .objectives import benefit
+from .objectives import score
 from .sim.runner import run
 
 logger = logging.getLogger(__name__)
@@ -50,9 +52,7 @@ def stage_bundle(source: Path, destination: Path) -> None:
         shutil.copy(source / name, destination / name)
 
 
-def evaluate(
-    bundle: Path, kind: str = "tree", budget_usd: float = 10_000_000, work_root: Path | None = None
-) -> dict:
+def evaluate(bundle: Path, kind: str = "tree", budget_usd: float = 10_000_000, work_root: Path | None = None) -> dict:
     """Plan, simulate and score one intervention against the do-nothing baseline."""
     bundle = Path(bundle)
     provenance = json.loads((bundle / "provenance.json").read_text())
