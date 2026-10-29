@@ -1,5 +1,6 @@
 import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { Info } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 
 import { api, ApiError } from "@/api/client";
@@ -14,6 +15,7 @@ import { Picker } from "@/components/Picker";
 import { TileFacts } from "@/components/TileFacts";
 import { TradeoffChart } from "@/components/TradeoffChart";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Slider } from "@/components/ui/slider";
 import { aggregate, type Totals } from "@/lib/aggregate";
 import { coolingImage } from "@/lib/overlay";
@@ -39,6 +41,7 @@ import {
 } from "@/lib/scale";
 import { seriesColor } from "@/lib/series";
 import { type Cell, cellBounds, cellsOf } from "@/lib/tile_grid";
+import { THRESHOLD, readThreshold, storeThreshold } from "@/lib/threshold_store";
 import { PRESETS, type Preset, applyPreset } from "@/lib/tile_presets";
 import { cn } from "@/lib/utils";
 
@@ -241,11 +244,17 @@ function Scenario({
   const [designKey, setDesignKey] = useState(policy.designs[0].key);
   const [scale, setScale] = useState<Scale>(INITIAL_SCALE);
   const [assumptions, setAssumptions] = useState<Assumptions>({});
-  const settled = useDebounced({ scale, assumptions }, SETTLE_MS);
+  const [threshold, setThreshold] = useState<number>(readThreshold);
+  const settled = useDebounced({ scale, assumptions, threshold }, SETTLE_MS);
   const levers = useMemo(
-    () => ({ ...leversOf(designKey, settled.scale), ...settled.assumptions }),
+    () => ({ ...leversOf(designKey, settled.scale), ...settled.assumptions, threshold: settled.threshold }),
     [designKey, settled],
   );
+
+  function chooseThreshold(value: number) {
+    setThreshold(value);
+    storeThreshold(value);
+  }
   const answers = useQueries({
     queries: chosen.map((tile) => ({
       queryKey: ["scenario", city.key, tile, levers],
@@ -288,7 +297,7 @@ function Scenario({
       {failed ? (
         <Unanswered error={failed} />
       ) : (
-        <OutcomesRow totals={totals} busy={busy} threshold={focusedOutcome?.threshold ?? 45} />
+        <OutcomesRow totals={totals} busy={busy} threshold={focusedOutcome?.threshold ?? threshold} />
       )}
       <div className="mt-8 grid gap-10 lg:grid-cols-[300px_minmax(0,1fr)]">
       <aside aria-label="Levers" className="space-y-8">
@@ -316,6 +325,25 @@ function Scenario({
         <Lever title="Scale" question="How much">
           <ScaleSliders scale={shown} rate={rate} outcome={focusedOutcome} onChange={setScale} />
           <AssumptionsPanel assumptions={assumptions} outcome={focusedOutcome} onChange={setAssumptions} />
+        </Lever>
+        <Lever title="Threshold" question="Who counts as exposed">
+          <div className="flex items-baseline justify-between text-sm">
+            <span>Stress line, mean radiant temperature</span>
+            <strong className="tabular-nums">{threshold} C</strong>
+          </div>
+          <Slider
+            value={[threshold]}
+            min={THRESHOLD.min}
+            max={THRESHOLD.max}
+            step={THRESHOLD.step}
+            onValueChange={([value]) => chooseThreshold(value)}
+            aria-label="Stress threshold"
+            className="mt-2"
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            45 C is this project's line for heat stress outdoors, not a standard; the published lines for heat
+            deaths sit higher. Your choice is kept in this browser.
+          </p>
         </Lever>
       </aside>
       <section aria-label="The focused tile">
@@ -547,7 +575,6 @@ function MarkedSlider({
 interface Assumptions {
   unit_cost?: number;
   maintenance?: number;
-  threshold?: number;
 }
 
 function AssumptionsPanel({
@@ -569,9 +596,7 @@ function AssumptionsPanel({
   return (
     <details className="mt-5 rounded-md border px-3 py-2 text-sm">
       <summary className="cursor-pointer text-muted-foreground">
-        Assumptions
-        {outcome &&
-          `, priced at ${outcome.unit_cost} USD per m², ${percent(outcome.maintenance)} a year, exposed above ${outcome.threshold} C`}
+        Assumptions{outcome && `, priced at ${outcome.unit_cost} USD per m², ${percent(outcome.maintenance)} a year`}
       </summary>
       <div className="mt-3 grid gap-3">
         <label className="grid gap-1">
@@ -601,23 +626,8 @@ function AssumptionsPanel({
             className="w-32 rounded-sm border bg-background px-2 py-1 tabular-nums"
           />
         </label>
-        <label className="grid gap-1">
-          <span className="text-xs text-muted-foreground">Stress threshold, C mean radiant temperature</span>
-          <input
-            type="number"
-            min={20}
-            max={80}
-            step={1}
-            inputMode="decimal"
-            value={assumptions.threshold ?? ""}
-            placeholder={outcome ? String(outcome.threshold) : "45"}
-            onChange={(event) => set("threshold", event.target.value)}
-            className="w-32 rounded-sm border bg-background px-2 py-1 tabular-nums"
-          />
-        </label>
         <p className="text-xs text-muted-foreground">
-          The catalogue's prices are placeholders, and 45 C is this project's line for heat stress outdoors, not a
-          standard. Yours change the cost and who counts as exposed, never the cooling.
+          The catalogue's prices are placeholders. Yours change the cost and what it buys, never the cooling.
         </p>
       </div>
     </details>
@@ -657,6 +667,7 @@ function OutcomesRow({ totals, busy, threshold }: { totals: Totals | null; busy:
         label={`People moved below ${threshold} C`}
         value={integer(totals.people)}
         note={`${share} of the ${integer(totals.baseline_at_risk)} above it today${over}`}
+        explainer={PEOPLE_EXPLAINER}
       />
       <Outcome
         label="Equity gap change"
@@ -674,10 +685,43 @@ function OutcomesRow({ totals, busy, threshold }: { totals: Totals | null; busy:
   );
 }
 
-function Outcome({ label, value, unit, note }: { label: string; value: string; unit?: string; note: string }) {
+const PEOPLE_EXPLAINER =
+  "How this is counted. We know how many people live in each 100 metre square from the GHS population grid, and we " +
+  "place them in the buildings there. Nobody stands on their own roof, so we spread each person over the open ground " +
+  "within about 25 metres of home. On the design day we take the daytime average radiant temperature of that ground. " +
+  "People whose nearby ground is hotter than the threshold count as exposed. This number is how many of them the " +
+  "scenario brings below the line.";
+
+function Outcome({
+  label,
+  value,
+  unit,
+  note,
+  explainer,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  note: string;
+  explainer?: string;
+}) {
   return (
     <div className="rounded-md border bg-card px-3 py-2">
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="flex items-center gap-1 text-xs text-muted-foreground">
+        {label}
+        {explainer && (
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" aria-label="How this is counted" className="inline-flex text-muted-foreground hover:text-foreground">
+                  <Info className="size-3.5" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{explainer}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </p>
       <p className="font-display text-2xl font-bold leading-tight tracking-tight">
         {value}
         {unit && <span className="ml-1 font-sans text-sm font-normal text-muted-foreground">{unit}</span>}
