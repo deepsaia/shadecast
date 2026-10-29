@@ -4,8 +4,8 @@ import { Navigate, useParams } from "react-router";
 import { api, ApiError } from "@/api/client";
 import { NextStep } from "@/components/NextStep";
 
-/** A city alone means its tile that has come furthest; the server decides which. A page name goes beneath it. */
-export function CityRedirect({ page }: { page?: "scenario" }) {
+/** A city alone means its tile that has come furthest; the server decides which. */
+export function CityRedirect() {
   const { city = "" } = useParams();
   const report = useQuery({ queryKey: ["cityReport", city], queryFn: () => api.cityReport(city) });
   if (report.isPending) return <p className="text-muted-foreground">Finding the tile that has come furthest.</p>;
@@ -27,5 +27,5 @@ export function CityRedirect({ page }: { page?: "scenario" }) {
       </section>
     );
   }
-  return <Navigate to={`/cities/${city}/tiles/${report.data.tile}${page ? `/${page}` : ""}`} replace />;
+  return <Navigate to={`/cities/${city}/tiles/${report.data.tile}`} replace />;
 }

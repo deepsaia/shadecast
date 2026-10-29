@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { BrowserRouter, Route, Routes } from "react-router";
 
 import { Shell } from "@/components/Shell";
 import { CitiesPage } from "@/pages/Cities";
@@ -8,7 +8,7 @@ import { FindingsPage } from "@/pages/Findings";
 import { ModelsPage } from "@/pages/Models";
 import { ReferencesPage } from "@/pages/References";
 import { ResultsPage } from "@/pages/Results";
-import { ScenarioPage } from "@/pages/Scenario";
+import { SimulatorPage } from "@/pages/Simulator";
 import { TilePage } from "@/pages/Tile";
 
 const queryClient = new QueryClient({
@@ -21,12 +21,10 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<Shell />}>
-            <Route index element={<CitiesPage />} />
-            <Route path="cities" element={<Navigate to="/" replace />} />
+            <Route index element={<SimulatorPage />} />
+            <Route path="cities" element={<CitiesPage />} />
             <Route path="cities/:city" element={<CityRedirect />} />
-            <Route path="cities/:city/scenario" element={<CityRedirect page="scenario" />} />
             <Route path="cities/:city/tiles/:tile" element={<TilePage />} />
-            <Route path="cities/:city/tiles/:tile/scenario" element={<ScenarioPage />} />
             <Route path="results" element={<ResultsPage />} />
             <Route path="models" element={<ModelsPage />} />
             <Route path="findings" element={<FindingsPage />} />

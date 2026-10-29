@@ -4,7 +4,8 @@ import { NavLink, Outlet } from "react-router";
 import { cn } from "@/lib/utils";
 
 const PAGES = [
-  { to: "/", label: "Cities", end: true },
+  { to: "/", label: "Simulator", end: true },
+  { to: "/cities", label: "Cities", end: false },
   { to: "/results", label: "Results", end: false },
   { to: "/models", label: "Models", end: false },
   { to: "/findings", label: "Findings", end: false },

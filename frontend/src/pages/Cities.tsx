@@ -81,8 +81,8 @@ function CityRow({ city }: { city: CitySummary }) {
         )}
         <span className="ml-2 text-muted-foreground">{city.country}</span>
         {city.stages.model > 0 && (
-          <Link to={`/cities/${city.key}/scenario`} className="ml-3 text-sm underline-offset-4 hover:underline">
-            scenario
+          <Link to={`/?city=${city.key}`} className="ml-3 text-sm underline-offset-4 hover:underline">
+            simulate
           </Link>
         )}
       </TableCell>

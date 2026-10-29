@@ -1,21 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
-import { Pause, Play } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 
 import { api } from "@/api/client";
 import { fetchField } from "@/api/fields";
 import type { Plan, TileReport } from "@/api/models";
 import { FieldCanvas } from "@/components/FieldCanvas";
-import { MetChart } from "@/components/MetChart";
+import { HeatReplay } from "@/components/HeatReplay";
 import { NextStep } from "@/components/NextStep";
+import { TileFacts } from "@/components/TileFacts";
 import { TradeoffChart } from "@/components/TradeoffChart";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { decimal, integer, percent } from "@/lib/format";
-import { band, type NpyArray } from "@/lib/npy";
-import { COOL, HEAT, extent } from "@/lib/ramp";
+import { COOL, extent } from "@/lib/ramp";
 import { seriesColor } from "@/lib/series";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +43,7 @@ export function TilePage() {
           {found.stages.model && (
             <>
               {" "}
-              <Link to={`/cities/${city}/tiles/${tile}/scenario`} className="underline underline-offset-4">
+              <Link to={`/?city=${city}&tiles=${tile}`} className="underline underline-offset-4">
                 Move the levers on this tile
               </Link>
               .
@@ -54,14 +51,16 @@ export function TilePage() {
           )}
         </p>
       </header>
-      <FactsPanel report={found} />
-      {found.baseline ? (
-        <HeatPanel city={city} tile={tile} report={found} />
-      ) : (
-        <Panel title="The day's heat">
+      <Panel title="What the tile is">
+        <TileFacts report={found} />
+      </Panel>
+      <Panel title="The day's heat">
+        {found.baseline ? (
+          <HeatReplay city={city} tile={tile} report={found} />
+        ) : (
           <NextStep missing="baseline physics" command={`sdc simulate baseline ${city} --tile ${tile}`} />
-        </Panel>
-      )}
+        )}
+      </Panel>
       {found.plans.length > 0 ? (
         <PlansPanel city={city} tile={tile} report={found} />
       ) : (
@@ -85,136 +84,6 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
       <h2>{title}</h2>
       <div className="mt-4">{children}</div>
     </section>
-  );
-}
-
-function FactsPanel({ report }: { report: TileReport }) {
-  const facts = report.facts;
-  const rows: [string, string][] = [
-    ["Design day", facts.design_day ?? ""],
-    ["Input quality tier", facts.tier],
-    ["Buildings with heights", integer(facts.buildings)],
-    ["Ground built on", percent(facts.built_fraction)],
-    ["Tree canopy over 2 m", percent(facts.canopy, 1)],
-    ["Residents", integer(facts.population_2020)],
-  ];
-  const centre = facts.urban_centre;
-  return (
-    <Panel title="What the tile is">
-      <div className="grid gap-8 md:grid-cols-2">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-sm">
-          {rows.map(([label, value]) => (
-            <div key={label} className="contents">
-              <dt className="text-muted-foreground">{label}</dt>
-              <dd className="text-right tabular-nums">{value}</dd>
-            </div>
-          ))}
-          {centre && (
-            <div className="contents">
-              <dt className="text-muted-foreground">Urban centre</dt>
-              <dd className="text-right">
-                {centre.name}, {centre.koppen ?? "?"}, income {centre.income ?? "?"}, {integer(centre.tiles)} tiles
-              </dd>
-            </div>
-          )}
-        </dl>
-        <div className="text-sm">
-          <p className="text-muted-foreground">Every layer carries its source.</p>
-          <ul className="mt-2 space-y-1">
-            {Object.entries(facts.sources).map(([layer, source]) => (
-              <li key={layer}>
-                <span className="text-muted-foreground">{layer}</span> {source}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </Panel>
-  );
-}
-
-function HeatPanel({ city, tile, report }: { city: string; tile: string; report: TileReport }) {
-  const [hour, setHour] = useState(15);
-  const [playing, setPlaying] = useState(false);
-  const hours = useQuery({
-    queryKey: ["field", city, tile, "hours", DISPLAY_PX],
-    queryFn: () => fetchField(city, tile, "hours", { size: DISPLAY_PX }),
-  });
-  const scale = useMemo(() => (hours.data ? extent(hours.data.data) : null), [hours.data]);
-  useEffect(() => {
-    if (!playing) return;
-    const timer = window.setInterval(() => setHour((current) => (current + 1) % 24), 400);
-    return () => window.clearInterval(timer);
-  }, [playing]);
-  const statistic = report.hourly[hour];
-  return (
-    <Panel title="The day's heat">
-      <p className="max-w-[60ch] text-sm text-muted-foreground">
-        Mean radiant temperature for every square metre and every hour, on one scale held fixed across the
-        day. Hover any pixel to read its value.
-      </p>
-      <div className="mt-4 grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div>
-          {hours.data && scale ? (
-            <HourField array={hours.data} hour={hour} scale={scale} />
-          ) : (
-            <div className="aspect-square w-full rounded-sm bg-secondary" aria-busy="true" />
-          )}
-          <div className="mt-3 flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="icon"
-              aria-pressed={playing}
-              aria-label={playing ? "Pause" : "Play the day"}
-              onClick={() => setPlaying((current) => !current)}
-            >
-              {playing ? <Pause /> : <Play />}
-            </Button>
-            <Slider
-              value={[hour]}
-              min={0}
-              max={23}
-              step={1}
-              onValueChange={([value]) => setHour(value)}
-              aria-label="Hour of day"
-              className="flex-1"
-            />
-            <span className="w-14 text-right tabular-nums">{String(hour).padStart(2, "0")}:00</span>
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {statistic ? `median ${decimal(statistic.median, 1)} C, peak ${decimal(statistic.max, 1)} C` : ""}
-            {scale ? `, scale ${decimal(scale.min, 0)} to ${decimal(scale.max, 0)} C` : ""}
-          </p>
-        </div>
-        <div>
-          <p className="text-sm text-muted-foreground">Weather on the design day</p>
-          <div className="mt-2">
-            <MetChart met={report.met} hour={hour} />
-          </div>
-          {report.baseline && (
-            <p className="mt-4 text-sm">
-              Doing nothing leaves a population-weighted outdoor exposure of{" "}
-              <strong>{decimal(report.baseline.exposure, 1)} C</strong>, with{" "}
-              <strong>{integer(report.baseline.at_risk)}</strong> people on ground above the stress threshold.
-            </p>
-          )}
-        </div>
-      </div>
-    </Panel>
-  );
-}
-
-function HourField({ array, hour, scale }: { array: NpyArray; hour: number; scale: { min: number; max: number } }) {
-  const [, height, width] = array.shape;
-  const values = useMemo(() => band(array, hour), [array, hour]);
-  return (
-    <FieldCanvas
-      values={values}
-      width={width}
-      height={height}
-      encoding={{ kind: "quantity", ramp: HEAT, scale, unit: " C" }}
-      label={`Mean radiant temperature at ${hour}:00`}
-    />
   );
 }
 
