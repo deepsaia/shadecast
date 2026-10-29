@@ -1,4 +1,7 @@
-"""The serve command: resolve the settings once and hand them to uvicorn, which runs the app."""
+"""The serve command: resolve the settings once and hand them to uvicorn, which runs the app.
+
+uvicorn is imported when the command runs, so ``sdc --help`` never pays for it.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +13,6 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
-import uvicorn
 
 from .console import console
 from .console import error_console
@@ -30,6 +32,8 @@ def serve(
 
     Each default yields to its SDC_HOST, SDC_PORT or SDC_DATA variable, which yields to the flag.
     """
+    import uvicorn
+
     settings = resolve(host, port, data, reload)
     if port_in_use(settings.host, settings.port):
         error_console.print(

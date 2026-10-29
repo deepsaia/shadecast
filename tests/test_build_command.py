@@ -7,9 +7,11 @@ from support.fixtures import fixture_provenance
 from support.fixtures import fixture_tiles
 from typer.testing import CliRunner
 
-from shadecast import cli
+from shadecast import cities
+from shadecast import tile_build
 from shadecast import tile_cli
 from shadecast.cli import app
+from shadecast.corpus import tile_description
 from shadecast.corpus import tile_paths
 from shadecast.corpus.tile import Tile
 
@@ -26,10 +28,10 @@ def _fake_build_tile(city, tile, paths):
 def _offline(monkeypatch, tmp_path):
     monkeypatch.setenv("COLUMNS", "200")
     CALLS.clear()
-    monkeypatch.setattr(cli.cities, "corpus", fixture_corpus)
-    monkeypatch.setattr(cli, "build_tile", _fake_build_tile)
+    monkeypatch.setattr(cities, "corpus", fixture_corpus)
+    monkeypatch.setattr(tile_build, "build_tile", _fake_build_tile)
     monkeypatch.setattr(tile_cli, "load_centres", fixture_centres)
-    monkeypatch.setattr(tile_cli, "describe", fixture_tiles)
+    monkeypatch.setattr(tile_description, "describe", fixture_tiles)
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
     monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
 

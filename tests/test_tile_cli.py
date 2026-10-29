@@ -12,6 +12,7 @@ from shadecast import cities
 from shadecast import tile_cli
 from shadecast.cities import City
 from shadecast.cli import app
+from shadecast.corpus import tile_description
 from shadecast.corpus import tile_paths
 from shadecast.corpus.urban_centre import UrbanCentre
 from shadecast.corpus.urban_centres import UrbanCentres
@@ -111,7 +112,7 @@ def _offline(monkeypatch, tmp_path):
     monkeypatch.setenv("COLUMNS", "200")
     monkeypatch.setattr(cities, "corpus", _fixture_corpus)
     monkeypatch.setattr(tile_cli, "load_centres", _fixture_centres)
-    monkeypatch.setattr(tile_cli, "describe", _fixture_describe)
+    monkeypatch.setattr(tile_description, "describe", _fixture_describe)
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
     monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
 
@@ -140,7 +141,7 @@ def test_list_writes_tiles_json_and_prints_the_densest_first(tmp_path):
 
 def test_list_reads_the_written_file_instead_of_describing_again(monkeypatch):
     assert runner.invoke(app, ["tile", "list", "ahmedabad"]).exit_code == 0
-    monkeypatch.setattr(tile_cli, "describe", _refuse_describe)
+    monkeypatch.setattr(tile_description, "describe", _refuse_describe)
     assert runner.invoke(app, ["tile", "list", "ahmedabad"]).exit_code == 0
     assert runner.invoke(app, ["tile", "list", "ahmedabad", "--refresh"]).exit_code == 1
 

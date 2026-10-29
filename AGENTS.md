@@ -166,6 +166,9 @@ From Robert C. Martin's *The Clean Coder*. How we behave, not what we type.
   `network`, `service`, `server`.
 - `sim/` is the only package that knows the physics engine exists, and it reaches it as a subprocess. Nothing
   under `src/` imports `solweig_gpu`, which is GPL-3.0.
+- The command line answers `--help` in a fraction of a second. A command module (`cli.py`, `*_cli.py`) imports
+  typer, rich, the standard library and the light request, exception, console and path modules at the top; the
+  service a command runs is imported inside the command. `tests/test_startup.py` guards it.
 - The client is built into `src/shadecast/server/static/` by `make frontend` and is never committed. The
   hand-written pages that GitHub Pages publishes live in `src/shadecast/pages/`.
 

@@ -13,6 +13,7 @@ from typer.testing import CliRunner
 from shadecast import cities
 from shadecast import tile_cli
 from shadecast.cli import app
+from shadecast.corpus import tile_description
 from shadecast.corpus import tile_paths
 from shadecast.server.app import build_app
 from shadecast.server.services import Services
@@ -38,7 +39,7 @@ def everything(tmp_path, monkeypatch):
     monkeypatch.setenv("COLUMNS", "200")
     monkeypatch.setattr(cities, "corpus", fixture_corpus)
     monkeypatch.setattr(tile_cli, "load_centres", fixture_centres)
-    monkeypatch.setattr(tile_cli, "describe", fixture_tiles)
+    monkeypatch.setattr(tile_description, "describe", fixture_tiles)
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tiles_root)
     monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
     catalog = CityCatalog(

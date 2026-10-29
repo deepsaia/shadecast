@@ -3,6 +3,7 @@
 Every command here is an engine run written under the tile's physics directory. The baseline
 is the tile as it is, run once and kept. The designs are the planting patterns a surrogate
 learns from, one engine run each. The surrogate commands read what these write.
+What a command runs is imported inside it, so ``sdc --help`` answers before any heavy library loads.
 """
 
 from __future__ import annotations
@@ -17,16 +18,11 @@ from .console import error_console
 from .corpus import tile_paths
 from .service.baseline_request import BaselineRequest
 from .service.channels import channel
-from .service.city_catalog import CityCatalog
-from .service.engine_service import EngineService
 from .service.missing_stage import MissingStage
 from .service.null_progress import NullProgress
 from .service.simulation_request import SimulationRequest
-from .service.simulation_service import SimulationService
-from .service.simulation_service import settings_for
 from .service.unknown_city import UnknownCity
 from .service.unknown_tile import UnknownTile
-from .surrogate.dataset import engine_threads
 from .surrogate.simulation_progress import SimulationProgress
 
 app = typer.Typer(
@@ -48,6 +44,9 @@ def baseline(
 
     The engine is a separate subprocess. A baseline already on disk is kept, not rerun.
     """
+    from .service.city_catalog import CityCatalog
+    from .service.engine_service import EngineService
+
     service = EngineService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT))
     try:
         with console.status(f"[cyan]{city}[/]: baseline physics"):
@@ -89,6 +88,11 @@ def treeshade(
     its engine time, how to stop and how to resume. Designs already on disk are skipped, so
     an interrupted run resumes where it stopped. Put --verbose before the command for debug logging.
     """
+    from .service.city_catalog import CityCatalog
+    from .service.simulation_service import SimulationService
+    from .service.simulation_service import settings_for
+    from .surrogate.dataset import engine_threads
+
     request = SimulationRequest(target=target, tiles=tiles, out=out, jobs=jobs, kind=TREESHADE.kind)
     service = SimulationService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT))
     try:

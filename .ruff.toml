@@ -19,9 +19,16 @@ force-single-line = true
 "src/shadecast/surrogate/training_progress.py" = ["ARG002"]
 "src/shadecast/build_progress.py" = ["ARG002"]
 # A Typer command signature IS the command line interface. Its parameter count is
-# set by what the command needs to expose, not by internal design.
-"src/shadecast/cli.py" = ["PLR0913", "PLR0917"]
-"src/shadecast/surrogate_cli.py" = ["PLR0913", "PLR0917"]
-"src/shadecast/simulate_cli.py" = ["PLR0913", "PLR0917"]
-"src/shadecast/experiments_cli.py" = ["PLR0913", "PLR0917"]
-"src/shadecast/tile_cli.py" = ["PLR0913", "PLR0917"]
+# set by what the command needs to expose, not by internal design. A command imports
+# what it runs inside itself (PLC0415), so `sdc --help` answers before torch, geopandas
+# or rasterio load; tests/test_startup.py guards that.
+"src/shadecast/cli.py" = ["PLR0913", "PLR0917", "PLC0415"]
+"src/shadecast/surrogate_cli.py" = ["PLR0913", "PLR0917", "PLC0415"]
+"src/shadecast/simulate_cli.py" = ["PLR0913", "PLR0917", "PLC0415"]
+"src/shadecast/experiments_cli.py" = ["PLR0913", "PLR0917", "PLC0415"]
+"src/shadecast/tile_cli.py" = ["PLR0913", "PLR0917", "PLC0415"]
+"src/shadecast/corpus_cli.py" = ["PLC0415"]
+"src/shadecast/serve_cli.py" = ["PLC0415"]
+# These two sit on the path of every command and import their one heavy dependency on use.
+"src/shadecast/corpus/tile_paths.py" = ["PLC0415"]
+"src/shadecast/hardware.py" = ["PLC0415"]

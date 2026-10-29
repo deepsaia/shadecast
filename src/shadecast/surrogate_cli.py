@@ -2,6 +2,7 @@
 
 Kept in its own module so the main command surface stays readable, and registered on the
 root app as a sub-command group. The physics a model learns from comes from ``sdc simulate``.
+What a command runs is imported inside it, so ``sdc --help`` answers before any heavy library loads.
 """
 
 from __future__ import annotations
@@ -18,12 +19,9 @@ from .console import error_console
 from .console import pairs_table
 from .corpus import tile_paths
 from .service.assessment_request import AssessmentRequest
-from .service.assessment_service import AssessmentService
 from .service.channels import channel
 from .service.null_progress import NullProgress
 from .service.training_request import TrainingRequest
-from .service.training_service import TrainingService
-from .surrogate import manifest
 from .surrogate.training_progress import TrainingProgress
 from .surrogate.training_settings import TrainingSettings
 
@@ -121,6 +119,8 @@ def train_model(
     stalled against the patience, and how to stop and resume. Put --verbose before the command for
     debug logging in its log box.
     """
+    from .service.training_service import TrainingService
+
     request = TrainingRequest(
         target=target,
         bundle=bundle,
@@ -195,6 +195,8 @@ def assess_model(
     error in the plan score, and how well plans are ordered. A city key assesses its
     newest model; a model directory needs the physics directory and bundle after it.
     """
+    from .service.assessment_service import AssessmentService
+
     request = AssessmentRequest(
         target=target,
         physics_dir=physics_dir,
@@ -228,6 +230,8 @@ def describe(
     as_json: Annotated[bool, typer.Option("--json", help="Emit the manifest as JSON.")] = False,
 ) -> None:
     """Say what a trained model is, from its manifest alone."""
+    from .surrogate import manifest
+
     try:
         model_dir = Path(target) if Path(target).is_dir() else _model_dir(target, model)
         found = manifest.read(model_dir)
@@ -242,5 +246,7 @@ def describe(
 
 
 def _model_dir(target: str, model: str | None) -> Path:
+    from .service.assessment_service import AssessmentService
+
     service = AssessmentService(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT)
     return Path(service.model_summary(target, model).path)

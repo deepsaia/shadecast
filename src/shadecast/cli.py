@@ -6,6 +6,10 @@ rich so that corpus and result tables stay readable as they grow.
 Machine-readable output goes to stdout via ``--json`` on the commands that produce
 results; human output and logs go to the console and stderr respectively, so a
 benchmark run can be piped into an aggregator without stripping decoration.
+
+The service a command runs is imported inside the command. At the top of the module it
+would load torch, geopandas and rasterio before the arguments are parsed, and ``sdc --help``
+would take seconds instead of a fraction of one. ``tests/test_startup.py`` guards this.
 """
 
 from __future__ import annotations
@@ -17,7 +21,6 @@ from typing import Annotated
 import click
 import typer
 
-from . import cities
 from . import tile_cli
 from .build_progress import BuildProgress
 from .console import console
@@ -32,19 +35,13 @@ from .experiments_cli import app as experiments_app
 from .logging_setup import configure
 from .serve_cli import serve
 from .service.build_request import BuildRequest
-from .service.build_service import BuildService
-from .service.city_catalog import CityCatalog
 from .service.missing_stage import MissingStage
 from .service.null_progress import NullProgress
 from .service.plan_request import PlanRequest
-from .service.plan_service import PlanService
-from .service.results_report import ResultsReport
-from .service.run_status import RunStatus
 from .service.unknown_city import UnknownCity
 from .service.unknown_tile import UnknownTile
 from .simulate_cli import app as simulate_app
 from .surrogate_cli import app as surrogate_app
-from .tile_build import build_tile
 from .tile_cli import app as tile_app
 
 logger = logging.getLogger("shadecast")
@@ -98,6 +95,9 @@ def list_cities(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """Show the selected cities, how they are stratified, and what each has on disk."""
+    from . import cities
+    from .service.city_catalog import CityCatalog
+
     selection = cities.corpus()
     listed = CityCatalog.over(selection, tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT).cities()
     summary = cities.summary(selection.values())
@@ -118,6 +118,9 @@ def results(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of tables.")] = False,
 ) -> None:
     """The measured results across every tile with physics: ranking, arrangement verdict, totals."""
+    from .service.city_catalog import CityCatalog
+    from .service.results_report import ResultsReport
+
     catalog = CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT)
     found = ResultsReport(catalog, tile_paths.TILES_ROOT.parent).collect()
     if as_json:
@@ -146,6 +149,9 @@ def runs(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """What is simulating or training right now, and whether its process is still alive."""
+    from .service.city_catalog import CityCatalog
+    from .service.run_status import RunStatus
+
     found = RunStatus(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT), tile_paths.MODELS_ROOT).runs()
     if as_json:
         console.print_json(json.dumps([run.model_dump() for run in found]))
@@ -178,6 +184,9 @@ def build(
     One tile per city by default, the one with most residents. --tiles names tiles or asks
     for all of them; --densest and --stratified pick K the way the corpus selection does.
     """
+    from .service.build_service import BuildService
+    from .tile_build import build_tile
+
     request = BuildRequest(city=city, build_all=build_all, tiles=tiles, densest=densest, stratified=stratified)
     service = BuildService(tile_cli.catalog(), tile_paths.TILES_ROOT, build_tile)
     try:
@@ -200,6 +209,9 @@ def plan(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """Plan an intervention over a tile and score it against doing nothing."""
+    from .service.city_catalog import CityCatalog
+    from .service.plan_service import PlanService
+
     service = PlanService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT))
     request = PlanRequest(target=city, tile=tile, kind=kind, budget_usd=budget)
     try:
