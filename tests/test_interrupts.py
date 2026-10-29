@@ -58,6 +58,20 @@ def test_entry_point_keeps_usage_errors_and_planned_exits(monkeypatch):
     assert cli.entry() == 3
 
 
+def test_entry_point_returns_the_code_click_hands_back_and_0_for_a_finished_command(monkeypatch):
+    def failed(*args, **kwargs):
+        return 2  # outside standalone mode click returns a planned exit's code instead of raising it
+
+    monkeypatch.setattr(cli, "app", failed)
+    assert cli.entry() == 2
+
+    def finished(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(cli, "app", finished)
+    assert cli.entry() == 0
+
+
 def test_simulate_stops_with_the_resume_line(tmp_path, monkeypatch):
     monkeypatch.setattr(tile_paths, "TILES_ROOT", tmp_path)
     monkeypatch.setattr(tile_paths, "MODELS_ROOT", tmp_path / "models")
