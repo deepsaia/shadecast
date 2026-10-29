@@ -11,6 +11,7 @@ from ..exposure import outdoor_weights
 from ..interventions import spec_cost
 from ..objectives import Score
 from ..objectives import benefit
+from ..objectives import exposure_by_threshold
 from ..objectives import score
 from .arrangements import arrangement_of
 from .assumptions import Assumptions
@@ -18,6 +19,7 @@ from .baseline_score import BaselineScore
 from .field_store import FieldStore
 from .physics_facts import PhysicsFacts
 from .plan import Plan
+from .sweep_point import SweepPoint
 from .tile_layers import TileLayers
 
 KIND = "tree"
@@ -32,6 +34,7 @@ class PlanScoring:
     def __init__(self, store: FieldStore) -> None:
         self._store = store
         self._baselines: dict[float, Score] = {}
+        self._baseline_curves: dict[tuple[float, ...], tuple[np.ndarray, np.ndarray]] = {}
 
     def baseline(self, assumptions: Assumptions = JUDGED_ALIKE) -> BaselineScore:
         scored = self._baseline_at(assumptions.threshold)
@@ -49,6 +52,20 @@ class PlanScoring:
         spent = spec_cost(assumptions.spec, placement, RESOLUTION_M)
         after = self._score(self._layers.baseline - response, spent, assumptions.threshold)
         return benefit(self._baseline_at(assumptions.threshold), after)
+
+    def point_over(self, response: np.ndarray, thresholds: tuple[float, ...]) -> SweepPoint:
+        """A placement's four price-free outcomes against doing nothing, the threshold-bound two at every threshold."""
+        after = self._layers.baseline - response
+        before_excess, before_people = self._baseline_over(thresholds)
+        excess, people = exposure_by_threshold(self._outdoors(after), self._layers.weights, np.asarray(thresholds))
+        base = self._baseline_at(thresholds[0])
+        scored = self._score(after, 0.0, thresholds[0])
+        return SweepPoint(
+            exposure_drop=round(base.exposure - scored.exposure, 4),
+            equity_gap_change=round(base.equity_gap - scored.equity_gap, 4),
+            excess_removed=np.round(before_excess - excess, 2).tolist(),
+            people=np.round(before_people - people, 1).tolist(),
+        )
 
     def physics(self) -> PhysicsFacts:
         """How many designs the engine ran and how long each took, from the manifest."""
@@ -68,6 +85,19 @@ class PlanScoring:
             weights=outdoor_weights(self._store.population(), heights),
             baseline=self._store.baseline_daylight(),
         )
+
+    def _baseline_over(self, thresholds: tuple[float, ...]) -> tuple[np.ndarray, np.ndarray]:
+        """Doing nothing at every threshold asked, computed once per set of thresholds."""
+        found = self._baseline_curves.get(thresholds)
+        if found is None:
+            found = exposure_by_threshold(
+                self._outdoors(self._layers.baseline), self._layers.weights, np.asarray(thresholds)
+            )
+            self._baseline_curves[thresholds] = found
+        return found
+
+    def _outdoors(self, field: np.ndarray) -> np.ndarray:
+        return np.where(self._layers.outdoor, field, 0)
 
     def _baseline_at(self, threshold: float) -> Score:
         """Doing nothing, judged at a threshold, scored once per threshold asked."""
@@ -95,7 +125,7 @@ class PlanScoring:
 
     # Three arguments: the field, what it cost, and the threshold it is judged at.
     def _score(self, field: np.ndarray, spent: float, threshold: float) -> Score:
-        return score(np.where(self._layers.outdoor, field, 0), self._layers.weights, spent, threshold)
+        return score(self._outdoors(field), self._layers.weights, spent, threshold)
 
 
 def _by_arrangement_then_coverage(plan: Plan) -> tuple[str, float]:

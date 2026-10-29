@@ -22,6 +22,7 @@ from .city_catalog import CityCatalog
 from .field_store import FieldStore
 from .model_catalog import WEIGHTS
 from .model_catalog import ModelCatalog
+from .model_summary import ModelSummary
 from .plan_scoring import RESOLUTION_M
 from .plan_scoring import PlanScoring
 from .scenario import Scenario
@@ -55,7 +56,7 @@ class ScenarioService:
         """The outcomes of the scenario against doing nothing, with the cooling field behind them."""
         if scenario.kind not in LIVE_KINDS:
             raise ValueError(f"{scenario.kind!r} has no surrogate yet; tree is the one live kind")
-        tile = self._tile(scenario)
+        tile = self.open_tile(scenario.target, scenario.tile)
         judged = Assumptions(
             spec=priced(scenario.kind, scenario.unit_cost, scenario.maintenance),
             threshold=TMRT_STRESS_C if scenario.threshold is None else scenario.threshold,
@@ -88,30 +89,33 @@ class ScenarioService:
         )
         return ScenarioAnswer(outcome, cooling, placement)
 
-    def _tile(self, scenario: Scenario) -> ScenarioTile:
-        paths = self._paths(scenario)
+    def open_tile(self, target: str, tile: str | None) -> ScenarioTile:
+        """The tile as the simulator needs it, read once and kept until a newer model of it appears."""
+        paths = self._paths(target, tile)
+        newest = self._models.newest(paths.urban_centre)
         found = self._tiles.get(paths.root)
-        if found is None:
-            found = self._open(paths, scenario.kind)
+        if found is None or found.model_id != newest.id:
+            found = self._open(paths, newest)
             self._tiles[paths.root] = found
         return found
 
-    def _paths(self, scenario: Scenario) -> TilePaths:
-        if scenario.tile is not None:
-            return self._catalog.tile_paths(scenario.target, scenario.tile)
-        return self._catalog.densest_built(scenario.target)
+    def _paths(self, target: str, tile: str | None) -> TilePaths:
+        if tile is not None:
+            return self._catalog.tile_paths(target, tile)
+        return self._catalog.densest_built(target)
 
-    def _open(self, paths: TilePaths, kind: str) -> ScenarioTile:
-        """Read the tile once: its newest model, the ground the kind may go on, and its scoring."""
-        model = self._models.newest(paths.urban_centre)
+    def _open(self, paths: TilePaths, model: ModelSummary) -> ScenarioTile:
+        """Read the tile once: the model, the ground the live kind may go on, and its scoring."""
         store = FieldStore(paths)
         heights = store.heights()
+        weights = Path(model.path) / WEIGHTS
         return ScenarioTile(
             paths=paths,
             city=str(store.provenance().get("city", {}).get("key")),
             model_id=model.id,
-            surrogate=self._load(Path(model.path) / WEIGHTS, paths.bundle, paths.physics),
-            feasible=feasibility_mask(to_umep(store.land_cover(), heights), heights, kind),
+            weights=weights,
+            surrogate=self._load(weights, paths.bundle, paths.physics),
+            feasible=feasibility_mask(to_umep(store.land_cover(), heights), heights, LIVE_KINDS[0]),
             scoring=PlanScoring(store),
         )
 

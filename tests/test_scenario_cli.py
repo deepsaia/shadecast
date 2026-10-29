@@ -12,6 +12,8 @@ from shadecast.service.scenario import Scenario
 from shadecast.service.scenario_answer import ScenarioAnswer
 from shadecast.service.scenario_outcome import ScenarioOutcome
 from shadecast.service.scenario_service import ScenarioService
+from shadecast.service.sweep import Sweep
+from shadecast.service.sweep_service import SweepService
 
 runner = CliRunner()
 ASKED: list[Scenario] = []
@@ -103,3 +105,26 @@ def test_a_city_without_a_model_leaves_with_1_and_the_training_command(monkeypat
     monkeypatch.setattr(ScenarioService, "evaluate", missing)
     result = runner.invoke(app, ["scenario", "ahmedabad", "--coverage", "0.1"])
     assert result.exit_code == 1 and "sdc surrogate treeshade train" in result.output
+
+
+def test_the_sweep_command_runs_the_modelled_tiles_and_says_what_it_kept(monkeypatch):
+    swept: list[tuple[str, str | None]] = []
+
+    def fake_sweep(self, target: str, tile: str | None) -> Sweep:
+        swept.append((target, tile))
+        return Sweep(
+            model_id="response-unet-ahmedabad-20261028T154005",
+            created="2026-10-29T12:00:00+00:00",
+            coverages=[0.05],
+            thresholds=[45.0],
+            curves=[],
+            designs=[],
+            seconds=27.0,
+            fresh=len(swept) == 1,
+        )
+
+    monkeypatch.setattr(SweepService, "sweep", fake_sweep)
+    result = runner.invoke(app, ["sweep", "ahmedabad", "--tiles", "t43N_249_2547,t43N_250_2547"])
+    assert result.exit_code == 0, result.output
+    assert swept == [("ahmedabad", "t43N_249_2547"), ("ahmedabad", "t43N_250_2547")]
+    assert "27s" in result.output and "kept from disk" in result.output

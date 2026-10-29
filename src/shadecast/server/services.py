@@ -14,6 +14,7 @@ from ..service.results_report import ResultsReport
 from ..service.run_status import RunStatus
 from ..service.scenario_service import ScenarioService
 from ..service.selection import Selection
+from ..service.sweep_service import SweepService
 from ..service.tile_index import TileIndex
 from ..service.tile_reporter import TileReporter
 from .settings import ServerSettings
@@ -28,6 +29,7 @@ class Services:
     models: ModelCatalog
     runs: RunStatus
     scenarios: ScenarioService
+    sweeps: SweepService
 
     @classmethod
     def open(cls, settings: ServerSettings) -> Services:
@@ -39,6 +41,7 @@ class Services:
         index = TileIndex(settings.tiles_root, _never_describe)
         models = ModelCatalog(settings.models_root)
         catalog = CityCatalog(Selection.read(), UrbanCentres.load, index, models)
+        scenarios = ScenarioService(catalog, models)
         return cls(
             catalog=catalog,
             reporter=TileReporter(catalog),
@@ -46,7 +49,8 @@ class Services:
             findings=FindingsReport(settings.data_root),
             models=models,
             runs=RunStatus(catalog, settings.models_root),
-            scenarios=ScenarioService(catalog, models),
+            scenarios=scenarios,
+            sweeps=SweepService(scenarios),
         )
 
 

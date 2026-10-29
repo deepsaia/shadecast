@@ -12,6 +12,7 @@ from shadecast.data.landcover import to_umep
 from shadecast.exposure import outdoor_mask
 from shadecast.exposure import outdoor_weights
 from shadecast.objectives import benefit
+from shadecast.objectives import exposure_by_threshold
 from shadecast.objectives import score
 
 
@@ -104,3 +105,15 @@ def test_cost_is_linear_in_area_and_includes_maintenance():
     assert ten == pytest.approx(10 * one)
     capital = IV.CATALOGUE["tree"].unit_cost
     assert one > capital  # discounted maintenance must be added on top
+
+
+def test_every_threshold_from_one_sort_agrees_with_scoring_each():
+    bh, pop, tmrt = _toy()
+    weights = outdoor_weights(pop, bh)
+    field = np.where(outdoor_mask(bh), tmrt, 0)
+    thresholds = np.array([35.0, 45.0, 59.9, 60.0, 70.0])
+    excess, people = exposure_by_threshold(field, weights, thresholds)
+    for index, threshold in enumerate(thresholds):
+        one = score(field, weights, 0.0, float(threshold))
+        assert excess[index] == pytest.approx(one.excess, rel=1e-4, abs=1e-3)  # score sums in float32
+        assert people[index] == pytest.approx(one.people_at_risk, rel=1e-4, abs=1e-3)

@@ -105,6 +105,27 @@ const OUTCOME = {
   surrogate_seconds: 0.54,
 };
 
+const POINT = (drop: number, people: number[]) => ({
+  exposure_drop: drop,
+  equity_gap_change: -0.2,
+  excess_removed: people.map((count) => count * 10),
+  people,
+});
+
+const SWEEP = {
+  model_id: "response-unet-ahmedabad-20261028T154005",
+  created: "2026-10-29T12:00:00+00:00",
+  coverages: [0.05, 0.3],
+  thresholds: [45, 49],
+  curves: ["clustered", "scattered", "corridor"].map((arrangement) => ({
+    arrangement,
+    points: [POINT(1, [100, 300]), POINT(3, [400, 900])],
+  })),
+  designs: [{ id: "clustered_0105", arrangement: "clustered", coverage: 0.052, point: POINT(0.7, [120, 320]) }],
+  seconds: 25,
+  fresh: true,
+};
+
 function fetchFor(urls: string[]) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
@@ -114,6 +135,7 @@ function fetchFor(urls: string[]) {
     if (url.endsWith("/cities/london/tiles")) return Response.json(TILES.london);
     if (url.endsWith("/grid")) return Response.json(GRID);
     if (url.endsWith("/basemap")) return Response.json({ source: "openfreemap", style_url: "https://example.test/style", attribution: "OpenFreeMap" });
+    if (url.endsWith("/sweep")) return Response.json(SWEEP);
     if (url.endsWith("/report")) return Response.json(REPORT);
     if (url.includes("/scenario/field")) return new Response(encodeNpy([0, 1, 0.5, 0, 0, 1, 1, 0], [2, 2, 2], "<f4"));
     if (url.includes("/scenario?")) return Response.json(OUTCOME);
@@ -224,4 +246,20 @@ it("offers the tile presets and lists tiles without a model as not selectable", 
   const list = await screen.findByRole("listbox", { name: "Tiles" });
   expect(within(list).getByRole("button", { name: /t43N_250_2547/ })).toBeDisabled();
   expect(within(list).getByText("no model yet")).toBeInTheDocument();
+});
+
+it("shows the curves instead of the numbers when asked, and remembers the choice", async () => {
+  const urls: string[] = [];
+  vi.stubGlobal("fetch", fetchFor(urls));
+  renderSimulator("/?city=ahmedabad");
+  await screen.findByRole("region", { name: "Outcomes" });
+  expect(urls.some((url) => url.endsWith("/sweep"))).toBe(false);
+  fireEvent.click(screen.getByRole("button", { name: "curves" }));
+  const curves = await screen.findByRole("region", { name: "Outcome curves" });
+  expect(within(curves).getByText("Degree-hours removed")).toBeInTheDocument();
+  expect(within(curves).getByText(/3.06 at 5.0%/)).toBeInTheDocument();
+  expect(urls.some((url) => url.endsWith("/tiles/t43N_249_2547/sweep"))).toBe(true);
+  expect(window.localStorage.getItem("shadecast.outcomes-view")).toBe("curves");
+  fireEvent.click(screen.getByRole("button", { name: "numbers" }));
+  expect(await screen.findByRole("region", { name: "Outcomes" })).toBeInTheDocument();
 });

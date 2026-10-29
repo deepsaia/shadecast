@@ -22,6 +22,7 @@ from shadecast.service.results_report import ResultsReport
 from shadecast.service.run_status import RunStatus
 from shadecast.service.scenario_service import ScenarioService
 from shadecast.service.selection import Selection
+from shadecast.service.sweep_service import SweepService
 from shadecast.service.tile_index import TileIndex
 from shadecast.service.tile_reporter import TileReporter
 
@@ -36,6 +37,8 @@ def _services(data_root: Path) -> Services:
         TileIndex(tiles_root, fixture_tiles),
         ModelCatalog(data_root / "models"),
     )
+    scenarios = ScenarioService(catalog, ModelCatalog(data_root / "models"))
+
     return Services(
         catalog=catalog,
         reporter=TileReporter(catalog),
@@ -43,7 +46,8 @@ def _services(data_root: Path) -> Services:
         findings=FindingsReport(data_root),
         models=ModelCatalog(data_root / "models"),
         runs=RunStatus(catalog, data_root / "models"),
-        scenarios=ScenarioService(catalog, ModelCatalog(data_root / "models")),
+        scenarios=scenarios,
+        sweeps=SweepService(scenarios),
     )
 
 

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import TYPE_CHECKING
 from typing import Annotated
 
 import click
@@ -43,6 +44,9 @@ from .service.missing_stage import MissingStage
 from .service.null_progress import NullProgress
 from .service.plan_request import PlanRequest
 from .service.scenario import Scenario
+
+if TYPE_CHECKING:
+    from .service.city_catalog import CityCatalog
 from .service.unknown_city import UnknownCity
 from .service.unknown_tile import UnknownTile
 from .simulate_cli import app as simulate_app
@@ -295,6 +299,53 @@ def scenario(
         console.print_json(outcome.model_dump_json())
         return
     console.print(scenario_table(outcome))
+
+
+@app.command()
+def sweep(
+    city: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
+    tiles: Annotated[
+        str | None,
+        typer.Option("--tiles", help="Tile ids separated by commas. Default: every tile of the city with a model."),
+    ] = None,
+) -> None:
+    """Compute the outcome curves of a city's tiles for the simulator and keep them beside each tile.
+
+    The surrogate over a ladder of coverages in every arrangement, once per tile and model. A tile
+    whose curves are current for its newest model is read back, not recomputed.
+    """
+    from .service.city_catalog import CityCatalog
+    from .service.model_catalog import ModelCatalog
+    from .service.scenario_service import ScenarioService
+    from .service.sweep_service import SweepService
+
+    catalog = CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT)
+    service = SweepService(ScenarioService(catalog, ModelCatalog(tile_paths.MODELS_ROOT)))
+    try:
+        chosen = _modelled_tiles(catalog, city, tiles)
+        for tile_id in chosen:
+            with console.status(f"[cyan]{city} {tile_id}[/]: the surrogate over every coverage and arrangement"):
+                found = service.sweep(city, tile_id)
+            how = f"{found.seconds:.0f}s" if found.fresh else "kept from disk"
+            console.print(
+                f"[green]{tile_id}[/]: {len(found.curves)} arrangements at {len(found.coverages)} coverages, "
+                f"{len(found.designs)} engine designs, model {found.model_id}, {how}"
+            )
+    except (ValueError, LookupError) as exc:
+        fail(exc)
+
+
+def _modelled_tiles(catalog: CityCatalog, city: str, tiles: str | None) -> list[str]:
+    """The tiles named, else every tile of the city that a model learned from; none is a missing stage.
+
+    Three arguments: the catalog that knows the tiles, the city, and the names a person gave.
+    """
+    if tiles:
+        return [part.strip() for part in tiles.split(",") if part.strip()]
+    found = [location.tile for location in catalog.tiles_on_disk(city) if location.stages.model]
+    if not found:
+        raise MissingStage("model", city, f"sdc surrogate treeshade train {city}")
+    return found
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ COOLING_C = 2.0
 
 class FakeSurrogate:
     loads: ClassVar[list[tuple[Path, Path, Path]]] = []
+    predictions: ClassVar[int] = 0
 
     @classmethod
     def load(cls, checkpoint: Path, bundle: Path, physics_dir: Path) -> FakeSurrogate:
@@ -19,4 +20,5 @@ class FakeSurrogate:
         return cls()
 
     def predict(self, placement: np.ndarray) -> tuple[np.ndarray, float]:
+        FakeSurrogate.predictions += 1
         return placement.astype("float32") * COOLING_C, 0.01

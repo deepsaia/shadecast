@@ -17,6 +17,7 @@ import {
   type ScenarioOutcome,
   type TileGrid,
   type Basemap,
+  type Sweep,
   type TileReport,
   type TileStatistics,
   type TileSummary,
@@ -88,6 +89,7 @@ export const paths = {
     `/cities/${encodeURIComponent(city)}/tiles/${encodeURIComponent(tile)}/scenario${leverSearch(levers)}`,
   scenarioField: (city: string, tile: string, levers: ScenarioLevers) =>
     `/cities/${encodeURIComponent(city)}/tiles/${encodeURIComponent(tile)}/scenario/field${leverSearch(levers)}`,
+  sweep: (city: string, tile: string) => `/cities/${encodeURIComponent(city)}/tiles/${encodeURIComponent(tile)}/sweep`,
   results: () => "/results",
   findings: () => "/findings",
   references: () => "/references",
@@ -109,6 +111,7 @@ export const api = {
     tileReport(await getJson<RawTileReport>(paths.cityReport(city))),
   scenario: (city: string, tile: string, levers: ScenarioLevers) =>
     getJson<ScenarioOutcome>(paths.scenario(city, tile, levers)),
+  sweep: (city: string, tile: string) => getJson<Sweep>(paths.sweep(city, tile)),
   results: async (): Promise<Results> => results(await getJson<RawResults>(paths.results())),
   findings: () => getJson<Findings>(paths.findings()),
   references: () => getJson<ReferenceGroup[]>(paths.references()),

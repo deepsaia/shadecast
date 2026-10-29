@@ -263,6 +263,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cities/{city}/tiles/{tile}/sweep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sweep
+         * @description The outcome curves of the tile for its newest model, computed on the first ask and kept after.
+         */
+        get: operations["sweep_api_v1_cities__city__tiles__tile__sweep_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/findings": {
         parameters: {
             query?: never;
@@ -702,6 +722,56 @@ export interface components {
             results: number;
             /** Tiles */
             tiles: number;
+        };
+        /** Sweep */
+        Sweep: {
+            /** Coverages */
+            coverages: number[];
+            /** Created */
+            created: string;
+            /** Curves */
+            curves: components["schemas"]["SweepCurve"][];
+            /** Designs */
+            designs: components["schemas"]["SweepDesign"][];
+            /**
+             * Fresh
+             * @default true
+             */
+            fresh: boolean;
+            /** Model Id */
+            model_id: string;
+            /** Seconds */
+            seconds: number;
+            /** Thresholds */
+            thresholds: number[];
+        };
+        /** SweepCurve */
+        SweepCurve: {
+            /** Arrangement */
+            arrangement: string;
+            /** Points */
+            points: components["schemas"]["SweepPoint"][];
+        };
+        /** SweepDesign */
+        SweepDesign: {
+            /** Arrangement */
+            arrangement: string;
+            /** Coverage */
+            coverage: number;
+            /** Id */
+            id: string;
+            point: components["schemas"]["SweepPoint"];
+        };
+        /** SweepPoint */
+        SweepPoint: {
+            /** Equity Gap Change */
+            equity_gap_change: number;
+            /** Excess Removed */
+            excess_removed: number[];
+            /** Exposure Drop */
+            exposure_drop: number;
+            /** People */
+            people: number[];
         };
         /** TileFacts */
         TileFacts: {
@@ -1352,6 +1422,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sweep_api_v1_cities__city__tiles__tile__sweep_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                city: string;
+                tile: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Sweep"];
+                };
             };
             /** @description Validation Error */
             422: {
