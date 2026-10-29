@@ -5,22 +5,35 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { ARRANGEMENTS, type Arrangement, seriesColor } from "@/lib/series";
 
 
+/** A point that is not a stored design: a live scenario, drawn as a diamond in the accent color. */
+export interface LivePoint {
+  exposure_drop: number;
+  people: number;
+  label: string;
+}
+
+const LIVE_COLOR = "var(--sun)";
+
 /**
  * Every plan on both objectives: the average exposure drop against the people moved below the
- * threshold. One fixed color per arrangement, the selected plan drawn larger, a click selects.
+ * threshold. One fixed color per arrangement, the selected plan drawn larger, a click selects, and a
+ * live point sits among them when there is one.
  */
 export function TradeoffChart({
   plans,
-  selected,
+  selected = null,
   onSelect,
+  live,
 }: {
   plans: Plan[];
-  selected: string | null;
-  onSelect: (id: string) => void;
+  selected?: string | null;
+  onSelect?: (id: string) => void;
+  live?: LivePoint;
 }) {
-  const config = Object.fromEntries(
-    ARRANGEMENTS.map((arrangement) => [arrangement, { label: arrangement, color: seriesColor(arrangement) }]),
-  );
+  const config = Object.fromEntries([
+    ...ARRANGEMENTS.map((arrangement) => [arrangement, { label: arrangement, color: seriesColor(arrangement) }]),
+    ...(live ? [[live.label, { label: live.label, color: LIVE_COLOR }]] : []),
+  ]);
   return (
     <ChartContainer config={config} className="h-64 w-full">
       <ScatterChart margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
@@ -61,10 +74,20 @@ export function TradeoffChart({
             fill={seriesColor(arrangement)}
             stroke="var(--card)"
             strokeWidth={1.5}
-            onClick={(point) => onSelect(String((point as { id?: string }).id))}
-            cursor="pointer"
+            onClick={(point) => onSelect?.(String((point as { id?: string }).id))}
+            cursor={onSelect ? "pointer" : "default"}
           />
         ))}
+        {live && (
+          <Scatter
+            name={live.label}
+            data={[{ ...live, id: live.label, arrangement: live.label, size: 3 }]}
+            fill={LIVE_COLOR}
+            shape="diamond"
+            stroke="var(--foreground)"
+            strokeWidth={1.5}
+          />
+        )}
       </ScatterChart>
     </ChartContainer>
   );
