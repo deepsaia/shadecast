@@ -54,7 +54,7 @@ def test_a_live_lock_is_a_simulation_run_with_its_progress(tmp_path):
     (physics / SIMULATION_LOCK).write_text(str(os.getpid()))
     [run] = _status(tmp_path).runs()
     assert run.kind == "simulation" and run.city == "ahmedabad" and run.tile == TILE
-    assert run.alive is True and run.designs_done == 3 and run.designs_planned == 17
+    assert run.alive is True and run.designs_done == 3 and run.designs_planned == 22
     assert run.started
 
 

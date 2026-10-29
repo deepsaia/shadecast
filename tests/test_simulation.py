@@ -109,6 +109,57 @@ def test_designs_run_side_by_side_and_the_manifest_keeps_plan_order(bundle, tmp_
     assert not (out / ".simulating.lock").exists()
 
 
+EARLIER_SEVENTEEN = (
+    *(f"sparse_probe_{seed:04d}" for seed in range(4)),
+    *(f"clustered_{100 + percent:04d}" for percent in (1, 2, 5, 10, 20, 30)),
+    *(f"random_uniform_{200 + percent:04d}" for percent in (1, 5, 10, 20)),
+    *(f"corridor_{300 + percent:04d}" for percent in (2, 5, 10)),
+)
+
+
+def test_the_default_plan_gives_every_dense_family_the_same_ladder():
+    plan = dataset.default_plan()
+    ids = [dataset.entry_id(spec["family"], spec["seed"]) for spec in plan]
+    assert len(plan) == 22 and len(set(ids)) == 22
+    for family in ("clustered", "random_uniform", "corridor"):
+        rungs = [spec["params"]["coverage"] for spec in plan if spec["family"] == family]
+        assert rungs == list(dataset.LADDER), family
+    assert set(EARLIER_SEVENTEEN) <= set(ids)
+    assert set(ids) - set(EARLIER_SEVENTEEN) == {
+        "random_uniform_0202",
+        "random_uniform_0230",
+        "corridor_0301",
+        "corridor_0320",
+        "corridor_0330",
+    }
+
+
+def test_a_tile_with_the_earlier_seventeen_runs_only_the_five_new_designs(bundle, tmp_path, monkeypatch):
+    engine = FakeEngine()
+    monkeypatch.setattr(dataset, "run", engine)
+    out = tmp_path / "physics"
+    (out / "baseline").mkdir(parents=True)
+    np.save(out / "baseline" / "tmrt_daylight.npy", np.full((SIDE, SIDE), 50.0, dtype="float32"))
+    for design_id in EARLIER_SEVENTEEN:
+        folder = out / design_id
+        folder.mkdir()
+        placement = np.zeros((SIDE, SIDE), dtype=bool)
+        placement[0, 0] = True
+        np.savez_compressed(folder / "response.npz", placement=placement, response=np.zeros((SIDE, SIDE), "float32"))
+        (folder / "meta.json").write_text(json.dumps({"id": design_id, "engine_seconds": 1.0}))
+    summary = dataset.simulate(bundle, out, SimulationSettings(jobs=1))
+    ran = sorted(path.name for path in engine.calls)
+    assert ran == ["corridor_0301", "corridor_0320", "corridor_0330", "random_uniform_0202", "random_uniform_0230"]
+    assert summary["entries"] == 22
+    assert [entry["id"] for entry in summary["manifest"]][:5] == [
+        "sparse_probe_0000",
+        "sparse_probe_0001",
+        "sparse_probe_0002",
+        "sparse_probe_0003",
+        "clustered_0101",
+    ]
+
+
 def test_a_second_run_resumes_without_touching_the_engine(bundle, tmp_path, monkeypatch):
     engine = FakeEngine()
     monkeypatch.setattr(dataset, "run", engine)

@@ -33,7 +33,7 @@ sdc build savannah                # assemble the densest tile's bundle, about a 
 sdc simulate baseline savannah    # the baseline physics for that tile, kept beside its bundle
 sdc tile show savannah            # where its tiles live and which stages have run; reads disk only
 sdc tile report savannah          # the tile's baseline, its physics run and every scored plan
-sdc simulate treeshade savannah --jobs 4   # physics for the 17 tree designs, 4 at a time
+sdc simulate treeshade savannah --jobs 4   # physics for the 22 tree designs, 4 at a time
 sdc surrogate treeshade train savannah      # fit the tree shade surrogate on that tile
 sdc surrogate treeshade assess savannah     # judge the newest model against the engine
 sdc scenario savannah --arrangement scattered --coverage 0.05   # move the levers, read the outcomes
@@ -43,7 +43,8 @@ sdc serve                         # the API and the dashboard for whatever data 
 ```
 
 Every command takes the city name and means its densest tile unless told otherwise. One
-simulation run is one tile: the 17 designs are 17 engine runs over the same square kilometre.
+simulation run is one tile: the 22 designs are 22 engine runs over the same square kilometre, and a design
+already on disk is kept, so extending the plan runs only what is new.
 `sdc simulate treeshade` and `sdc surrogate treeshade train` show a live dashboard while they run; Ctrl-C stops
 either cleanly and prints the command that resumes it, and `--verbose` before the command fills the dashboard's
 log box.
