@@ -4,7 +4,7 @@ A header with the tile and the engine setup, a status line with the elapsed time
 the plan with the pace and the time left, sparklines of engine seconds and cooling per
 design, a live hardware reading, the designs running now with their engine phase, a table of
 the last ten finished, how to stop and resume, and a rolling log box. The box shows warnings
-and errors always and the chatty lines only when the command ran with -v. Quiet mode renders
+and errors always and the chatty lines only when the command ran with --verbose. Quiet mode renders
 nothing and is what the library and the tests use.
 """
 

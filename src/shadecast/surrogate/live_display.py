@@ -3,7 +3,7 @@
 A rich Live redraws a dashboard twice a second while its operation runs. Log records go into a
 rolling box inside the display instead of the terminal, so the picture stays whole: the root
 logger's handlers are set aside on start and put back on stop. The box shows warnings and
-errors always, and every record when the command ran with -v. Without a console nothing is
+errors always, and every record when the command ran with --verbose. Without a console nothing is
 rendered, which is what the library and the tests use.
 """
 
@@ -101,5 +101,5 @@ def clock(seconds: float) -> str:
 
 
 def verbose_logging() -> bool:
-    """True when the command ran with -v, which sets the root logger to DEBUG."""
+    """True when the command ran with --verbose, which sets the root logger to DEBUG."""
     return logging.getLogger().getEffectiveLevel() <= logging.DEBUG

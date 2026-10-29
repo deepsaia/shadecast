@@ -87,7 +87,7 @@ app.command("serve")(serve)
 
 @app.callback()
 def main(
-    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Debug logging.")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", help="Debug logging.")] = False,
 ) -> None:
     """Configure logging before any command runs."""
     configure(verbose=verbose)

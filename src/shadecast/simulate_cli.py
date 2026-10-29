@@ -80,14 +80,14 @@ def treeshade(
     out: Annotated[Path | None, typer.Option("--out", help="Where to write responses, for one tile.")] = None,
     jobs: Annotated[
         int,
-        typer.Option("--jobs", "-j", help="Engine runs side by side. The baseline runs alone first."),
+        typer.Option("--jobs", help="Engine runs side by side. The baseline runs alone first."),
     ] = 1,
 ) -> None:
     """Run the tree shade designs through the engine, one tile at a time.
 
     Each tile gets its own dashboard: a bar over the plan, a line per finished design with
     its engine time, how to stop and how to resume. Designs already on disk are skipped, so
-    an interrupted run resumes where it stopped. Put -v before the command for debug logging.
+    an interrupted run resumes where it stopped. Put --verbose before the command for debug logging.
     """
     request = SimulationRequest(target=target, tiles=tiles, out=out, jobs=jobs, kind=TREESHADE.kind)
     service = SimulationService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT))

@@ -118,7 +118,7 @@ def train_model(
     measures transfer to unseen geometry. Those are different questions.
 
     A dashboard shows the epochs as they run, with the best so far, how long the skill has
-    stalled against the patience, and how to stop and resume. Put -v before the command for
+    stalled against the patience, and how to stop and resume. Put --verbose before the command for
     debug logging in its log box.
     """
     request = TrainingRequest(
