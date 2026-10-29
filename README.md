@@ -89,9 +89,9 @@ make frontend                     # install the client's packages and build it i
 sdc serve                         # http://127.0.0.1:8765/ with the API at /api/docs
 ```
 
-A city with a trained model has a scenario page, `/cities/<city>/scenario`: choose the arrangement and the coverage
-or budget, and the outcomes, the cooling map and the placement answer from the surrogate while the stored
-engine-verified designs stay on the chart beside them.
+The first page is the simulator. Pick a city and its tiles, the policy and the design under it, and the
+coverage or budget, and the outcomes, the cooling map and the placement answer from the surrogate while the
+stored engine-verified designs stay on the chart beside them. The cities list is at `/cities`.
 
 An installed copy needs no Node. `make wheel` builds the client and then a wheel that carries it, so
 `sdc serve` from a `pip install dist/shadecast-*.whl` serves the dashboard too.
