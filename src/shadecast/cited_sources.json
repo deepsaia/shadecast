@@ -426,6 +426,28 @@
       "year": 1969,
       "doi": "10.1016/0038-092X(69)90047-4",
       "used_for": "The solar declination formula behind the sun-path input channels of the surrogate."
+    },
+    {
+      "key": "openfreemap",
+      "group": "data",
+      "title": "OpenFreeMap vector tiles and map styles",
+      "authors_or_publisher": "OpenFreeMap, from OpenStreetMap data",
+      "licence": "Tiles free to use; the data is ODbL 1.0, OpenStreetMap contributors",
+      "url": "https://openfreemap.org/",
+      "endpoint": "https://tiles.openfreemap.org/styles/positron",
+      "access": "anonymous",
+      "short": "OpenFreeMap tiles, OpenStreetMap data",
+      "used_for": "The street basemap under the tile grid on the simulator's map, fetched by the browser at view time with no key. Every layer on top of it is our own data, and the map still draws them when the basemap is unreachable."
+    },
+    {
+      "key": "maplibre_gl",
+      "group": "method",
+      "title": "MapLibre GL JS, an open-source map renderer",
+      "authors_or_publisher": "MapLibre contributors",
+      "release": "6.16.0",
+      "licence": "BSD-3-Clause",
+      "url": "https://maplibre.org/",
+      "used_for": "Draws the city map in the browser: the tile grid, the chosen tiles and the cooling field laid over them."
     }
   ]
 }

@@ -6,6 +6,7 @@ import { api, ApiError } from "@/api/client";
 import { fetchScenarioField } from "@/api/fields";
 import type { CitySummary, ScenarioOutcome, TileSummary } from "@/api/models";
 import { Chips } from "@/components/Chips";
+import { CityMap, type Zoom } from "@/components/CityMap";
 import { FieldCanvas } from "@/components/FieldCanvas";
 import { HeatReplay } from "@/components/HeatReplay";
 import { NextStep } from "@/components/NextStep";
@@ -15,6 +16,7 @@ import { TradeoffChart } from "@/components/TradeoffChart";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { aggregate, type Totals } from "@/lib/aggregate";
+import { coolingImage } from "@/lib/overlay";
 import { useDebounced } from "@/lib/debounce";
 import { decimal, integer, percent } from "@/lib/format";
 import { band, type NpyArray } from "@/lib/npy";
@@ -33,6 +35,7 @@ import {
   setLocked,
 } from "@/lib/scale";
 import { seriesColor } from "@/lib/series";
+import { type Cell, cellBounds, cellsOf } from "@/lib/tile_grid";
 import { PRESETS, type Preset, applyPreset } from "@/lib/tile_presets";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +54,9 @@ export function SimulatorPage() {
   );
   const focused = params.get("focus") ?? chosen[0] ?? "";
   const city = cities.data?.find((found) => found.key === cityKey);
+  const grid = useQuery({ queryKey: ["grid", cityKey], queryFn: () => api.grid(cityKey), enabled: cityKey !== "" });
+  const basemap = useQuery({ queryKey: ["basemap"], queryFn: api.basemap });
+  const cells = useMemo(() => (grid.data ? cellsOf(grid.data) : []), [grid.data]);
 
   function choose(next: { city?: string; tiles?: string[]; focus?: string }) {
     const search = new URLSearchParams();
@@ -92,9 +98,12 @@ export function SimulatorPage() {
         <Scenario
           city={city}
           tiles={tiles.data ?? []}
+          cells={cells}
+          basemap={basemap.data?.style_url}
           chosen={chosen}
           focused={focused}
           onFocus={(tile) => choose({ focus: tile })}
+          onPick={(tile) => choose({ tiles: chosen.includes(tile) ? chosen : [...chosen, tile], focus: tile })}
         />
       )}
     </article>
@@ -208,15 +217,21 @@ function tileSummary(chosen: string[], modelled: number, total: number): string 
 function Scenario({
   city,
   tiles,
+  cells,
+  basemap,
   chosen,
   focused,
   onFocus,
+  onPick,
 }: {
   city: CitySummary;
   tiles: TileSummary[];
+  cells: Cell[];
+  basemap: string | undefined;
   chosen: string[];
   focused: string;
   onFocus: (tile: string) => void;
+  onPick: (tile: string) => void;
 }) {
   const [policyKey, setPolicyKey] = useState("tree");
   const policy = policyOf(policyKey);
@@ -245,6 +260,16 @@ function Scenario({
     queryFn: () => fetchScenarioField(city.key, focused, { ...levers, size: DISPLAY_PX }),
     placeholderData: keepPreviousData,
   });
+  const [zoom, setZoom] = useState<Zoom>("city");
+  const [coolingOnMap, setCoolingOnMap] = useState(false);
+  const focusedCell = cells.find((cell) => cell.id === focused);
+  const overlay = useMemo(() => {
+    if (!coolingOnMap || !fields.data || !focusedCell) return undefined;
+    const cooling = band(fields.data, 0);
+    const [, height, width] = fields.data.shape;
+    const url = coolingImage(cooling, width, height, { min: 0, max: extent(cooling).max });
+    return url ? { url, bounds: cellBounds(focusedCell) } : undefined;
+  }, [coolingOnMap, fields.data, focusedCell]);
 
   function choosePolicy(key: string) {
     setPolicyKey(key);
@@ -280,6 +305,41 @@ function Scenario({
           <ScaleSliders scale={shown} rate={rate} outcome={focusedOutcome} onChange={setScale} />
         </Lever>
       </section>
+      {cells.length > 0 && basemap && (
+        <section aria-label="Where in the city" className="mt-10 border-t pt-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+            <h2>
+              Where in {city.name} <span className="font-normal text-muted-foreground">{integer(cells.length)} tiles of one square kilometre</span>
+            </h2>
+            <div className="flex flex-wrap items-center gap-4">
+              <Chips
+                label="Map view"
+                options={[
+                  { key: "city", label: "whole city" },
+                  { key: "tile", label: "the tile" },
+                ]}
+                value={zoom}
+                onChange={(key) => setZoom(key as Zoom)}
+              />
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={coolingOnMap}
+                  onCheckedChange={(checked) => setCoolingOnMap(checked === true)}
+                  aria-label="Cooling on the map"
+                />
+                cooling on the map
+              </label>
+            </div>
+          </div>
+          <p className="mt-1 max-w-[70ch] text-sm text-muted-foreground">
+            Ink is residents per tile; the sun outline marks a tile with a model, which a click chooses. The street
+            map underneath is the one layer that is not our data.
+          </p>
+          <div className="mt-4">
+            <CityMap style={basemap} cells={cells} chosen={chosen} focused={focused} zoom={zoom} overlay={overlay} onPick={onPick} />
+          </div>
+        </section>
+      )}
       <section className="mt-10 border-t pt-6">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
           <h2>

@@ -15,6 +15,8 @@ import {
   type Results,
   results,
   type ScenarioOutcome,
+  type TileGrid,
+  type Basemap,
   type TileReport,
   type TileStatistics,
   type TileSummary,
@@ -64,9 +66,11 @@ export async function getJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const paths = {
   health: () => "/health",
+  basemap: () => "/basemap",
   cities: () => "/cities",
   city: (city: string) => `/cities/${encodeURIComponent(city)}`,
   tiles: (city: string) => `/cities/${encodeURIComponent(city)}/tiles`,
+  grid: (city: string) => `/cities/${encodeURIComponent(city)}/grid`,
   report: (city: string, tile: string) =>
     `/cities/${encodeURIComponent(city)}/tiles/${encodeURIComponent(tile)}/report`,
   cityReport: (city: string) => `/cities/${encodeURIComponent(city)}/report`,
@@ -91,9 +95,11 @@ export const paths = {
 
 export const api = {
   health: () => getJson<Health>(paths.health()),
+  basemap: () => getJson<Basemap>(paths.basemap()),
   cities: () => getJson<CitySummary[]>(paths.cities()),
   city: (city: string) => getJson<TileStatistics>(paths.city(city)),
   tiles: (city: string) => getJson<TileSummary[]>(paths.tiles(city)),
+  grid: (city: string) => getJson<TileGrid>(paths.grid(city)),
   report: async (city: string, tile: string): Promise<TileReport> =>
     tileReport(await getJson<RawTileReport>(paths.report(city, tile))),
   cityReport: async (city: string): Promise<TileReport> =>

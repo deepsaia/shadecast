@@ -13,6 +13,7 @@ from . import errors
 from . import pages
 from . import spa
 from .request_id import RequestIdMiddleware
+from .routes import basemap
 from .routes import channels
 from .routes import cities
 from .routes import fields
@@ -49,6 +50,7 @@ def build_app(settings: ServerSettings, services: Services) -> FastAPI:
     errors.install(app)
     routers = (
         health.router,
+        basemap.router,
         cities.router,
         tiles.router,
         fields.router,

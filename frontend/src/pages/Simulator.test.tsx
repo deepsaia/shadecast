@@ -2,9 +2,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 
+import { FakeMap, fakeMaplibre } from "@/test/fake_maplibre";
 import { encodeNpy } from "@/test/npy_writer";
 
 import { SimulatorPage } from "./Simulator";
+
+vi.mock("maplibre-gl", () => ({ default: fakeMaplibre, ...fakeMaplibre }));
+vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
 
 const STAGES = (model: boolean) => ({ bundle: true, baseline: model, physics: model, model, results: false });
 
@@ -34,6 +38,16 @@ const CITIES = [
     stages: { tiles: 365, bundle: 2, baseline: 1, physics: 1, model: 1, results: 0 },
   },
 ];
+
+const GRID = {
+  columns: ["west", "south", "east", "north", "density_per_km2", "residents", "modelled"],
+  ids: ["t43N_249_2547", "t43N_250_2547"],
+  cells: [
+    [72.57, 23.13, 72.58, 23.139, 101644, 101644, 1],
+    [72.58, 23.13, 72.59, 23.139, 40000, 40000, 0],
+  ],
+  described: 2,
+};
 
 const TILES = {
   ahmedabad: [
@@ -95,6 +109,8 @@ function fetchFor(urls: string[]) {
     if (url.endsWith("/cities")) return Response.json(CITIES);
     if (url.endsWith("/cities/ahmedabad/tiles")) return Response.json(TILES.ahmedabad);
     if (url.endsWith("/cities/london/tiles")) return Response.json(TILES.london);
+    if (url.endsWith("/grid")) return Response.json(GRID);
+    if (url.endsWith("/basemap")) return Response.json({ source: "openfreemap", style_url: "https://example.test/style", attribution: "OpenFreeMap" });
     if (url.endsWith("/report")) return Response.json(REPORT);
     if (url.includes("/scenario/field")) return new Response(encodeNpy([0, 1, 0.5, 0, 0, 1, 1, 0], [2, 2, 2], "<f4"));
     if (url.includes("/scenario?")) return Response.json(OUTCOME);
@@ -119,6 +135,9 @@ function renderSimulator(path = "/") {
 }
 
 afterEach(() => vi.unstubAllGlobals());
+beforeEach(() => {
+  FakeMap.instances.length = 0;
+});
 
 it("opens on the first city with a model and its densest tile, with the outcomes row on top", async () => {
   const urls: string[] = [];
@@ -143,6 +162,8 @@ it("opens on the first city with a model and its densest tile, with the outcomes
   expect(await screen.findByText("What the tile is")).toBeInTheDocument();
   expect(screen.getByText("The day's heat")).toBeInTheDocument();
   expect(screen.getByText("Input quality tier").nextElementSibling).toHaveTextContent("A");
+  expect(screen.getByRole("application", { name: "City map" })).toBeInTheDocument();
+  await waitFor(() => expect(FakeMap.instances[0]?.filters.get("grid-focused")).toEqual(["==", ["get", "id"], "t43N_249_2547"]));
 });
 
 it("lets a person pick a design and another city from the dropdown", async () => {

@@ -16,6 +16,7 @@ from shadecast.data import population
 from shadecast.data import rasters
 from shadecast.data import regions
 from shadecast.network import graph
+from shadecast.server.routes import basemap
 from shadecast.sim import runner
 
 DATA_GROUP = "data"
@@ -57,6 +58,7 @@ def test_every_data_source_is_anonymous_except_landsat():
         validation.SOURCE,
         runner.SOURCE,
         ucdb.SOURCE,
+        basemap.SOURCE,
     ],
 )
 def test_every_module_names_a_source_the_registry_knows(key):
@@ -76,6 +78,7 @@ def test_every_data_entry_is_named_by_a_module():
         regions.SOURCE,
         graph.SOURCE,
         ucdb.SOURCE,
+        basemap.SOURCE,
     }
     data_keys = {e["key"] for e in sources.registry()["sources"] if e["group"] == DATA_GROUP}
     unnamed = data_keys - named

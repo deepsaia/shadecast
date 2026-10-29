@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter
 from fastapi import Depends
 
+from ...service.tile_grid import TileGrid
 from ...service.tile_location import TileLocation
 from ...service.tile_report import TileReport
 from ...service.tile_summary import TileSummary
@@ -19,6 +20,12 @@ router = APIRouter(tags=["tiles"])
 @router.get("/cities/{city}/tiles", response_model=list[TileSummary])
 def tiles(city: str, found: Annotated[Services, Depends(services)]) -> list[TileSummary]:
     return found.catalog.tiles(city)
+
+
+@router.get("/cities/{city}/grid", response_model=TileGrid)
+def grid(city: str, found: Annotated[Services, Depends(services)]) -> TileGrid:
+    """The city's 1 km tiles as a grid for a map, light enough for thousands of cells."""
+    return found.catalog.grid(city)
 
 
 @router.get("/cities/{city}/report", response_model=TileReport)

@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/api/v1/basemap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Basemap
+         * @description Where the browser fetches the street map at view time, and the credit it owes.
+         */
+        get: operations["basemap_api_v1_basemap_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/channels": {
         parameters: {
             query?: never;
@@ -84,6 +104,26 @@ export interface paths {
         };
         /** City */
         get: operations["city_api_v1_cities__city__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cities/{city}/grid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Grid
+         * @description The city's 1 km tiles as a grid for a map, light enough for thousands of cells.
+         */
+        get: operations["grid_api_v1_cities__city__grid_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -333,6 +373,15 @@ export interface components {
             at_risk: number;
             /** Exposure */
             exposure: number;
+        };
+        /** Basemap */
+        Basemap: {
+            /** Attribution */
+            attribution: string;
+            /** Source */
+            source: string;
+            /** Style Url */
+            style_url: string;
         };
         /** ChannelSummary */
         ChannelSummary: {
@@ -676,6 +725,28 @@ export interface components {
             tier: string;
             urban_centre: components["schemas"]["UrbanCentreFacts"] | null;
         };
+        /** TileGrid */
+        TileGrid: {
+            /** Cells */
+            cells: number[][];
+            /**
+             * Columns
+             * @default [
+             *       "west",
+             *       "south",
+             *       "east",
+             *       "north",
+             *       "density_per_km2",
+             *       "residents",
+             *       "modelled"
+             *     ]
+             */
+            columns: string[];
+            /** Described */
+            described: number;
+            /** Ids */
+            ids: string[];
+        };
         /** TileLocation */
         TileLocation: {
             /** Baseline */
@@ -841,6 +912,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    basemap_api_v1_basemap_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Basemap"];
+                };
+            };
+        };
+    };
     channels_api_v1_channels_get: {
         parameters: {
             query?: never;
@@ -967,6 +1058,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TileStatistics"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    grid_api_v1_cities__city__grid_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                city: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TileGrid"];
                 };
             };
             /** @description Validation Error */

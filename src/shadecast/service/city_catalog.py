@@ -22,6 +22,7 @@ from .model_catalog import ModelCatalog
 from .selection import Selection
 from .stage_counting import count_stages
 from .stage_counts import StageCounts
+from .tile_grid import TileGrid
 from .tile_index import TileIndex
 from .tile_location import TileLocation
 from .tile_statistics import TileStatistics
@@ -124,6 +125,12 @@ class CityCatalog:
         """Every 1 km tile of the centre, densest first, with the stages each has reached."""
         centre = self.centre(text)
         return self._summaries(centre, self._index.read_or_describe(centre))
+
+    def grid(self, text: str) -> TileGrid:
+        """The centre's tiles as a grid for a map, each flagged when a model learned from it."""
+        centre = self.centre(text)
+        rows = self._index.read_or_describe(centre).get("tiles", [])
+        return TileGrid.of(rows, self._models.tiles_with_models(centre.id))
 
     def refresh(self, text: str) -> list[TileSummary]:
         """Describe the centre's tiles again, then list them as `tiles` does."""
