@@ -1,6 +1,6 @@
 """Does spatial arrangement change what a fixed budget buys?
 
-This is the experiment the benchmark exists to make possible, and it needs no
+This is the experiment the simulator exists to make possible, and it needs no
 surrogate: the simulated designs already contain matched pairs of plans that spend
 the same money in different spatial patterns, each with a real engine response.
 

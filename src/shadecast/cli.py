@@ -5,7 +5,7 @@ rich so that corpus and result tables stay readable as they grow.
 
 Machine-readable output goes to stdout via ``--json`` on the commands that produce
 results; human output and logs go to the console and stderr respectively, so a
-benchmark run can be piped into an aggregator without stripping decoration.
+run over many tiles can be piped into an aggregator without stripping decoration.
 
 The service a command runs is imported inside the command. At the top of the module it
 would load torch, geopandas and rasterio before the arguments are parsed, and ``sdc --help``

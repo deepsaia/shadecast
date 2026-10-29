@@ -1,7 +1,7 @@
-"""Draw a stratified benchmark set from the corpus.
+"""Draw a stratified city selection from the corpus.
 
 A stratum is a Koppen class paired with a World Bank income group. Drawing k centres per stratum
-above a population floor with a fixed seed makes the benchmark set a reproducible command rather
+above a population floor with a fixed seed makes the selection a reproducible command rather
 than a judgement call, and makes the stratification table something anyone can regenerate.
 Centres missing either stratum are left out, because an unknown stratum cannot be sampled from.
 """

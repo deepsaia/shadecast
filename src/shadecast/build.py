@@ -48,7 +48,7 @@ def source_record(key: str) -> dict:
 
 
 def urban_centre_record(city: City) -> dict:
-    """The urban centre a bundle belongs to, with the strata the benchmark is reported on."""
+    """The urban centre a bundle belongs to, with the strata results are reported on."""
     return {
         "id": city.ucdb_id,
         "release": f"{ucdb.RELEASE} {ucdb.VERSION}",

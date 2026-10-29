@@ -2,7 +2,7 @@
 
 The corpus is the GHS Urban Centre Database, fetched once with no credentials and read from
 the cache after that. These commands are the way into it: find a centre, see its strata and
-tile count, or draw a stratified set with a seed so the benchmark selection is reproducible.
+tile count, or draw a stratified set with a seed so the city selection is reproducible.
 What a command runs is imported inside it, so ``sdc --help`` answers before any heavy library loads.
 """
 

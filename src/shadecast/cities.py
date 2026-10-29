@@ -1,6 +1,6 @@
-"""The CoolBench city corpus: a selection of urban centres from GHS-UCDB.
+"""The city corpus: a selection of urban centres from GHS-UCDB.
 
-The database is the corpus; the benchmark reports on a selection. ``corpus.json`` beside this
+The database is the corpus; the simulator covers a selection. ``corpus.json`` beside this
 module lists the selected urban centres by database id with the only fields the database
 cannot know: our short key, our regional grouping, whether WRI's Cool Cities Lab also covers
 the city, and a note. Every stratum (Koppen class, income group, country, 2025 population, and the

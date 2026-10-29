@@ -52,7 +52,7 @@
     {
       "key": "solweig_gpu",
       "group": "radiation",
-      "title": "solweig-gpu, the SOLWEIG implementation this benchmark calls",
+      "title": "solweig-gpu, the SOLWEIG implementation this simulator calls",
       "authors_or_publisher": "solweig-gpu maintainers, PyPI",
       "year": 2025,
       "release": "2.0.0",
@@ -116,7 +116,7 @@
       "year": 2025,
       "doi": "10.1007/s44327-025-00086-y",
       "url": "https://link.springer.com/article/10.1007/s44327-025-00086-y",
-      "used_for": "Review of retro-reflective materials, recorded as a stated limit of the benchmark."
+      "used_for": "Review of retro-reflective materials, recorded as a stated limit of the simulator."
     },
     {
       "key": "coolwalks_2025",
@@ -135,7 +135,7 @@
       "authors_or_publisher": "arXiv:2405.01225",
       "year": 2024,
       "url": "https://arxiv.org/html/2405.01225v1",
-      "used_for": "The forward routing problem this benchmark inverts."
+      "used_for": "The forward routing problem this simulator inverts."
     },
     {
       "key": "cool_routes",
@@ -169,7 +169,7 @@
       "title": "cities-cif, WRI's city indicator framework",
       "authors_or_publisher": "World Resources Institute",
       "url": "https://github.com/wri/cities-cif",
-      "used_for": "Needs Earth Engine, a CDS key and an AWS profile, which is why this benchmark has the credential rule."
+      "used_for": "Needs Earth Engine, a CDS key and an AWS profile, which is why this simulator has the credential rule."
     },
     {
       "key": "wri_cities_openurban",
@@ -327,7 +327,7 @@
       "endpoint": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_THEME_GLOBE_R2024A/GHS_UCDB_THEME_{theme}_GLOBE_R2024A/V1-2/GHS_UCDB_THEME_{theme}_GLOBE_R2024A_V1_2.zip",
       "access": "anonymous",
       "short": "GHS-UCDB R2024A, JRC",
-      "used_for": "The corpus: 11,422 urban centres with name, country, population, area, World Bank income group and Koppen-Geiger class, and the polygons whose 1 km cells are the benchmark's tiles. Its population is the zonal sum of GHS-POP R2023A inside the boundary for the 2025 epoch, a modelled projection rather than a count; summing that epoch over Ahmedabad's 365 cells reproduces the database figure to the person."
+      "used_for": "The corpus: 11,422 urban centres with name, country, population, area, World Bank income group and Koppen-Geiger class, and the polygons whose 1 km cells are the simulator's tiles. Its population is the zonal sum of GHS-POP R2023A inside the boundary for the 2025 epoch, a modelled projection rather than a count; summing that epoch over Ahmedabad's 365 cells reproduces the database figure to the person."
     },
     {
       "key": "koppen_beck_2018",

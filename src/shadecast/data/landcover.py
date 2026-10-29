@@ -35,7 +35,7 @@ WORLDCOVER_TO_UMEP: dict[int, int] = {
 }
 
 # Albedo values used for intervention classes. UMEP's stock table has no cool
-# surfaces, so CoolBench extends it; see interventions.py.
+# surfaces, so shadecast extends it; see interventions.py.
 ALBEDO = {COBBLE: 0.20, ASPHALT: 0.18, ROOF: 0.18, GRASS: 0.16, SOIL: 0.25, WATER: 0.05}
 
 

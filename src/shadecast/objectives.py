@@ -1,7 +1,7 @@
 """What a heat adaptation plan is scored on.
 
-Four objectives, all reported. Scalarising them is the agent's business, not the
-benchmark's, because the weighting between lives, money and fairness is a
+Four objectives, all reported. Scalarising them is the decision-maker's business, not the
+simulator's, because the weighting between lives, money and fairness is a
 political choice and hard-coding one would quietly make that choice for everyone.
 
 The thermal quantity is mean radiant temperature (Tmrt) from SOLWEIG, aggregated
@@ -44,7 +44,7 @@ def equity_gap(field: np.ndarray, pop: np.ndarray, deciles: int = 10) -> float:
 
     Population density is a weak proxy for deprivation. It is used here because
     it is globally available; a city with a real deprivation surface should
-    substitute it, and the benchmark records which was used.
+    substitute it, and the results record which was used.
     """
     occupied = pop > 0
     if occupied.sum() < deciles:
@@ -79,6 +79,6 @@ def benefit(baseline: Score, after: Score) -> dict:
         "delta_people_at_risk": round(baseline.people_at_risk - after.people_at_risk, 1),
         "delta_equity_gap_C": round(baseline.equity_gap - after.equity_gap, 4),
         "cost_usd": round(after.cost_usd, 2),
-        # The headline efficiency number the benchmark ranks on.
+        # The headline efficiency number: cooling bought per thousand dollars.
         "excess_reduced_per_1k_usd": round(d_excess / (after.cost_usd / 1000), 4) if after.cost_usd > 0 else 0.0,
     }

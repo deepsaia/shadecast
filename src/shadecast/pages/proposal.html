@@ -1,4 +1,4 @@
-<title>CoolBench</title>
+<title>shadecast</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -221,7 +221,7 @@ tbody td:first-child{color:var(--ink);font-weight:500}
 
 <div class="strip">
   <div class="strip-in">
-    <span class="brand">CoolBench</span>
+    <span class="brand">shadecast</span>
     <nav>
       <a href="#result">Phase 0</a>
       <a href="#phase1">Phase 1</a>
@@ -241,18 +241,18 @@ tbody td:first-child{color:var(--ink);font-weight:500}
 
 <header class="top">
   <p class="kicker">Research proposal, v3, 2026-08-26</p>
-  <h1>CoolBench</h1>
-  <p class="sub">A global, open benchmark for urban heat adaptation planning.</p>
+  <h1>shadecast</h1>
+  <p class="sub">An open, physics-grounded simulator of urban heat adaptation planning.</p>
   <div class="meta">
     <span><a href="index.html">&larr; shadecast</a></span>
-    <span>Contribution <b>Benchmark plus baselines</b></span>
+    <span>Contribution <b>Simulator plus baselines</b></span>
     <span>Data <b>100% open, no credentials</b></span>
     <span>Phases 0 and 1 <b>passed, 9 cities</b></span>
   </div>
 
   <div class="abstract">
     <p class="lbl">The claim</p>
-    <p>WRI's Cool Cities Lab solved the forward model: given an intervention, how much cooler? Nobody has solved the inverse problem: given a budget, what should you build? CoolBench is a reproducible, physics-grounded environment in which an agent allocates a finite adaptation budget across a real city to minimise heat-attributable exposure under equity and robustness constraints. Built entirely from open global data requiring <strong>no account, key or quota</strong>, with baselines spanning greedy, MILP, evolutionary, quality-diversity and deep RL, and zero-shot transfer to held-out cities.</p>
+    <p>WRI's Cool Cities Lab solved the forward model: given an intervention, how much cooler? Nobody has solved the inverse problem: given a budget, what should you build? shadecast is a reproducible, physics-grounded simulator in which a decision-maker allocates a finite adaptation budget across a real city and sees the heat exposure, the people reached, the equity gap and the cost change at once. Built entirely from open global data requiring <strong>no account, key or quota</strong>. A search layer over the same simulator, from greedy to evolutionary methods, comes after the instrument itself.</p>
   </div>
 </header>
 
@@ -272,9 +272,9 @@ tbody td:first-child{color:var(--ink);font-weight:500}
   <p>Greedy targets correctly, planting where baseline Tmrt averages 64.8&deg;C against an outdoor mean of 55.8&deg;C. Local cooling where planted is <strong>17.84&deg;C mean and 27.19&deg;C maximum</strong>.</p>
 
   <div class="result">
-    <p class="lbl">The finding that shapes the benchmark</p>
+    <p class="lbl">The finding that shapes the simulator</p>
     <p>Cooling spilled over to <em>unplanted</em> outdoor pixels by <strong>1.52 &deg;C</strong>.</p>
-    <p>That is spatial interaction. A tree shades its neighbours, so the marginal value of any placement depends on every other placement. Greedy assumes independence and structurally cannot see it. The gap between greedy and an interaction-aware search is the headroom this benchmark exists to measure, and it is now quantified rather than asserted. This is the empirical reason evolutionary search, quality-diversity and RL belong in the paper at all.</p>
+    <p>That is spatial interaction. A tree shades its neighbours, so the marginal value of any placement depends on every other placement. Greedy assumes independence and structurally cannot see it. The gap between greedy and an interaction-aware search is the headroom the simulator makes visible, and it is now quantified rather than asserted. This is the empirical reason a search layer belongs on top of the instrument.</p>
   </div>
 
   <h3>The physics behaves</h3>
@@ -287,7 +287,7 @@ tbody td:first-child{color:var(--ink);font-weight:500}
     <div><div class="n">45 to 78 h</div><div class="l">cost of one 1,000-evaluation search, one city</div></div>
   </div>
 
-  <p><strong>That last number is the surrogate justification, quantified.</strong> The corpus is 30 cities. Without a learned response model the benchmark is not runnable, which makes the surrogate a load-bearing contribution rather than an optimisation. There is also a useful asymmetry: sky-view factor is cached, so albedo interventions such as cool roofs are 1.7 times cheaper to evaluate than geometry interventions such as trees. A search method that knows this can spend its budget better.</p>
+  <p><strong>That last number is the surrogate justification, quantified.</strong> The corpus is 30 cities. Without a learned response model the simulator cannot answer while a person waits, which makes the surrogate the core of the instrument rather than an optimisation. There is also a useful asymmetry: sky-view factor is cached, so albedo interventions such as cool roofs are 1.7 times cheaper to evaluate than geometry interventions such as trees. A search method that knows this can spend its budget better.</p>
 </section>
 
 
@@ -406,8 +406,8 @@ tbody td:first-child{color:var(--ink);font-weight:500}
     <p class="lbl">The rule</p>
     <p><strong>Credentials at build time, never at use time.</strong></p>
   </div>
-  <p>A benchmark that requires three accounts to run is not a benchmark. WRI's <code>cities-cif</code> needs Google Earth Engine access, a Copernicus CDS API key, and an AWS profile named <code>cities-data-dev</code> whose credentials live in WRI's internal secrets. Their OpenUrban land cover is served only as an Earth Engine asset. That is fine for a hosted platform and fatal for a reproducible benchmark.</p>
-  <p>So the pipeline splits. <strong>Build time</strong>, done once by us, needs network but no accounts: pull layers, run the physics, design the intervention sampling, fit the surrogate. <strong>Use time</strong>, for anyone, forever: download a frozen versioned bundle and run offline. This is what separates a benchmark from a pipeline.</p>
+  <p>A simulator that needs three accounts before it answers is not open. WRI's <code>cities-cif</code> needs Google Earth Engine access, a Copernicus CDS API key, and an AWS profile named <code>cities-data-dev</code> whose credentials live in WRI's internal secrets. Their OpenUrban land cover is served only as an Earth Engine asset. That is fine for a hosted platform and fatal for a simulator anyone can run.</p>
+  <p>So the pipeline splits. <strong>Build time</strong>, done once by us, needs network but no accounts: pull layers, run the physics, design the intervention sampling, fit the surrogate. <strong>Use time</strong>, for anyone, forever: download a frozen versioned bundle and run offline. This is what separates an instrument from a pipeline.</p>
 
   <h3>Where we can be better, not just faster</h3>
   <p>WRI uses UT-GLOBUS for building heights, which reports <strong>RMSE 9.1 m against LiDAR</strong> in its own paper. Three storeys of error in the input that drives shadow geometry, which is why WRI cautions that their 1 m output has spatial inaccuracies "well above 1 m" and advises against site-specific use. We measured the alternatives on the same Ahmedabad area:</p>
@@ -449,7 +449,7 @@ tbody td:first-child{color:var(--ink);font-weight:500}
     <div class="track">
       <div class="tid">Track A</div>
       <h4>Single period</h4>
-      <p>Fixed budget, one shot. MILP and greedy should be strong. If RL loses, that is a <em>finding</em>, and an honest benchmark reports it.</p>
+      <p>Fixed budget, one shot. MILP and greedy should be strong. If RL loses, that is a <em>finding</em>, and an honest simulator reports it.</p>
     </div>
     <div class="track">
       <div class="tid">Track B</div>
@@ -477,7 +477,7 @@ tbody td:first-child{color:var(--ink);font-weight:500}
     <tbody>
       <tr><td>Supervised ML</td><td>SOLWEIG surrogate, learned change in Tmrt from the intervention field</td><td>At 162 s per evaluation, nothing else is affordable. Publishable alone.</td></tr>
       <tr><td>Design of experiments</td><td>Which physics runs to spend; Bayesian experimental design over the intervention space; active learning for surrogate training points</td><td>Physics runs are the hard budget. DoE decides feasibility here, it is not decoration.</td></tr>
-      <tr><td>Exact and heuristic OR</td><td>MILP p-median, max-cover, greedy</td><td>Honest strong baselines. Benchmarks that omit these are not credible.</td></tr>
+      <tr><td>Exact and heuristic OR</td><td>MILP p-median, max-cover, greedy</td><td>Honest strong baselines. A search layer that omits these is not credible.</td></tr>
       <tr><td>Evolutionary strategies</td><td>CMA-ES, NSGA-II over the allocation vector</td><td>Non-convex, mixed-integer, black-box. Handles spatial interaction that greedy cannot.</td></tr>
       <tr><td>Quality-diversity</td><td>MAP-Elites over a cost and equity behaviour space</td><td>Produces the portfolio planners actually need, Track D.</td></tr>
       <tr><td>Deep RL</td><td>PPO and graph RL for Track B sequencing and Track C transfer</td><td>Non-stationary multi-period allocation with delayed reward.</td></tr>
@@ -495,7 +495,7 @@ tbody td:first-child{color:var(--ink);font-weight:500}
       <li><b>SOLWEIG models outdoor thermal comfort, not indoor air temperature.</b> Most heat mortality, especially among the over-65s who are roughly 90% of deaths, is mediated by indoor exposure. We report outdoor exposure and do not claim to predict deaths averted. <em>Phase 0 found this as a real bug:</em> Tmrt over a building footprint is not a temperature anyone experiences, yet the dasymetric population step places everyone inside buildings, so the first scoring pass weighted the physics by exactly the mask where it does not apply. Fixed by redistributing residents onto outdoor pixels within walking reach.</li>
       <li><b>Exposure-response functions do not exist for most target cities.</b> The MCC network covers 604 locations in 39 countries, heavily skewed to the Global North. We use meta-regression transfer and report where the epidemiology is extrapolated, as a first-class uncertainty.</li>
       <li><b>Equity is currently proxied by population density, which is weak.</b> Phase 0 measured a negative equity gap, meaning the densest areas are cooler at pedestrian level by day. That is probably physically real, since dense low-rise fabric self-shades its own streets, but interpreting it needs a proper deprivation surface.</li>
-      <li><b>A benchmark is not a deployment.</b> We are not telling a city what to build. We are giving the research community a shared, honest place to compare methods.</li>
+      <li><b>A simulator is not a deployment.</b> It shows what a budget buys on a tile. We are not telling a city what to build.</li>
     </ul>
   </div>
 </section>
@@ -521,7 +521,6 @@ tbody td:first-child{color:var(--ink);font-weight:500}
       <tr><td>Global height data too coarse for 1 m physics</td><td><strong>Mitigated.</strong> GlobalBuildingAtlas at 3 m with 100% completeness on the test area, against UT-GLOBUS at RMSE 9.1 m. Data-quality tier recorded per city and results stratified by tier.</td></tr>
       <tr><td>Surrogate error swamps intervention effect</td><td><strong>Unlikely.</strong> Measured effect is 17.84&deg;C where planted and 5.93&deg;C population-weighted, which is a large signal to sit above.</td></tr>
       <tr><td>Epidemiology does not transfer to target cities</td><td>Outdoor exposure metrics are primary. Mortality remains a clearly labelled secondary layer.</td></tr>
-      <tr><td>"Just another benchmark"</td><td>Track D quality-diversity portfolios and Track C transfer carry genuine method novelty, and the measured spillover gives both a concrete target.</td></tr>
       <tr><td>Scope creep across 30 cities</td><td>Tiered corpus: 5 deep-validation cities, 25 breadth cities. Ship 5 if 30 slips.</td></tr>
       <tr><td>Upstream packaging fragility</td><td><strong>Live issue.</strong> solweig-gpu 2.0.0 has undeclared dependencies on GDAL Python bindings and numba, and hardcodes CUDA-or-CPU device selection with no Apple Silicon path. Worth reporting upstream. Both WRI repos also have no license file set.</td></tr>
     </tbody>
@@ -529,11 +528,11 @@ tbody td:first-child{color:var(--ink);font-weight:500}
 </section>
 
 <section id="umbra">
-  <div class="shead"><span class="n">12</span><h2>Umbra, the second artifact</h2></div>
+  <div class="shead"><span class="n">12</span><h2>Umbra, the instrument</h2></div>
   <p>Named for the fully shaded core of a shadow, which is literally what SOLWEIG computes: shadow geometry driving mean radiant temperature.</p>
   <p>En-ROADS works as a negotiation instrument because it answers in 60 milliseconds. It is global, system-dynamics, and about mitigation, so there is no overlap with this work. The two nest rather than compete: En-ROADS gives the planet's temperature trajectory, Umbra gives where to plant trees on a given block given that trajectory.</p>
   <p>The surrogate is the only thing standing between us and that instrument. Once city-scale heat response evaluates in milliseconds rather than minutes, a planner can move a budget slider and watch the exposure map and the health burden update live. That aims directly at the governance failures above: 88% of cities have no heat budget, fewer than 5% ever evaluate an intervention, and the diagnosis is siloed decision-making.</p>
-  <p>Same core, two audiences. CoolBench is the rigorous artifact for researchers. Umbra is the instrument for the people who actually hold the budget.</p>
+  <p>Same core, one audience first. Umbra is the instrument for the people who actually hold the budget, and every number in it is a physics run or a surrogate checked against one.</p>
 </section>
 
 <section id="sources">
@@ -603,7 +602,7 @@ tbody td:first-child{color:var(--ink);font-weight:500}
     </div>
   </div>
   <div class="colo">
-    CoolBench, research proposal v3, 2026-08-26. Phases 0 and 1 passed.<br>
+    shadecast, research proposal v3, 2026-08-26. Phases 0 and 1 passed.<br>
     Source of truth: <code>~/exp/shadecast/PROPOSAL.md</code> and <code>PHASE0.md</code>
   </div>
 </section>

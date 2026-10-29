@@ -1,4 +1,4 @@
-"""Score every simulated design of a tile against doing nothing, as the benchmark ranks plans."""
+"""Score every simulated design of a tile against doing nothing, as the simulator ranks plans."""
 
 from __future__ import annotations
 

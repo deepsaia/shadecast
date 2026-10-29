@@ -8,7 +8,7 @@ build time, no account anywhere.
 
 Each archive is checked against a recorded SHA-256 before it is unpacked. A changed or truncated
 download is refused by name rather than read into a corpus that would silently differ from the
-one the benchmark was stratified on. The climate CSV is latin-1 encoded, which is recorded here
+one the selection was stratified on. The climate CSV is latin-1 encoded, which is recorded here
 so that a reader never has to rediscover it.
 """
 

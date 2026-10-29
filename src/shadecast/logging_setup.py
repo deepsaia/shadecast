@@ -1,7 +1,7 @@
 """Structured logging configuration for the command line and library.
 
 Output goes to stderr so that machine-readable results written to stdout stay
-clean and pipeable, which matters for a benchmark whose results get aggregated.
+clean and pipeable, which matters when results from many tiles get aggregated.
 """
 
 from __future__ import annotations

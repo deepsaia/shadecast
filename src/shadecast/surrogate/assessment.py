@@ -6,7 +6,7 @@ Four questions, in the order that decides whether the surrogate is usable.
    so a low mean error proves nothing on its own. Skill against the zero baseline is
    the first gate, and a negative value means the model is worse than useless.
 2. **Does the tail survive?** Cooling reaches tens of metres, and that tail is the
-   spillover the benchmark exists to measure. A model that nails the near field and
+   spillover the simulator exists to capture. A model that nails the near field and
    flattens the tail would pass on mean error and fail at the job.
 3. **Is the plan score right?** Plans are ranked on population weighted exposure,
    which integrates the whole field, so that integral has to be unbiased.

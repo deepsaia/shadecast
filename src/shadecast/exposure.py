@@ -11,7 +11,7 @@ encodes the ordinary fact that you experience the street outside your home, the
 route to transit, and the shade you can reach, not your own roof.
 
 This is the outdoor-exposure channel. Indoor heat, which drives most mortality
-among the over-65s, is a separate problem this benchmark does not claim to solve.
+among the over-65s, is a separate problem this simulator does not claim to solve.
 """
 
 from __future__ import annotations

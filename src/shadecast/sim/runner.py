@@ -1,7 +1,7 @@
 """Subprocess wall around the SOLWEIG physics engine.
 
 solweig-gpu is GPL-3.0. shadecast is intended to stay permissively licensed so the
-benchmark, its data and its baselines can be used without inheriting a copyleft
+simulator, its data and its baselines can be used without inheriting a copyleft
 obligation. Importing a GPL library would defeat that.
 
 The engine is therefore never imported. It is invoked as a subprocess through its
