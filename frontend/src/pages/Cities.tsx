@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { integer } from "@/lib/format";
+import { byName } from "@/lib/order";
 import { cellsOf } from "@/lib/tile_grid";
 
 /** Every selected city, what each has on disk, and the way into its tiles. */
@@ -58,7 +59,7 @@ function CitiesTable({ cities }: { cities: CitySummary[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {cities.map((city) => (
+          {byName(cities).map((city) => (
             <CityRow key={city.key} city={city} />
           ))}
         </TableBody>

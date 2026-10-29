@@ -5,6 +5,7 @@ import type { CitySummary, ModelSummary } from "@/api/models";
 import { Loading } from "@/components/Loading";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { decimal, integer } from "@/lib/format";
+import { byName } from "@/lib/order";
 
 /** The surrogate models trained so far, per channel and city, from their manifests. */
 export function ModelsPage() {
@@ -45,7 +46,7 @@ function ChannelModels({ channelKey, label, cities }: { channelKey: string; labe
 
 /** The cities whose tiles have physics and no model, each with the command that trains one. */
 function Untrained({ channelKey, cities }: { channelKey: string; cities: CitySummary[] }) {
-  const waiting = cities.filter((city) => city.stages.physics > 0 && city.stages.model === 0);
+  const waiting = byName(cities.filter((city) => city.stages.physics > 0 && city.stages.model === 0));
   if (!waiting.length) return null;
   return (
     <div className="mt-6 max-w-[64ch] rounded-md border border-dashed p-4 text-sm">

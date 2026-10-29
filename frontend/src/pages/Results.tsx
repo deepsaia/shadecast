@@ -8,6 +8,7 @@ import { Loading } from "@/components/Loading";
 import { SeriesLegend } from "@/components/SeriesLegend";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { decimal, integer, percent } from "@/lib/format";
+import { byName } from "@/lib/order";
 
 /** What the physics measured across every tile, with nothing typed in. */
 export function ResultsPage() {
@@ -60,7 +61,7 @@ function Measured({ data }: { data: Results }) {
         <SeriesLegend />
       </div>
       <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {data.cities.map((city) => (
+        {byName(data.cities).map((city) => (
           <figure key={city.key} className="m-0">
             <figcaption className="mb-1 text-sm font-medium">{city.name}</figcaption>
             <FacetChart city={city} />
@@ -74,7 +75,7 @@ function Measured({ data }: { data: Results }) {
       <Arrangement data={data} />
       <Ranking data={data} />
       <Measures data={data} />
-      <EveryPlan cities={data.cities} />
+      <EveryPlan cities={byName(data.cities)} />
 
       <p className="mt-10 border-t pt-4 text-sm text-muted-foreground">
         Every number is a real SOLWEIG run at 1 m, not a surrogate. Sparse probe designs are omitted from the charts:
@@ -94,7 +95,7 @@ function Fact({ label, value }: { label: string; value: string }) {
 }
 
 function Arrangement({ data }: { data: Results }) {
-  const rows = data.cities.filter((city) => city.matched);
+  const rows = byName(data.cities.filter((city) => city.matched));
   if (!rows.length) return null;
   const verdict = data.arrangement;
   const every = verdict.scattered_wins === verdict.cities_compared ? "in every tile compared" : `in ${verdict.scattered_wins} of ${verdict.cities_compared} tiles`;

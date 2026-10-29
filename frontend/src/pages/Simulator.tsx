@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Slider } from "@/components/ui/slider";
 import { aggregate, type Totals } from "@/lib/aggregate";
+import { byName } from "@/lib/order";
 import { type OutcomesView, readOutcomesView, storeOutcomesView } from "@/lib/outcomes_view";
 import { coolingImage } from "@/lib/overlay";
 import { useDebounced } from "@/lib/debounce";
@@ -138,13 +139,11 @@ function Where({
   onTiles: (ids: string[]) => void;
 }) {
   const [preset, setPreset] = useState<Preset | null>("densest");
-  const cityChoices = [...cities]
-    .sort((a, b) => Number(b.stages.model > 0) - Number(a.stages.model > 0))
-    .map((found) => ({
+  const cityChoices = byName(cities).map((found) => ({
       value: found.key,
       label: `${found.name}, ${found.country}`,
-      note: found.stages.model > 0 ? `${found.stages.model} with a model` : lacking(found),
-    }));
+    note: found.stages.model > 0 ? `${found.stages.model} with a model` : lacking(found),
+  }));
   const tileChoices = tiles.map((tile) => ({
     value: tile.id,
     label: tile.id,
