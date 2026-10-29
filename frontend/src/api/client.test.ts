@@ -4,6 +4,7 @@ describe("paths", () => {
   it("build every route under the API prefix with encoded names", () => {
     expect(paths.cities()).toBe("/cities");
     expect(paths.tiles("oaxaca")).toBe("/cities/oaxaca/tiles");
+    expect(paths.grid("oaxaca")).toBe("/cities/oaxaca/grid");
     expect(paths.report("ahmedabad", "t43N_249_2547")).toBe(
       "/cities/ahmedabad/tiles/t43N_249_2547/report",
     );

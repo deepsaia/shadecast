@@ -91,7 +91,10 @@ sdc serve                         # http://127.0.0.1:8765/ with the API at /api/
 
 The first page is the simulator. Pick a city and its tiles, the policy and the design under it, and the
 coverage or budget, and the outcomes, the cooling map and the placement answer from the surrogate while the
-stored engine-verified designs stay on the chart beside them. The cities list is at `/cities`.
+stored engine-verified designs stay on the chart beside them. A map shows the city's 1 km tile grid, shaded by
+residents, with the tiles that have a model outlined, and lays the cooling over the chosen tile. The street
+basemap under it comes from OpenFreeMap at view time, the one layer not from our data; everything above it draws
+without it. The cities list is at `/cities`.
 
 An installed copy needs no Node. `make wheel` builds the client and then a wheel that carries it, so
 `sdc serve` from a `pip install dist/shadecast-*.whl` serves the dashboard too.

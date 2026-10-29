@@ -81,6 +81,10 @@ def test_cities_and_one_city_s_statistics(client):
 def test_tiles_a_tile_and_its_report(client):
     tiles = client.get("/api/v1/cities/ahmedabad/tiles").json()
     assert tiles[0]["id"] == synthetic_tile.TILE_ID and tiles[0]["stages"]["physics"] is True
+    grid = client.get("/api/v1/cities/ahmedabad/grid").json()
+    basemap = client.get("/api/v1/basemap").json()
+    assert basemap["source"] == "openfreemap" and basemap["style_url"].startswith("https://tiles.openfreemap.org/")
+    assert grid["columns"][0] == "west" and len(grid["ids"]) == len(fixture_tiles()) == grid["described"]
     location = client.get(f"/api/v1/cities/ahmedabad/tiles/{synthetic_tile.TILE_ID}").json()
     assert location["tile"] == synthetic_tile.TILE_ID and location["stages"]["bundle"] is True
     report = client.get(f"/api/v1/cities/ahmedabad/tiles/{synthetic_tile.TILE_ID}/report").json()

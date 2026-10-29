@@ -3,6 +3,7 @@ import { Link } from "react-router";
 
 import { api } from "@/api/client";
 import type { CitySummary } from "@/api/models";
+import { GridThumb } from "@/components/GridThumb";
 import { TileStrip } from "@/components/TileStrip";
 import {
   Table,
@@ -14,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { integer } from "@/lib/format";
+import { cellsOf } from "@/lib/tile_grid";
 
 /** Every selected city, what each has on disk, and the way into its tiles. */
 export function CitiesPage() {
@@ -52,6 +54,7 @@ function CitiesTable({ cities }: { cities: CitySummary[] }) {
             <TableHead className="text-right">Tiles</TableHead>
             <TableHead>Progress</TableHead>
             <TableHead className="text-right">Built</TableHead>
+            <TableHead>Map</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -96,6 +99,13 @@ function CityRow({ city }: { city: CitySummary }) {
       <TableCell className="text-right">
         {city.stages.bundle > 0 ? `${city.stages.bundle} of ${city.stages.tiles}` : "none yet"}
       </TableCell>
+      <TableCell>{hasTiles && <CityThumb city={city.key} />}</TableCell>
     </TableRow>
   );
+}
+
+function CityThumb({ city }: { city: string }) {
+  const grid = useQuery({ queryKey: ["grid", city], queryFn: () => api.grid(city), retry: false });
+  if (!grid.data) return <span className="text-xs text-muted-foreground">{grid.isError ? "not described" : ""}</span>;
+  return <GridThumb cells={cellsOf(grid.data)} />;
 }

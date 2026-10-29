@@ -137,6 +137,7 @@ TILE_ROWS = [
         "density_2020_per_km2": 9000.0,
         "built_fraction": 0.9,
         "mean_height_m": 9.0,
+        "bounds_wgs84": [72.57, 23.139, 72.5798, 23.148],
     },
     {
         "id": "t43N_250_2547",
@@ -146,6 +147,7 @@ TILE_ROWS = [
         "density_2020_per_km2": 7000.0,
         "built_fraction": 0.8,
         "mean_height_m": 8.0,
+        "bounds_wgs84": [72.5798, 23.139, 72.5896, 23.148],
     },
     {
         "id": "t43N_249_2546",
@@ -155,6 +157,7 @@ TILE_ROWS = [
         "density_2020_per_km2": 5000.0,
         "built_fraction": 0.5,
         "mean_height_m": 6.0,
+        "bounds_wgs84": [72.57, 23.13, 72.5798, 23.139],
     },
     {
         "id": "t43N_250_2546",
@@ -164,6 +167,7 @@ TILE_ROWS = [
         "density_2020_per_km2": 3000.0,
         "built_fraction": 0.4,
         "mean_height_m": 5.0,
+        "bounds_wgs84": [72.5798, 23.13, 72.5896, 23.139],
     },
     {
         "id": "t43N_251_2546",
@@ -173,6 +177,7 @@ TILE_ROWS = [
         "density_2020_per_km2": 1000.0,
         "built_fraction": 0.1,
         "mean_height_m": 3.0,
+        "bounds_wgs84": [72.5896, 23.13, 72.5994, 23.139],
     },
     {
         "id": "t43N_251_2547",
@@ -182,6 +187,7 @@ TILE_ROWS = [
         "density_2020_per_km2": 0.0,
         "built_fraction": 0.0,
         "mean_height_m": 0.0,
+        "bounds_wgs84": [72.5896, 23.139, 72.5994, 23.148],
     },
 ]
 

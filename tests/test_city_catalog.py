@@ -39,6 +39,23 @@ def catalog(root) -> CityCatalog:
     )
 
 
+def test_the_grid_draws_every_described_tile_and_flags_the_one_with_a_model(root, catalog):
+    _prove(root, "t43N_249_2547", "bundle", "model")
+    grid = catalog.grid("ahmedabad")
+    assert grid.described == len(ROWS) and len(grid.ids) == len(ROWS) == len(grid.cells)
+    cell = dict(zip(grid.columns, grid.cells[grid.ids.index("t43N_249_2547")], strict=True))
+    assert cell == {
+        "west": 72.57,
+        "south": 23.139,
+        "east": 72.5798,
+        "north": 23.148,
+        "density_per_km2": 9000.0,
+        "residents": 9000.0,
+        "modelled": 1.0,
+    }
+    assert sum(cell[-1] for cell in grid.cells) == 1.0
+
+
 def _prove(root: Path, tile_id: str, *stages: str, urban_centre: int = 6143) -> Path:
     """Write the files that prove the named stages for one tile, and nothing else."""
     tile = root / str(urban_centre) / tile_id
