@@ -22,6 +22,7 @@ from shadecast.service.results_report import ResultsReport
 from shadecast.service.run_status import RunStatus
 from shadecast.service.scenario_service import ScenarioService
 from shadecast.service.selection import Selection
+from shadecast.service.sweep_service import SweepService
 from shadecast.service.tile_index import TileIndex
 from shadecast.service.tile_reporter import TileReporter
 
@@ -37,6 +38,8 @@ def _services(data_root: Path) -> Services:
         TileIndex(data_root / "tiles", fixture_tiles),
         models,
     )
+    scenarios = ScenarioService(catalog, models, FakeSurrogate.load)
+
     return Services(
         catalog=catalog,
         reporter=TileReporter(catalog),
@@ -44,7 +47,8 @@ def _services(data_root: Path) -> Services:
         findings=FindingsReport(data_root),
         models=models,
         runs=RunStatus(catalog, data_root / "models"),
-        scenarios=ScenarioService(catalog, models, FakeSurrogate.load),
+        scenarios=scenarios,
+        sweeps=SweepService(scenarios),
     )
 
 
@@ -90,6 +94,13 @@ def test_the_threshold_is_a_lever_too(client):
     payload = client.get(SCENARIO, params={**SCATTERED_QUARTER, "threshold": 49}).json()
     assert payload["threshold"] == 49.0 and payload["people"] > 0
     assert client.get(SCENARIO, params={**SCATTERED_QUARTER, "threshold": 5}).status_code == 400
+
+
+def test_the_sweep_answers_the_curves_for_the_tile(client):
+    sweep = client.get(f"{SCENARIO[: -len('/scenario')]}/sweep").json()
+    assert sweep["model_id"] == synthetic_tile.MODEL_ID and len(sweep["curves"]) == 3
+    assert len(sweep["coverages"]) == len(sweep["curves"][0]["points"]) and len(sweep["thresholds"]) == 41
+    assert [design["id"] for design in sweep["designs"]] == list(synthetic_tile.PLAN_IDS)
 
 
 def test_a_budget_sets_the_coverage_and_is_not_exceeded(client):

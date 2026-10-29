@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -16,6 +17,7 @@ class ScenarioTile:
     paths: TilePaths
     city: str
     model_id: str
+    weights: Path  # the checkpoint the surrogate was loaded from, which stamps what is derived from it
     surrogate: Predictor
     feasible: np.ndarray  # where the kind may be placed, as the physics designs were drawn
     scoring: PlanScoring

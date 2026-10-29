@@ -17,6 +17,8 @@ export type ChannelSummary = components["schemas"]["ChannelSummary"];
 export type Plan = components["schemas"]["Plan"];
 export type TileGrid = components["schemas"]["TileGrid"];
 export type Basemap = components["schemas"]["Basemap"];
+export type Sweep = components["schemas"]["Sweep"];
+export type SweepPoint = components["schemas"]["SweepPoint"];
 export type ScenarioOutcome = components["schemas"]["ScenarioOutcome"];
 
 export type RawResults = components["schemas"]["Results"];

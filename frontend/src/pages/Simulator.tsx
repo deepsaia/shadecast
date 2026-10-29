@@ -1,16 +1,17 @@
-import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
+import { type UseQueryResult, keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Info } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 
 import { api, ApiError } from "@/api/client";
 import { fetchScenarioField } from "@/api/fields";
-import type { CitySummary, ScenarioOutcome, TileSummary } from "@/api/models";
+import type { CitySummary, ScenarioOutcome, Sweep, TileSummary } from "@/api/models";
 import { Chips } from "@/components/Chips";
 import { CityMap, type Zoom } from "@/components/CityMap";
 import { FieldCanvas } from "@/components/FieldCanvas";
 import { HeatReplay } from "@/components/HeatReplay";
 import { NextStep } from "@/components/NextStep";
+import { OutcomeCurves } from "@/components/OutcomeCurves";
 import { Picker } from "@/components/Picker";
 import { TileFacts } from "@/components/TileFacts";
 import { TradeoffChart } from "@/components/TradeoffChart";
@@ -18,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Slider } from "@/components/ui/slider";
 import { aggregate, type Totals } from "@/lib/aggregate";
+import { type OutcomesView, readOutcomesView, storeOutcomesView } from "@/lib/outcomes_view";
 import { coolingImage } from "@/lib/overlay";
 import { useDebounced } from "@/lib/debounce";
 import { decimal, integer, percent } from "@/lib/format";
@@ -245,6 +247,7 @@ function Scenario({
   const [scale, setScale] = useState<Scale>(INITIAL_SCALE);
   const [assumptions, setAssumptions] = useState<Assumptions>({});
   const [threshold, setThreshold] = useState<number>(readThreshold);
+  const [view, setView] = useState<OutcomesView>(readOutcomesView);
   const settled = useDebounced({ scale, assumptions, threshold }, SETTLE_MS);
   const levers = useMemo(
     () => ({ ...leversOf(designKey, settled.scale), ...settled.assumptions, threshold: settled.threshold }),
@@ -254,6 +257,11 @@ function Scenario({
   function chooseThreshold(value: number) {
     setThreshold(value);
     storeThreshold(value);
+  }
+
+  function chooseView(next: OutcomesView) {
+    setView(next);
+    storeOutcomesView(next);
   }
   const answers = useQueries({
     queries: chosen.map((tile) => ({
@@ -276,6 +284,12 @@ function Scenario({
     queryFn: () => fetchScenarioField(city.key, focused, { ...levers, size: DISPLAY_PX }),
     placeholderData: keepPreviousData,
   });
+  const sweep = useQuery({
+    queryKey: ["sweep", city.key, focused],
+    queryFn: () => api.sweep(city.key, focused),
+    enabled: view === "curves" && focused !== "",
+    staleTime: Infinity,
+  });
   const [zoom, setZoom] = useState<Zoom>("city");
   const [coolingOnMap, setCoolingOnMap] = useState(false);
   const focusedCell = cells.find((cell) => cell.id === focused);
@@ -294,8 +308,28 @@ function Scenario({
 
   return (
     <>
+      <div className="mt-8 flex items-center justify-between">
+        <h2 className="text-sm font-medium text-muted-foreground">Outcomes</h2>
+        <Chips
+          label="Outcomes view"
+          options={[
+            { key: "numbers", label: "numbers" },
+            { key: "curves", label: "curves" },
+          ]}
+          value={view}
+          onChange={(key) => chooseView(key as OutcomesView)}
+        />
+      </div>
       {failed ? (
         <Unanswered error={failed} />
+      ) : view === "curves" ? (
+        <Curves
+          sweep={sweep}
+          threshold={focusedOutcome?.threshold ?? threshold}
+          outcome={focusedOutcome}
+          arrangement={designKey}
+          onPickCoverage={(coverage) => setScale(moveCoverage(shown, coverage, rate))}
+        />
       ) : (
         <OutcomesRow totals={totals} busy={busy} threshold={focusedOutcome?.threshold ?? threshold} />
       )}
@@ -634,10 +668,53 @@ function AssumptionsPanel({
   );
 }
 
+function Curves({
+  sweep,
+  threshold,
+  outcome,
+  arrangement,
+  onPickCoverage,
+}: {
+  sweep: UseQueryResult<Sweep>;
+  threshold: number;
+  outcome: ScenarioOutcome | undefined;
+  arrangement: string;
+  onPickCoverage: (coverage: number) => void;
+}) {
+  if (sweep.isError) return <Unanswered error={sweep.error} />;
+  if (!sweep.data) {
+    return (
+      <p className="mt-2 text-sm text-muted-foreground" aria-busy="true">
+        Computing the curves for this model: the surrogate over every coverage in every arrangement, about half a
+        minute the first time, then kept beside the tile.
+      </p>
+    );
+  }
+  const live = outcome && {
+    arrangement,
+    coverage: outcome.coverage,
+    values: {
+      exposure_drop: outcome.exposure_drop,
+      excess_removed: outcome.excess_removed,
+      people: outcome.people,
+      equity_gap_change: outcome.equity_gap_change,
+    },
+  };
+  return (
+    <div className="mt-2">
+      <OutcomeCurves sweep={sweep.data} threshold={threshold} live={live} onPickCoverage={onPickCoverage} />
+      <p className="mt-2 text-xs text-muted-foreground">
+        Lines are the surrogate, dots the engine-verified designs, the diamond this scenario. Click a curve to set the
+        coverage. Curves from {sweep.data.model_id}.
+      </p>
+    </div>
+  );
+}
+
 function OutcomesRow({ totals, busy, threshold }: { totals: Totals | null; busy: boolean; threshold: number }) {
   if (!totals) {
     return (
-      <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-busy="true">
+      <div className="mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-busy="true">
         {Array.from({ length: 5 }, (_, index) => (
           <div key={index} className="h-[4.5rem] rounded-md bg-secondary" />
         ))}
@@ -650,7 +727,7 @@ function OutcomesRow({ totals, busy, threshold }: { totals: Totals | null; busy:
     <section
       aria-label="Outcomes"
       aria-busy={busy}
-      className={cn("mt-8 grid gap-3 transition-opacity sm:grid-cols-2 xl:grid-cols-5", busy && "opacity-60")}
+      className={cn("mt-2 grid gap-3 transition-opacity sm:grid-cols-2 xl:grid-cols-5", busy && "opacity-60")}
     >
       <Outcome
         label="Exposure drop"

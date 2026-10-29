@@ -13,6 +13,7 @@ from fastapi.responses import Response
 from ...service.resample import downsample_stack
 from ...service.scenario import Scenario
 from ...service.scenario_outcome import ScenarioOutcome
+from ...service.sweep import Sweep
 from ..dependencies import services
 from ..npy_response import npy_response
 from ..services import Services
@@ -76,3 +77,9 @@ def scenario_field(
     if size is not None:
         stacked = np.asarray(downsample_stack(stacked, size), dtype=np.float32)
     return npy_response(stacked)
+
+
+@router.get("/cities/{city}/tiles/{tile}/sweep", response_model=Sweep)
+def sweep(city: str, tile: str, found: Annotated[Services, Depends(services)]) -> Sweep:
+    """The outcome curves of the tile for its newest model, computed on the first ask and kept after."""
+    return found.sweeps.sweep(city, tile)

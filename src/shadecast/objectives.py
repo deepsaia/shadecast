@@ -70,6 +70,25 @@ def score(tmrt: np.ndarray, pop: np.ndarray, cost_usd: float = 0.0, threshold: f
     )
 
 
+def exposure_by_threshold(tmrt: np.ndarray, pop: np.ndarray, thresholds: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Excess degree-hours and people above each threshold, from one sort of the field.
+
+    Above a threshold t the people are the weight of the pixels hotter than t, and the excess is the
+    weight-summed temperature of those pixels less t times their weight; both fall out of cumulative
+    sums over the sorted field, so forty thresholds cost no more than one. Three arguments: the field,
+    the weights, and the thresholds asked.
+    """
+    order = np.argsort(tmrt, axis=None)
+    values = tmrt.ravel()[order].astype("float64")
+    weights = pop.ravel()[order].astype("float64")
+    weight_up_to = np.cumsum(weights)
+    heat_up_to = np.cumsum(weights * values)
+    below = np.searchsorted(values, np.asarray(thresholds, dtype="float64"), side="right")
+    people = weight_up_to[-1] - np.where(below > 0, weight_up_to[np.maximum(below - 1, 0)], 0.0)
+    heat = heat_up_to[-1] - np.where(below > 0, heat_up_to[np.maximum(below - 1, 0)], 0.0)
+    return heat - np.asarray(thresholds, dtype="float64") * people, people
+
+
 def benefit(baseline: Score, after: Score) -> dict:
     """Improvement of a plan over doing nothing."""
     d_excess = baseline.excess - after.excess

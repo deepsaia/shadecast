@@ -37,6 +37,7 @@ sdc simulate treeshade savannah --jobs 4   # physics for the 22 tree designs, 4 
 sdc surrogate treeshade train savannah      # fit the tree shade surrogate on that tile
 sdc surrogate treeshade assess savannah     # judge the newest model against the engine
 sdc scenario savannah --arrangement scattered --coverage 0.05   # move the levers, read the outcomes
+sdc sweep savannah                # the outcome curves of its tile for the simulator, kept beside the tile
 sdc results                       # the measured results across every tile with physics
 sdc runs                          # what is simulating or training right now, and whether it is alive
 sdc serve                         # the API and the dashboard for whatever data is on disk
