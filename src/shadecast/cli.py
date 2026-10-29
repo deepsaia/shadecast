@@ -65,7 +65,7 @@ def entry() -> int:
     every long command has already said how to resume by the time it gets here.
     """
     try:
-        app(standalone_mode=False)
+        returned = app(standalone_mode=False)
     except click.exceptions.Exit as exit_:  # typer.Exit, raised on purpose by a command
         return int(exit_.exit_code)
     except click.ClickException as error:  # usage errors, bad parameters
@@ -74,7 +74,8 @@ def entry() -> int:
     except (KeyboardInterrupt, click.exceptions.Abort):
         error_console.print("\nstopped")
         return STOPPED
-    return 0
+    # Outside standalone mode click hands a planned exit's code back instead of raising it.
+    return int(returned) if isinstance(returned, int) else 0
 
 
 app.add_typer(corpus_app, name="corpus")
