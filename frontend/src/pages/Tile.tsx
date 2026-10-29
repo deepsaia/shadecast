@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Pause, Play } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 
 import { api } from "@/api/client";
 import { fetchField } from "@/api/fields";
@@ -43,6 +43,15 @@ export function TilePage() {
         <p className="mt-2 max-w-[60ch] text-muted-foreground">
           One square kilometre at one metre, built from open data, run through the radiation physics, and
           planted in every arrangement the surrogate learns from.
+          {found.stages.model && (
+            <>
+              {" "}
+              <Link to={`/cities/${city}/tiles/${tile}/scenario`} className="underline underline-offset-4">
+                Move the levers on this tile
+              </Link>
+              .
+            </>
+          )}
         </p>
       </header>
       <FactsPanel report={found} />
