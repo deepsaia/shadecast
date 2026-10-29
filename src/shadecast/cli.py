@@ -250,6 +250,13 @@ def scenario(
     budget: Annotated[
         float | None, typer.Option("--budget", help="Budget in USD; sets the coverage through the cost table.")
     ] = None,
+    unit_cost: Annotated[
+        float | None, typer.Option("--unit-cost", help="USD per square metre; the catalogue's price when absent.")
+    ] = None,
+    maintenance: Annotated[
+        float | None,
+        typer.Option("--maintenance", help="Yearly maintenance as a share of capital; the catalogue's when absent."),
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """Move the levers on a tile and read the outcomes from its surrogate, against doing nothing.
@@ -264,7 +271,14 @@ def scenario(
     service = ScenarioService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT), models)
     try:
         asked = Scenario(
-            target=city, tile=tile, kind=kind, arrangement=arrangement, coverage=coverage, budget_usd=budget
+            target=city,
+            tile=tile,
+            kind=kind,
+            arrangement=arrangement,
+            coverage=coverage,
+            budget_usd=budget,
+            unit_cost=unit_cost,
+            maintenance=maintenance,
         )
         with console.status(f"[cyan]{city}[/]: the surrogate over the tile"):
             outcome = service.evaluate(asked).outcome

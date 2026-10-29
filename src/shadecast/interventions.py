@@ -33,6 +33,7 @@ in code, because they are the most locally variable numbers in the whole system.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import replace
 
 import numpy as np
 
@@ -130,9 +131,29 @@ def apply(
     return cdsm, umep_lc
 
 
-def cost(kind: str, placement: np.ndarray, res_m: float, *, years: int = 20, discount: float = 0.03) -> float:
-    """Capital plus discounted maintenance over the planning horizon."""
+def priced(kind: str, unit_cost: float | None = None, maintenance_frac: float | None = None) -> InterventionSpec:
+    """The catalogue's spec for the kind, with the prices a person gives in place of the placeholders.
+
+    Three arguments because the two prices are each optional on their own: a city may know what a
+    tree costs and take the maintenance share as given, or the other way round.
+    """
     spec = CATALOGUE[kind]
+    return replace(
+        spec,
+        unit_cost=spec.unit_cost if unit_cost is None else unit_cost,
+        maintenance_frac=spec.maintenance_frac if maintenance_frac is None else maintenance_frac,
+    )
+
+
+def cost(kind: str, placement: np.ndarray, res_m: float, *, years: int = 20, discount: float = 0.03) -> float:
+    """Capital plus discounted maintenance over the planning horizon, at the catalogue's prices."""
+    return spec_cost(CATALOGUE[kind], placement, res_m, years=years, discount=discount)
+
+
+def spec_cost(
+    spec: InterventionSpec, placement: np.ndarray, res_m: float, *, years: int = 20, discount: float = 0.03
+) -> float:
+    """Capital plus discounted maintenance over the planning horizon, at the spec's prices."""
     area = float(placement.sum()) * res_m * res_m
     capital = area * spec.unit_cost
     annual = capital * spec.maintenance_frac

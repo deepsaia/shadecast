@@ -78,6 +78,14 @@ def test_the_outcomes_answer_the_levers_as_json(client):
     assert payload["exposure_drop"] > 0 and payload["baseline_exposure"] == synthetic_tile.BASELINE_C
 
 
+def test_a_unit_cost_reprices_the_scenario(client):
+    listed = client.get(SCENARIO, params=SCATTERED_QUARTER).json()
+    dearer = client.get(SCENARIO, params={**SCATTERED_QUARTER, "unit_cost": 80, "maintenance": 0.08}).json()
+    assert dearer["cost_usd"] == pytest.approx(2 * listed["cost_usd"]) and dearer["unit_cost"] == 80.0
+    assert dearer["exposure_drop"] == listed["exposure_drop"]
+    assert client.get(SCENARIO, params={**SCATTERED_QUARTER, "maintenance": 1.5}).status_code == 400
+
+
 def test_a_budget_sets_the_coverage_and_is_not_exceeded(client):
     payload = client.get(SCENARIO, params={"budget_usd": 10_000}).json()
     assert 0 < payload["cost_usd"] <= 10_000 and payload["coverage"] > 0

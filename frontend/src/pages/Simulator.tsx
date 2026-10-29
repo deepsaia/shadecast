@@ -237,8 +237,12 @@ function Scenario({
   const policy = policyOf(policyKey);
   const [designKey, setDesignKey] = useState(policy.designs[0].key);
   const [scale, setScale] = useState<Scale>(INITIAL_SCALE);
-  const settled = useDebounced(scale, SETTLE_MS);
-  const levers = useMemo(() => leversOf(designKey, settled), [designKey, settled]);
+  const [assumptions, setAssumptions] = useState<Assumptions>({});
+  const settled = useDebounced({ scale, assumptions }, SETTLE_MS);
+  const levers = useMemo(
+    () => ({ ...leversOf(designKey, settled.scale), ...settled.assumptions }),
+    [designKey, settled],
+  );
   const answers = useQueries({
     queries: chosen.map((tile) => ({
       queryKey: ["scenario", city.key, tile, levers],
@@ -303,6 +307,7 @@ function Scenario({
         </Lever>
         <Lever title="Scale" question="How much">
           <ScaleSliders scale={shown} rate={rate} outcome={focusedOutcome} onChange={setScale} />
+          <AssumptionsPanel assumptions={assumptions} outcome={focusedOutcome} onChange={setAssumptions} />
         </Lever>
       </section>
       {cells.length > 0 && basemap && (
@@ -485,6 +490,69 @@ function ScaleSliders({
         Move the two together through the cost table
       </label>
     </div>
+  );
+}
+
+/** The prices a scenario is costed at when a person sets them; otherwise the catalogue's placeholders. */
+interface Assumptions {
+  unit_cost?: number;
+  maintenance?: number;
+}
+
+function AssumptionsPanel({
+  assumptions,
+  outcome,
+  onChange,
+}: {
+  assumptions: Assumptions;
+  outcome: ScenarioOutcome | undefined;
+  onChange: (assumptions: Assumptions) => void;
+}) {
+  function set(name: keyof Assumptions, raw: string, scale = 1) {
+    const value = Number(raw);
+    const next = { ...assumptions };
+    if (raw === "" || !Number.isFinite(value)) delete next[name];
+    else next[name] = value / scale;
+    onChange(next);
+  }
+  return (
+    <details className="mt-5 rounded-md border px-3 py-2 text-sm">
+      <summary className="cursor-pointer text-muted-foreground">
+        Assumptions{outcome && `, priced at ${outcome.unit_cost} USD per m², ${percent(outcome.maintenance)} a year`}
+      </summary>
+      <div className="mt-3 grid gap-3">
+        <label className="grid gap-1">
+          <span className="text-xs text-muted-foreground">Unit cost, USD per square metre</span>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            inputMode="decimal"
+            value={assumptions.unit_cost ?? ""}
+            placeholder={outcome ? String(outcome.unit_cost) : ""}
+            onChange={(event) => set("unit_cost", event.target.value)}
+            className="w-32 rounded-sm border bg-background px-2 py-1 tabular-nums"
+          />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-xs text-muted-foreground">Maintenance, percent of capital a year</span>
+          <input
+            type="number"
+            min={0}
+            max={99}
+            step={1}
+            inputMode="decimal"
+            value={assumptions.maintenance === undefined ? "" : Math.round(assumptions.maintenance * 100)}
+            placeholder={outcome ? String(Math.round(outcome.maintenance * 100)) : ""}
+            onChange={(event) => set("maintenance", event.target.value, 100)}
+            className="w-32 rounded-sm border bg-background px-2 py-1 tabular-nums"
+          />
+        </label>
+        <p className="text-xs text-muted-foreground">
+          The catalogue's prices are placeholders. Yours change the cost and what it buys, never the cooling.
+        </p>
+      </div>
+    </details>
   );
 }
 

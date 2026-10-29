@@ -28,6 +28,8 @@ def _answer(asked: Scenario) -> ScenarioAnswer:
         tile_fraction=0.034,
         trees=34028,
         cost_usd=2_980_000.0,
+        unit_cost=asked.unit_cost or 40.0,
+        maintenance=asked.maintenance if asked.maintenance is not None else 0.08,
         baseline_exposure=58.68,
         baseline_at_risk=78568,
         exposure_drop=3.06,
@@ -59,10 +61,12 @@ def test_the_command_answers_as_json_and_as_a_table(evaluated):
     payload = json.loads(result.stdout)
     assert (payload["arrangement"], payload["trees"], payload["exposure_drop"]) == ("scattered", 34028, 3.06)
     assert (ASKED[0].target, ASKED[0].coverage, ASKED[0].budget_usd) == ("ahmedabad", 0.05, None)
-    table = runner.invoke(app, ["scenario", "ahmedabad", "--budget", "5000000", "--tile", "t43N_249_2547"])
+    table = runner.invoke(
+        app, ["scenario", "ahmedabad", "--budget", "5000000", "--tile", "t43N_249_2547", "--unit-cost", "80"]
+    )
     assert table.exit_code == 0, table.output
-    assert "exposure drop" in table.stdout and "3.06 C" in table.stdout
-    assert (ASKED[1].budget_usd, ASKED[1].tile) == (5_000_000.0, "t43N_249_2547")
+    assert "exposure drop" in table.stdout and "3.06 C" in table.stdout and "80 USD per m2" in table.stdout
+    assert (ASKED[1].budget_usd, ASKED[1].tile, ASKED[1].unit_cost) == (5_000_000.0, "t43N_249_2547", 80.0)
 
 
 def test_wrong_levers_leave_with_2_and_one_line(evaluated):

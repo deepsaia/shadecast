@@ -81,6 +81,21 @@ def test_a_budget_buys_the_coverage_it_implies(service):
     assert np.array_equal(by_budget.placement, by_coverage.placement)
 
 
+def test_prices_change_the_cost_and_never_the_cooling(service):
+    listed = service.evaluate(Scenario(target="ahmedabad", arrangement="scattered", coverage=0.25))
+    dearer = service.evaluate(Scenario(target="ahmedabad", arrangement="scattered", coverage=0.25, unit_cost=80.0))
+    assert np.array_equal(listed.cooling, dearer.cooling)
+    assert (listed.outcome.unit_cost, listed.outcome.maintenance) == (40.0, 0.08)
+    assert dearer.outcome.unit_cost == 80.0 and dearer.outcome.cost_usd == pytest.approx(2 * listed.outcome.cost_usd)
+    assert dearer.outcome.efficiency == pytest.approx(listed.outcome.efficiency / 2, rel=1e-3)
+    upkeep = service.evaluate(Scenario(target="ahmedabad", arrangement="scattered", coverage=0.25, maintenance=0.0))
+    assert upkeep.outcome.cost_usd < listed.outcome.cost_usd and upkeep.outcome.maintenance == 0.0
+    with pytest.raises(ValidationError, match="above 0"):
+        Scenario(target="ahmedabad", coverage=0.1, unit_cost=0.0)
+    with pytest.raises(ValidationError, match="not including 1"):
+        Scenario(target="ahmedabad", coverage=0.1, maintenance=1.0)
+
+
 def test_a_tile_is_loaded_once_for_any_number_of_scenarios(service):
     for coverage in (0.05, 0.1, 0.2):
         service.evaluate(Scenario(target="ahmedabad", coverage=coverage))

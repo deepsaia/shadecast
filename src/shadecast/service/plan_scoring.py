@@ -8,7 +8,9 @@ import numpy as np
 
 from ..exposure import outdoor_mask
 from ..exposure import outdoor_weights
-from ..interventions import cost
+from ..interventions import CATALOGUE
+from ..interventions import InterventionSpec
+from ..interventions import spec_cost
 from ..objectives import Score
 from ..objectives import benefit
 from ..objectives import score
@@ -38,9 +40,13 @@ class PlanScoring:
         plans = [self._plan(design_id) for design_id in self._store.design_ids() if arrangement_of(design_id)]
         return sorted(plans, key=_by_arrangement_then_coverage)
 
-    def benefit_of(self, placement: np.ndarray, response: np.ndarray) -> dict:
+    # Three arguments: the placement, the cooling it causes, and the prices it is costed at, which
+    # default to the catalogue's so the stored designs are all priced alike.
+    def benefit_of(
+        self, placement: np.ndarray, response: np.ndarray, spec: InterventionSpec = CATALOGUE[KIND]
+    ) -> dict:
         """What a placement buys, given the cooling it causes, against doing nothing; cost included."""
-        spent = cost(KIND, placement, RESOLUTION_M)
+        spent = spec_cost(spec, placement, RESOLUTION_M)
         return benefit(self._baseline_score, self._score(self._layers.baseline - response, spent))
 
     def physics(self) -> PhysicsFacts:

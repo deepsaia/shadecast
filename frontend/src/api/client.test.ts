@@ -21,6 +21,9 @@ describe("paths", () => {
       "/cities/a/tiles/t/scenario/field?budget_usd=5000000&size=256",
     );
     expect(paths.scenario("a", "t", {})).toBe("/cities/a/tiles/t/scenario");
+    expect(paths.scenario("a", "t", { coverage: 0.1, unit_cost: 80, maintenance: 0.05 })).toBe(
+      "/cities/a/tiles/t/scenario?coverage=0.1&unit_cost=80&maintenance=0.05",
+    );
   });
 });
 
