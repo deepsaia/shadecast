@@ -12,15 +12,13 @@ from ..interventions import cost
 from ..objectives import Score
 from ..objectives import benefit
 from ..objectives import score
+from .arrangements import arrangement_of
 from .baseline_score import BaselineScore
 from .field_store import FieldStore
 from .physics_facts import PhysicsFacts
 from .plan import Plan
 from .tile_layers import TileLayers
 
-# The design families that are plans, by the first word of their id. Sparse probes exist to
-# characterize the response kernel and are not candidate plans.
-ARRANGEMENT = {"clustered": "clustered", "random": "scattered", "corridor": "corridor"}
 KIND = "tree"
 RESOLUTION_M = 1.0
 
@@ -32,18 +30,18 @@ class PlanScoring:
         self._store = store
 
     def baseline(self) -> BaselineScore:
-        scored = self._score(self._layers.baseline, 0.0)
+        scored = self._baseline_score
         return BaselineScore(exposure=round(scored.exposure, 2), at_risk=round(scored.people_at_risk))
 
     def plans(self) -> list[Plan]:
         """Every plan, by arrangement then coverage, so like compares with like."""
-        baseline = self._score(self._layers.baseline, 0.0)
-        plans = [
-            self._plan(design_id, baseline)
-            for design_id in self._store.design_ids()
-            if _family(design_id) in ARRANGEMENT
-        ]
+        plans = [self._plan(design_id) for design_id in self._store.design_ids() if arrangement_of(design_id)]
         return sorted(plans, key=_by_arrangement_then_coverage)
+
+    def benefit_of(self, placement: np.ndarray, response: np.ndarray) -> dict:
+        """What a placement buys, given the cooling it causes, against doing nothing; cost included."""
+        spent = cost(KIND, placement, RESOLUTION_M)
+        return benefit(self._baseline_score, self._score(self._layers.baseline - response, spent))
 
     def physics(self) -> PhysicsFacts:
         """How many designs the engine ran and how long each took, from the manifest."""
@@ -64,16 +62,20 @@ class PlanScoring:
             baseline=self._store.baseline_daylight(),
         )
 
-    def _plan(self, design_id: str, baseline: Score) -> Plan:
+    @cached_property
+    def _baseline_score(self) -> Score:
+        return self._score(self._layers.baseline, 0.0)
+
+    def _plan(self, design_id: str) -> Plan:
         placement, response = self._store.response(design_id)
-        spent = cost(KIND, placement, RESOLUTION_M)
-        gain = benefit(baseline, self._score(self._layers.baseline - response, spent))
+        gain = self.benefit_of(placement, response)
+        spent = float(gain.get("cost_usd", 0.0))
         return Plan(
             id=design_id,
-            arrangement=ARRANGEMENT.get(_family(design_id), ""),
+            arrangement=arrangement_of(design_id),
             coverage=round(float(placement.mean()), 4),
             trees=int(placement.sum()),
-            cost_usd=round(spent, 2),
+            cost_usd=spent,
             cost_m=round(spent / 1e6, 2),
             exposure_drop=float(gain.get("delta_exposure_C", 0.0)),
             people=round(float(gain.get("delta_people_at_risk", 0.0))),
@@ -82,10 +84,6 @@ class PlanScoring:
 
     def _score(self, field: np.ndarray, spent: float) -> Score:
         return score(np.where(self._layers.outdoor, field, 0), self._layers.weights, spent)
-
-
-def _family(design_id: str) -> str:
-    return design_id.split("_", maxsplit=1)[0]
 
 
 def _by_arrangement_then_coverage(plan: Plan) -> tuple[str, float]:

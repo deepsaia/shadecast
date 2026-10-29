@@ -12,19 +12,12 @@ that can stand in for an engine call inside a search loop.
 from __future__ import annotations
 
 import logging
-import time
 from pathlib import Path
 
 import numpy as np
 import torch
 
-from ..data.landcover import to_umep  # noqa: F401  (kept so callers can featurise)
-from .features import CHANNEL_SETS
-from .features import channel_set_for
-from .features import select
-from .features import stack
 from .model import ResponseUNet
-from .scene import Scene
 
 logger = logging.getLogger(__name__)
 
@@ -92,24 +85,3 @@ def predict_field(model: ResponseUNet, features: np.ndarray, device: torch.devic
             weights[top : top + TILE_PX, left : left + TILE_PX] += window
 
     return np.divide(accumulated, weights, out=np.zeros_like(accumulated), where=weights > 0)
-
-
-def predict_for_bundle(
-    checkpoint: Path,
-    bundle: Path,
-    physics_dir: Path,
-    placement: np.ndarray,
-    device: torch.device | None = None,
-) -> tuple[np.ndarray, float]:
-    """Predict the cooling field for one placement over a built bundle and its baseline run.
-
-    Returns the field and the wall clock seconds it took, which is the number that
-    matters when comparing against a 162 second engine call.
-    """
-    model = load(checkpoint, device)
-    scene = Scene.load(bundle, physics_dir)
-    names = CHANNEL_SETS[channel_set_for(model.in_channels)]
-    features = select(stack(placement, scene), names)
-    started = time.perf_counter()
-    field = predict_field(model, features, device)
-    return field, time.perf_counter() - started

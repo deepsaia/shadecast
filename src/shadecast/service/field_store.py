@@ -43,6 +43,10 @@ class FieldStore:
     def population(self) -> np.ndarray:
         return self._band("population.tif")
 
+    def land_cover(self) -> np.ndarray:
+        """The ESA WorldCover classes of the ground, as the bundle holds them."""
+        return self._band("landcover.tif")
+
     def provenance(self) -> dict:
         return json.loads(self._bundle_file(PROVENANCE).read_text())
 
