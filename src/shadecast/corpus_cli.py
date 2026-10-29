@@ -18,13 +18,13 @@ import typer
 from .console import centre_details
 from .console import centres_table
 from .console import console
-from .console import error_console
 from .console import pairs_table
 from .console import records_table
 from .console import stage_line
 from .corpus import tile_paths
 from .corpus.draw import Draw
 from .corpus.urban_centre import UrbanCentre
+from .exit_codes import fail
 
 if TYPE_CHECKING:
     from .corpus.urban_centres import UrbanCentres
@@ -105,8 +105,7 @@ def show(
     try:
         found = centres.resolve(centre)
     except (KeyError, ValueError) as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
+        fail(exc)
     catalog = CityCatalog.with_centres(centres, tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT)
     counts = catalog.stage_counts_of(found)
     if as_json:

@@ -77,14 +77,14 @@ def test_build_all_takes_the_densest_tile_of_every_selected_city():
     assert [call[0] for call in CALLS] == ["ahmedabad", "london"]
 
 
-def test_build_refuses_a_tile_with_all_or_a_malformed_tile():
-    assert runner.invoke(app, ["build", "--all", "--tiles", "t43N_250_2546"]).exit_code != 0
-    assert runner.invoke(app, ["build", "ahmedabad", "--tiles", "6908"]).exit_code != 0
+def test_build_refuses_a_tile_with_all_or_a_malformed_tile_as_a_wrong_command_line():
+    assert runner.invoke(app, ["build", "--all", "--tiles", "t43N_250_2546"]).exit_code == 2
+    assert runner.invoke(app, ["build", "ahmedabad", "--tiles", "6908"]).exit_code == 2
     assert CALLS == []
 
 
-def test_build_rejects_an_unknown_city():
-    assert runner.invoke(app, ["build", "atlantis"]).exit_code != 0
+def test_build_rejects_an_unknown_city_as_a_wrong_command_line():
+    assert runner.invoke(app, ["build", "atlantis"]).exit_code == 2
     assert CALLS == []
 
 

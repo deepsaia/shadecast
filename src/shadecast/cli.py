@@ -31,6 +31,9 @@ from .console import result_table
 from .console import runs_table
 from .corpus import tile_paths
 from .corpus_cli import app as corpus_app
+from .exit_codes import FAILED
+from .exit_codes import STOPPED
+from .exit_codes import fail
 from .experiments_cli import app as experiments_app
 from .logging_setup import configure
 from .serve_cli import serve
@@ -70,7 +73,7 @@ def entry() -> int:
         return int(error.exit_code)
     except (KeyboardInterrupt, click.exceptions.Abort):
         error_console.print("\nstopped")
-        return 130
+        return STOPPED
     return 0
 
 
@@ -192,12 +195,12 @@ def build(
     try:
         outcome = service.build(request, BuildProgress(console))
     except (ValueError, UnknownCity, UnknownTile) as exc:
-        raise typer.BadParameter(str(exc)) from exc
+        fail(exc)
     for key, chosen in outcome.chosen.items():
         console.print(f"[dim]{key}: {chosen} of {outcome.totals.get(key, 0)} tiles chosen.[/]")
     if outcome.failed:
         error_console.print(f"[red]{len(outcome.failed)} failed:[/] {', '.join(outcome.failed)}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=FAILED)
 
 
 @app.command()
@@ -218,8 +221,7 @@ def plan(
         with console.status(f"[cyan]{city}[/]: baseline physics, then the plan"):
             outcome = service.plan(request, NullProgress())
     except (UnknownCity, UnknownTile, MissingStage) as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
+        fail(exc)
     if as_json:
         console.print_json(outcome.model_dump_json())
         return

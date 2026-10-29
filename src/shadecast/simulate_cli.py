@@ -16,6 +16,9 @@ import typer
 from .console import console
 from .console import error_console
 from .corpus import tile_paths
+from .exit_codes import FAILED
+from .exit_codes import STOPPED
+from .exit_codes import fail
 from .service.baseline_request import BaselineRequest
 from .service.channels import channel
 from .service.missing_stage import MissingStage
@@ -52,8 +55,7 @@ def baseline(
         with console.status(f"[cyan]{city}[/]: baseline physics"):
             outcome = service.run_baseline(BaselineRequest(target=city, tile=tile), NullProgress())
     except (UnknownCity, UnknownTile, MissingStage) as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
+        fail(exc)
     if as_json:
         console.print_json(outcome.model_dump_json())
         return
@@ -98,8 +100,7 @@ def treeshade(
     try:
         chosen = service.tiles_for(request)
     except (UnknownCity, MissingStage, ValueError) as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
+        fail(exc)
     failures: list[str] = []
     for index, paths in enumerate(chosen, start=1):
         if len(chosen) > 1:
@@ -120,7 +121,7 @@ def treeshade(
                 f"\n[bold]stopped[/] with {progress.completed()} of {progress.total} designs on "
                 f"disk. Resume with: [cyan]{progress.resume_command}[/]"
             )
-            raise typer.Exit(code=130) from None
+            raise typer.Exit(code=STOPPED) from None
         except RuntimeError as error:
             error_console.print(f"[red]{error}[/]")
             failures.append(paths.tile.id)
@@ -132,7 +133,7 @@ def treeshade(
         )
     if failures:
         error_console.print(f"[red]{len(failures)} tile(s) had failed designs:[/] {', '.join(failures)}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=FAILED)
 
 
 def resume_command(target: str, tile: str | None, out: Path | None, jobs: int) -> str:

@@ -15,8 +15,8 @@ from typing import Annotated
 import typer
 
 from .console import console
-from .console import error_console
 from .corpus import tile_paths
+from .exit_codes import fail
 from .service.experiment_request import ExperimentRequest
 from .service.missing_stage import MissingStage
 from .service.null_progress import NullProgress
@@ -46,8 +46,7 @@ def _run(request: ExperimentRequest, as_json: bool) -> None:
         with console.status(f"[cyan]{request.name}[/]: every cell is a real engine run"):
             outcome = service.run(request, NullProgress())
     except (ValueError, UnknownCity, MissingStage) as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
+        fail(exc)
     if as_json:
         console.print_json(outcome.model_dump_json())
         return

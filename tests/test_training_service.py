@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from shadecast.service import training_service
+from shadecast.service.missing_stage import MissingStage
 from shadecast.service.null_progress import NullProgress
 from shadecast.service.training_request import TrainingRequest
 from shadecast.service.training_service import TrainingService
@@ -54,7 +55,7 @@ def _service(root: Path) -> TrainingService:
 def test_pairs_accept_keys_paths_and_mixed_pairs(tmp_path):
     service = _service(tmp_path)
     bundle = _bundle(tmp_path, "t43N_249_2547")
-    with pytest.raises(ValueError, match="no simulated physics"):
+    with pytest.raises(MissingStage, match="sdc simulate treeshade ahmedabad"):
         service.pairs_for(TrainingRequest(target="ahmedabad"))
     physics = _physics(bundle)
     assert service.pairs_for(TrainingRequest(target="ahmedabad")) == [(physics, bundle)]

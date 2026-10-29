@@ -19,13 +19,13 @@ from typing import Annotated
 import typer
 
 from .console import console
-from .console import error_console
 from .console import pairs_table
 from .console import plans_table
 from .console import stage_line
 from .console import stages_reached
 from .console import tiles_table
 from .corpus import tile_paths
+from .exit_codes import fail
 from .service.missing_stage import MissingStage
 from .service.tile_report import TileReport
 from .service.tile_summary import TileSummary
@@ -84,8 +84,7 @@ def answer[Answer](ask: Callable[[], Answer]) -> Answer:
     try:
         return ask()
     except (UnknownCity, UnknownTile, MissingStage) as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
+        fail(exc)
 
 
 @app.command("list")
@@ -158,8 +157,7 @@ def _named(rows: list[dict], ids: list[str]) -> list[dict]:
     try:
         return select_ids(rows, ids)
     except KeyError as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
+        fail(exc)
 
 
 def _in_chosen_order(tiles: list[TileSummary], chosen_ids: list[str]) -> list[TileSummary]:

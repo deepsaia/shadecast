@@ -153,6 +153,10 @@ From Robert C. Martin's *The Clean Coder*. How we behave, not what we type.
   Never log secrets, credentials or fixture contents at info level.
 - Blocking I/O inside async code goes through `asyncio.to_thread()`; never block the event loop.
 - Long-form flags only (`--force`, not `-f`).
+- Commands that answer a question take `--json`: one document on stdout, logs on stderr. Commands that show a
+  dashboard write their results to disk instead, where the question commands read them. A command that cannot
+  do what was asked ends through `exit_codes.fail`: 1 when the work could not be done, 2 when the command line
+  was wrong, 130 when stopped.
 - Linting: `ruff format`, `ruff check`, then `pyrefly check`. Configuration lives in `.ruff.toml` and
   `pyrefly.toml`. A lint failure is a build failure.
 

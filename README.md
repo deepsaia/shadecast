@@ -63,6 +63,21 @@ prints it, so nobody needs to know the id. Every model lives under `data/models/
 whatever it learned from; its manifest names the tiles, so a model of one tile and one pooled
 over several are found the same way.
 
+## Scripting
+
+The commands that answer a question take `--json`: `cities`, `results`, `runs`, `plan`, the `tile` and `corpus`
+commands, `simulate baseline`, `surrogate treeshade describe` and the experiments print one JSON document on stdout,
+with logs on stderr, so `sdc results --json | jq .` works. The commands that show a dashboard, `build`,
+`simulate treeshade` and `surrogate treeshade train` and `assess`, write their results to disk instead, where
+`tile show`, `tile report`, `describe` and `results` read them. Every command leaves with the same codes:
+
+| code | meaning |
+|---|---|
+| 0 | done |
+| 1 | the work could not be done: a stage this command needs has not run, or a stage failed |
+| 2 | the command line was wrong: a city, tile, model or channel that does not exist, or options that do not go together |
+| 130 | stopped with Ctrl-C, after the command said how to resume |
+
 ## The dashboard
 
 `sdc serve` serves the API and the dashboard for whatever data is on disk. The dashboard is a React client
