@@ -58,9 +58,13 @@ export function densityCeiling(cells: Cell[]): number {
   return Math.max(1, sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))]);
 }
 
+/** The colour as a hex string: the one form every renderer, the map library included, reads alike. */
 export function densityColor(density: number, ceiling: number): string {
-  return css(ramp(INK, density / ceiling));
+  return hex(ramp(INK, density / ceiling));
 }
+
+export const INK_LIGHT = hex(INK[0]);
+export const INK_DARK = hex(INK[INK.length - 1]);
 
 export function gridFeatures(cells: Cell[]): FeatureCollection<Polygon, Cell> {
   return {
@@ -119,6 +123,6 @@ export function thumbnail(cells: Cell[], side: number): { rects: Rect[]; width: 
   return { rects, width, height };
 }
 
-function css([r, g, b]: Rgb): string {
-  return `rgb(${r} ${g} ${b})`;
+function hex([r, g, b]: Rgb): string {
+  return `#${[r, g, b].map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
 }

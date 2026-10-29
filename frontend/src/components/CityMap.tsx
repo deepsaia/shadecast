@@ -5,11 +5,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { integer } from "@/lib/format";
-import { type Bounds, type Cell, cellBounds, densityCeiling, gridBounds, gridFeatures } from "@/lib/tile_grid";
+import {
+  type Bounds,
+  type Cell,
+  INK_DARK,
+  INK_LIGHT,
+  cellBounds,
+  densityCeiling,
+  gridBounds,
+  gridFeatures,
+} from "@/lib/tile_grid";
 
 const EMPTY: FeatureCollection = { type: "FeatureCollection", features: [] };
-const INK_LIGHT = "rgb(228 234 231)";
-const INK_DARK = "rgb(27 43 52)";
+// The grid sits over the streets; light enough for them to read through, lighter still when zoomed to a tile.
+const FILL_OPACITY = { city: 0.4, tile: 0.15 };
+const SUN = "#f2b134";
 
 export interface Overlay {
   url: string;
@@ -64,7 +74,12 @@ export function CityMap({
     });
     created.on("load", () => {
       created.addSource("grid", { type: "geojson", data: EMPTY });
-      created.addLayer({ id: "grid-fill", type: "fill", source: "grid", paint: { "fill-opacity": 0.55 } });
+      created.addLayer({
+        id: "grid-fill",
+        type: "fill",
+        source: "grid",
+        paint: { "fill-color": INK_LIGHT, "fill-opacity": FILL_OPACITY.city },
+      });
       created.addLayer({
         id: "grid-line",
         type: "line",
@@ -76,7 +91,7 @@ export function CityMap({
         type: "line",
         source: "grid",
         filter: ["==", ["get", "modelled"], true],
-        paint: { "line-color": "#f2b134", "line-width": 2 },
+        paint: { "line-color": SUN, "line-width": 2 },
       });
       created.addLayer({
         id: "grid-chosen",
@@ -136,6 +151,7 @@ export function CityMap({
     const current = map.current;
     if (!ready || !current) return;
     const target = zoom === "tile" && focusedCell ? cellBounds(focusedCell) : bounds;
+    current.setPaintProperty("grid-fill", "fill-opacity", FILL_OPACITY[zoom]);
     if (target) current.fitBounds(target, { padding: zoom === "tile" ? 48 : 24, duration: 600 });
   }, [ready, zoom, focusedCell, bounds]);
 
@@ -161,7 +177,7 @@ export function CityMap({
       return;
     }
     current.addSource("cooling", { type: "image", url: overlay.url, coordinates });
-    current.addLayer({ id: "cooling", type: "raster", source: "cooling", paint: { "raster-opacity": 0.85 } });
+    current.addLayer({ id: "cooling", type: "raster", source: "cooling", paint: { "raster-opacity": 0.7 } });
   }, [ready, overlay]);
 
   return (
