@@ -29,6 +29,7 @@ from .console import error_console
 from .console import ranking_table
 from .console import result_table
 from .console import runs_table
+from .console import scenario_table
 from .corpus import tile_paths
 from .corpus_cli import app as corpus_app
 from .exit_codes import FAILED
@@ -41,6 +42,7 @@ from .service.build_request import BuildRequest
 from .service.missing_stage import MissingStage
 from .service.null_progress import NullProgress
 from .service.plan_request import PlanRequest
+from .service.scenario import Scenario
 from .service.unknown_city import UnknownCity
 from .service.unknown_tile import UnknownTile
 from .simulate_cli import app as simulate_app
@@ -232,6 +234,46 @@ def plan(
         f"[dim]engine {float(seconds.get('baseline', 0.0)):.0f}s baseline, "
         f"{float(seconds.get('plan', 0.0)):.0f}s plan, tier {outcome.result.get('tier')}.[/]"
     )
+
+
+@app.command()
+def scenario(
+    city: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
+    tile: Annotated[str | None, typer.Option("--tile", help="A tile id; else the densest built tile.")] = None,
+    kind: Annotated[str, typer.Option("--kind", help="Intervention kind; tree is the one with a surrogate.")] = "tree",
+    arrangement: Annotated[
+        str, typer.Option("--arrangement", help="How the trees are laid out: clustered, scattered or corridor.")
+    ] = "clustered",
+    coverage: Annotated[
+        float | None, typer.Option("--coverage", help="Share of the feasible ground planted, above 0 and at most 1.")
+    ] = None,
+    budget: Annotated[
+        float | None, typer.Option("--budget", help="Budget in USD; sets the coverage through the cost table.")
+    ] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
+) -> None:
+    """Move the levers on a tile and read the outcomes from its surrogate, against doing nothing.
+
+    Give --coverage or --budget, not both. The engine is never run; `sdc plan` is the slow, verified answer.
+    """
+    from .service.city_catalog import CityCatalog
+    from .service.model_catalog import ModelCatalog
+    from .service.scenario_service import ScenarioService
+
+    models = ModelCatalog(tile_paths.MODELS_ROOT)
+    service = ScenarioService(CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT), models)
+    try:
+        asked = Scenario(
+            target=city, tile=tile, kind=kind, arrangement=arrangement, coverage=coverage, budget_usd=budget
+        )
+        with console.status(f"[cyan]{city}[/]: the surrogate over the tile"):
+            outcome = service.evaluate(asked).outcome
+    except (ValueError, LookupError) as exc:
+        fail(exc)
+    if as_json:
+        console.print_json(outcome.model_dump_json())
+        return
+    console.print(scenario_table(outcome))
 
 
 if __name__ == "__main__":

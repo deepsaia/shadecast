@@ -14,6 +14,7 @@ import {
   type ReferenceGroup,
   type Results,
   results,
+  type ScenarioOutcome,
   type TileReport,
   type TileStatistics,
   type TileSummary,
@@ -23,6 +24,23 @@ import type { components } from "./types";
 export const API = "/api/v1";
 
 type RawTileReport = components["schemas"]["TileReport"];
+
+/** The levers of a scenario as the API takes them; exactly one of coverage and budget_usd is set. */
+export interface ScenarioLevers {
+  kind?: string;
+  arrangement?: string;
+  coverage?: number;
+  budget_usd?: number;
+  size?: number;
+}
+
+function leverSearch(levers: ScenarioLevers): string {
+  const search = new URLSearchParams();
+  for (const [name, value] of Object.entries(levers)) {
+    if (value !== undefined) search.set(name, String(value));
+  }
+  return search.size ? `?${search}` : "";
+}
 
 export class ApiError extends Error {
   constructor(
@@ -59,6 +77,10 @@ export const paths = {
     const suffix = search.size ? `?${search}` : "";
     return `/cities/${encodeURIComponent(city)}/tiles/${encodeURIComponent(tile)}/fields/${field}${suffix}`;
   },
+  scenario: (city: string, tile: string, levers: ScenarioLevers) =>
+    `/cities/${encodeURIComponent(city)}/tiles/${encodeURIComponent(tile)}/scenario${leverSearch(levers)}`,
+  scenarioField: (city: string, tile: string, levers: ScenarioLevers) =>
+    `/cities/${encodeURIComponent(city)}/tiles/${encodeURIComponent(tile)}/scenario/field${leverSearch(levers)}`,
   results: () => "/results",
   findings: () => "/findings",
   references: () => "/references",
@@ -76,6 +98,8 @@ export const api = {
     tileReport(await getJson<RawTileReport>(paths.report(city, tile))),
   cityReport: async (city: string): Promise<TileReport> =>
     tileReport(await getJson<RawTileReport>(paths.cityReport(city))),
+  scenario: (city: string, tile: string, levers: ScenarioLevers) =>
+    getJson<ScenarioOutcome>(paths.scenario(city, tile, levers)),
   results: async (): Promise<Results> => results(await getJson<RawResults>(paths.results())),
   findings: () => getJson<Findings>(paths.findings()),
   references: () => getJson<ReferenceGroup[]>(paths.references()),

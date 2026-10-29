@@ -15,6 +15,7 @@ export type Findings = components["schemas"]["Findings"];
 export type ModelSummary = components["schemas"]["ModelSummary"];
 export type ChannelSummary = components["schemas"]["ChannelSummary"];
 export type Plan = components["schemas"]["Plan"];
+export type ScenarioOutcome = components["schemas"]["ScenarioOutcome"];
 
 export type RawResults = components["schemas"]["Results"];
 type RawCityResult = RawResults["cities"][number];

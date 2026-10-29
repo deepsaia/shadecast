@@ -2,9 +2,11 @@
 
 import pytest
 import typer
+from pydantic import ValidationError
 
 from shadecast import exit_codes
 from shadecast.service.missing_stage import MissingStage
+from shadecast.service.scenario import Scenario
 from shadecast.service.unknown_city import UnknownCity
 from shadecast.service.unknown_model import UnknownModel
 from shadecast.service.unknown_tile import UnknownTile
@@ -35,3 +37,10 @@ def test_a_key_error_is_printed_without_its_quotes(capsys):
         exit_codes.fail(KeyError("no tile 't1_1' in this urban centre"))
     assert left.value.exit_code == 2
     assert capsys.readouterr().err.startswith("no tile 't1_1'")
+
+
+def test_a_validation_error_is_one_line_without_the_scaffolding():
+    with pytest.raises(ValidationError) as caught:
+        Scenario(target="ahmedabad")
+    assert exit_codes.message(caught.value) == "give exactly one of coverage and budget_usd"
+    assert exit_codes.exit_code(caught.value) == 2

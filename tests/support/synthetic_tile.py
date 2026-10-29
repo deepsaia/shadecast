@@ -23,6 +23,7 @@ BASELINE_C = 50.0
 ENGINE_SECONDS = (300.0, 360.0, 330.0, 90.0)
 PLAN_IDS = ("clustered_0101", "random_uniform_0201", "corridor_0302")
 PROBE_ID = "sparse_probe_0000"
+MODEL_ID = "response-unet-ahmedabad-20261028T154005"
 
 
 def write_bundle(root: Path) -> Path:
@@ -88,6 +89,16 @@ def write_designs(tile: Path) -> Path:
     }
     (physics / "manifest.json").write_text(json.dumps(manifest))
     return physics
+
+
+def write_model(models_root: Path) -> Path:
+    """A model directory of the tile: weights that are never read and the manifest that names the tile."""
+    model = Path(models_root) / MODEL_ID
+    model.mkdir(parents=True, exist_ok=True)
+    (model / "model.pt").write_bytes(b"w")
+    tiles = [f"{URBAN_CENTRE}/{TILE_ID}"]
+    (model / "manifest.json").write_text(json.dumps({"created": "2026-10-28T15:40:05", "data": {"tiles": tiles}}))
+    return model
 
 
 def heights() -> np.ndarray:

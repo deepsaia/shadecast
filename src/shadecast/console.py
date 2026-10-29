@@ -16,6 +16,7 @@ from .service.city_summary import CitySummary
 from .service.plan import Plan
 from .service.ranking_row import RankingRow
 from .service.run_summary import RunSummary
+from .service.scenario_outcome import ScenarioOutcome
 from .service.stage_counts import StageCounts
 from .service.tile_summary import TileSummary
 
@@ -243,6 +244,26 @@ def pairs_table(title: str, pairs: dict) -> Table:
     for name, value in pairs.items():
         table.add_row(str(name), _cell(value))
     return table
+
+
+def scenario_table(outcome: ScenarioOutcome) -> Table:
+    """One scenario's outcomes against doing nothing, with the levers as the tile resolved them."""
+    return pairs_table(
+        f"{outcome.city}  {outcome.tile}  {outcome.kind}, {outcome.arrangement}",
+        {
+            "coverage of feasible ground": f"{outcome.coverage:.1%}",
+            "trees": f"{outcome.trees:,}",
+            "cost": f"{outcome.cost_usd / 1e6:.2f} M USD",
+            "baseline": f"{outcome.baseline_exposure:.2f} C, {outcome.baseline_at_risk:,} people above 45 C",
+            "exposure drop": f"{outcome.exposure_drop:.2f} C",
+            "degree-hours removed": f"{outcome.excess_removed:,.0f}",
+            "people moved below 45 C": f"{outcome.people:,}",
+            "equity gap change": f"{outcome.equity_gap_change:+.2f} C",
+            "excess removed per 1,000 USD": f"{outcome.efficiency:.2f}",
+            "model": outcome.model_id,
+            "answered in": f"{outcome.surrogate_seconds:.2f} s",
+        },
+    )
 
 
 def records_table(title: str, rows: list[dict]) -> Table:

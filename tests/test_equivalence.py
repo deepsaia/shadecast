@@ -23,6 +23,7 @@ from shadecast.service.findings_report import FindingsReport
 from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.results_report import ResultsReport
 from shadecast.service.run_status import RunStatus
+from shadecast.service.scenario_service import ScenarioService
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
 from shadecast.service.tile_reporter import TileReporter
@@ -55,6 +56,7 @@ def everything(tmp_path, monkeypatch):
         findings=FindingsReport(tmp_path),
         models=ModelCatalog(tmp_path / "models"),
         runs=RunStatus(catalog, tmp_path / "models"),
+        scenarios=ScenarioService(catalog, ModelCatalog(tmp_path / "models")),
     )
     settings = ServerSettings(data_root=tmp_path, static_dir=tmp_path / "static")
     return services, TestClient(build_app(settings, services))
