@@ -15,7 +15,8 @@ import logging
 
 import networkx as nx
 import numpy as np
-from scipy.ndimage import distance_transform_edt, grey_dilation
+from scipy.ndimage import distance_transform_edt
+from scipy.ndimage import grey_dilation
 from shapely.geometry import LineString
 
 from ..aoi import AOI
@@ -54,9 +55,7 @@ def corridor_surface(
     for (u, v), value in corridor.items():
         if value <= 0 or not graph.has_edge(u, v):
             continue
-        line = LineString(
-            [(graph.nodes[u]["x"], graph.nodes[u]["y"]), (graph.nodes[v]["x"], graph.nodes[v]["y"])]
-        )
+        line = LineString([(graph.nodes[u]["x"], graph.nodes[u]["y"]), (graph.nodes[v]["x"], graph.nodes[v]["y"])])
         n = max(2, int(line.length / step_m) + 1)
         points = [line.interpolate(d, normalized=True) for d in np.linspace(0.0, 1.0, n)]
         share = value / n

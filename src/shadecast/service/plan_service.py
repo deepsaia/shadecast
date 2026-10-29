@@ -38,8 +38,6 @@ class PlanService:
             exposure_drop=float(benefit.get("delta_exposure_C", 0.0)),
             people=round(float(benefit.get("delta_people_at_risk", 0.0))),
             efficiency=float(benefit.get("excess_reduced_per_1k_usd", 0.0)),
-            engine_seconds=round(
-                float(seconds.get("baseline", 0.0)) + float(seconds.get("plan", 0.0)), 1
-            ),
+            engine_seconds=round(float(seconds.get("baseline", 0.0)) + float(seconds.get("plan", 0.0)), 1),
             result=result,
         )

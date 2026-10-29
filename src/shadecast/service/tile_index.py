@@ -47,9 +47,7 @@ class TileIndex:
         """Describe every tile again and replace the file."""
         rows = self._describe(centre)
         if not rows:
-            raise ValueError(
-                f"urban centre {centre.id} ({centre.slug}) has no 1 km tiles to describe"
-            )
+            raise ValueError(f"urban centre {centre.id} ({centre.slug}) has no 1 km tiles to describe")
         payload = {
             "urban_centre": {
                 "id": centre.id,

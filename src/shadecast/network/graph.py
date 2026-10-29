@@ -51,9 +51,7 @@ def fetch(aoi: AOI, cache_dir: Path, *, refresh: bool = False) -> nx.MultiDiGrap
     graph = ox.projection.project_graph(graph, to_crs=aoi.crs)
     path.parent.mkdir(parents=True, exist_ok=True)
     ox.io.save_graphml(graph, path)
-    logger.info(
-        "walk network: %d nodes, %d edges", graph.number_of_nodes(), graph.number_of_edges()
-    )
+    logger.info("walk network: %d nodes, %d edges", graph.number_of_nodes(), graph.number_of_edges())
     return graph
 
 

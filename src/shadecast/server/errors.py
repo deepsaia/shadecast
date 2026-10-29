@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
+from fastapi import Request
 from fastapi.responses import JSONResponse
 
 from ..service.missing_stage import MissingStage
@@ -12,7 +13,8 @@ from ..service.unknown_channel import UnknownChannel
 from ..service.unknown_city import UnknownCity
 from ..service.unknown_model import UnknownModel
 from ..service.unknown_tile import UnknownTile
-from .request_id import HEADER, current_request_id
+from .request_id import HEADER
+from .request_id import current_request_id
 
 logger = logging.getLogger(__name__)
 

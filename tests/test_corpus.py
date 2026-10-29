@@ -7,7 +7,11 @@ import pandas as pd
 import pytest
 
 from shadecast import cities
-from shadecast.cities import SELECTION_PATH, City, corpus, selection, summary
+from shadecast.cities import SELECTION_PATH
+from shadecast.cities import City
+from shadecast.cities import corpus
+from shadecast.cities import selection
+from shadecast.cities import summary
 from shadecast.corpus.urban_centres import UrbanCentres
 
 COLUMNS = (

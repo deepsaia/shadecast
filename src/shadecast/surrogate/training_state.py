@@ -9,7 +9,8 @@ epoch, and the batch order from then on is the one the uninterrupted run would h
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
 from pathlib import Path
 
 import torch
@@ -44,9 +45,7 @@ class TrainingState:
             self.best_skill, self.best_epoch = skill, epoch
             self.best_state = copy.deepcopy(model.state_dict())
 
-    def save(
-        self, path: Path, trainables: Trainables, fingerprint: dict, elapsed_now: float
-    ) -> None:
+    def save(self, path: Path, trainables: Trainables, fingerprint: dict, elapsed_now: float) -> None:
         """Write everything needed to continue after this epoch. Replaces the previous file."""
         payload = {
             "epoch": self.epoch,

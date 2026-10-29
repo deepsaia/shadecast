@@ -4,7 +4,9 @@ from pathlib import Path
 
 import pytest
 from support import synthetic_tile
-from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
+from support.fixtures import fixture_tiles
 from support.recording_progress import RecordingProgress
 
 from shadecast.service import experiment_service
@@ -65,10 +67,7 @@ def test_the_factorial_runs_over_each_city_s_tile_with_a_baseline(tmp_path, serv
     assert cities == [(f"ahmedabad-{synthetic_tile.TILE_ID}", tile / "bundle", tile / "physics")]
     assert outcome.name == "factorial" and outcome.rows == 2 and outcome.out == str(out)
     assert outcome.verdict == {}
-    assert (
-        progress.names("phase") == ["factorial over 1 tile"]
-        and progress.events[-1][0] == "finished"
-    )
+    assert progress.names("phase") == ["factorial over 1 tile"] and progress.events[-1][0] == "finished"
 
 
 def test_targeting_and_channel_carry_their_budget_and_verdict(tmp_path, service):

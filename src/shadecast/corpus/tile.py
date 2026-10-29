@@ -13,7 +13,8 @@ import math
 import re
 from dataclasses import dataclass
 
-from shapely.geometry import Polygon, box
+from shapely.geometry import Polygon
+from shapely.geometry import box
 from shapely.ops import transform as transform_geometry
 
 from .utm_zone import UtmZone

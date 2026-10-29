@@ -13,7 +13,9 @@ from typing import Annotated
 
 import typer
 
-from .console import console, error_console, pairs_table
+from .console import console
+from .console import error_console
+from .console import pairs_table
 from .corpus import tile_paths
 from .service.assessment_request import AssessmentRequest
 from .service.assessment_service import AssessmentService
@@ -89,22 +91,16 @@ def train_model(
         str | None,
         typer.Option("--holdout-city", help="Hold out this whole city to measure transfer."),
     ] = None,
-    epochs: Annotated[
-        int, typer.Option("--epochs", help="Upper bound; patience stops early.")
-    ] = 60,
+    epochs: Annotated[int, typer.Option("--epochs", help="Upper bound; patience stops early.")] = 60,
     patch: Annotated[int, typer.Option("--patch", help="Patch side in pixels.")] = 256,
     per_entry: Annotated[int, typer.Option("--per-entry", help="Patches per design.")] = 24,
     channels: Annotated[
         str,
-        typer.Option(
-            "--channels", help="Channel set: engine (all eleven) or base (the first seven)."
-        ),
+        typer.Option("--channels", help="Channel set: engine (all eleven) or base (the first seven)."),
     ] = "engine",
     densest: Annotated[
         int | None,
-        typer.Option(
-            "--densest", help="Train on the K tiles with physics that have most residents."
-        ),
+        typer.Option("--densest", help="Train on the K tiles with physics that have most residents."),
     ] = None,
     stratified: Annotated[
         int | None,
@@ -174,9 +170,7 @@ def train_model(
 
 @treeshade.command("assess")
 def assess_model(
-    target: Annotated[
-        str, typer.Argument(help="A city key such as savannah, or a trained model directory.")
-    ],
+    target: Annotated[str, typer.Argument(help="A city key such as savannah, or a trained model directory.")],
     physics_dir: Annotated[
         Path | None,
         typer.Argument(help="The tile's physics directory, when a model directory was given."),
@@ -189,9 +183,7 @@ def assess_model(
         str | None,
         typer.Option("--model", help="A model id of the city, else its newest model."),
     ] = None,
-    tile: Annotated[
-        str | None, typer.Option("--tile", help="Which built tile, when the city has several.")
-    ] = None,
+    tile: Annotated[str | None, typer.Option("--tile", help="Which built tile, when the city has several.")] = None,
     design: Annotated[
         list[str] | None,
         typer.Option("--design", help="Assess these designs instead of the held-out set."),
@@ -220,23 +212,15 @@ def assess_model(
         raise typer.Exit(code=1) from exc
     verdict = "green" if outcome.beats_nothing else "red"
     console.print(f"[dim]assessed {outcome.model_dir}[/]")
-    console.print(
-        f"[{verdict}]mean skill {outcome.skill:+.3f}[/]  "
-        f"(above zero means it beats predicting nothing)"
-    )
+    console.print(f"[{verdict}]mean skill {outcome.skill:+.3f}[/]  (above zero means it beats predicting nothing)")
     speedup = f"{outcome.speedup:,.0f}x" if outcome.speedup is not None else "unknown"
-    console.print(
-        f"plan score error {outcome.error:.1%}, ranking spearman {outcome.spearman}, "
-        f"speedup {speedup}"
-    )
+    console.print(f"plan score error {outcome.error:.1%}, ranking spearman {outcome.spearman}, speedup {speedup}")
     console.print(f"[dim]full report written to {outcome.report_path}[/]")
 
 
 @treeshade.command("describe")
 def describe(
-    target: Annotated[
-        str, typer.Argument(help="A city key such as savannah, or a trained model directory.")
-    ],
+    target: Annotated[str, typer.Argument(help="A city key such as savannah, or a trained model directory.")],
     model: Annotated[
         str | None,
         typer.Option("--model", help="A model id of the city, else its newest model."),

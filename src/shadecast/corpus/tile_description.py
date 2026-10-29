@@ -13,7 +13,8 @@ from shapely.geometry.base import BaseGeometry
 
 from . import ucdb
 from .tile_rasters import TileRasters
-from .tiling import attributes, tiles_of
+from .tiling import attributes
+from .tiling import tiles_of
 from .urban_centre import UrbanCentre
 
 logger = logging.getLogger(__name__)

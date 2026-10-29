@@ -16,9 +16,7 @@ class PatchSettings:
 
     def __post_init__(self) -> None:
         if self.channels not in CHANNEL_SETS:
-            raise ValueError(
-                f"unknown channel set {self.channels!r}; one of {sorted(CHANNEL_SETS)}"
-            )
+            raise ValueError(f"unknown channel set {self.channels!r}; one of {sorted(CHANNEL_SETS)}")
 
     @property
     def names(self) -> tuple[str, ...]:

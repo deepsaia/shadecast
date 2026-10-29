@@ -12,7 +12,8 @@ from typing import Annotated
 
 import typer
 
-from .console import console, error_console
+from .console import console
+from .console import error_console
 from .corpus import tile_paths
 from .service.baseline_request import BaselineRequest
 from .service.channels import channel
@@ -21,7 +22,8 @@ from .service.engine_service import EngineService
 from .service.missing_stage import MissingStage
 from .service.null_progress import NullProgress
 from .service.simulation_request import SimulationRequest
-from .service.simulation_service import SimulationService, settings_for
+from .service.simulation_service import SimulationService
+from .service.simulation_service import settings_for
 from .service.unknown_city import UnknownCity
 from .service.unknown_tile import UnknownTile
 from .surrogate.dataset import engine_threads
@@ -39,9 +41,7 @@ TREESHADE = channel("treeshade")
 @app.command("baseline")
 def baseline(
     city: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
-    tile: Annotated[
-        str | None, typer.Option("--tile", help="A tile id; else the densest built tile.")
-    ] = None,
+    tile: Annotated[str | None, typer.Option("--tile", help="A tile id; else the densest built tile.")] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a line.")] = False,
 ) -> None:
     """Run the engine over a tile as it is, once, and keep the baseline beside its bundle.
@@ -77,14 +77,10 @@ def treeshade(
             help="Built tile ids separated by commas, or 'all'. Default: the densest built tile.",
         ),
     ] = None,
-    out: Annotated[
-        Path | None, typer.Option("--out", help="Where to write responses, for one tile.")
-    ] = None,
+    out: Annotated[Path | None, typer.Option("--out", help="Where to write responses, for one tile.")] = None,
     jobs: Annotated[
         int,
-        typer.Option(
-            "--jobs", "-j", help="Engine runs side by side. The baseline runs alone first."
-        ),
+        typer.Option("--jobs", "-j", help="Engine runs side by side. The baseline runs alone first."),
     ] = 1,
 ) -> None:
     """Run the tree shade designs through the engine, one tile at a time.
@@ -128,13 +124,10 @@ def treeshade(
         mean = progress.mean_seconds()
         pace = f", {mean:.0f} s a design" if mean else ""
         console.print(
-            f"[green]{outcome.entries}[/] responses in {outcome.destination}  "
-            f"({outcome.seconds / 60:.0f} min{pace})"
+            f"[green]{outcome.entries}[/] responses in {outcome.destination}  ({outcome.seconds / 60:.0f} min{pace})"
         )
     if failures:
-        error_console.print(
-            f"[red]{len(failures)} tile(s) had failed designs:[/] {', '.join(failures)}"
-        )
+        error_console.print(f"[red]{len(failures)} tile(s) had failed designs:[/] {', '.join(failures)}")
         raise typer.Exit(code=1)
 
 

@@ -57,10 +57,7 @@ HEADER = "Name              Code Alb  Emis Ts_deg Tstart TmaxLST"
 def render_table(classes=EXTENDED_CLASSES) -> str:
     lines = [HEADER]
     for name, code, albedo, emissivity, ts_deg, tstart, tmax in classes:
-        lines.append(
-            f"{name:<18s} {code:<4d} {albedo:.2f} {emissivity:.2f} "
-            f"{ts_deg:.2f}   {tstart:.2f}  {tmax:.1f}"
-        )
+        lines.append(f"{name:<18s} {code:<4d} {albedo:.2f} {emissivity:.2f} {ts_deg:.2f}   {tstart:.2f}  {tmax:.1f}")
     return "\n".join(lines) + "\n"
 
 

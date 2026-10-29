@@ -14,8 +14,10 @@ from __future__ import annotations
 import csv
 import json
 import subprocess
-from datetime import UTC, datetime
-from importlib.metadata import PackageNotFoundError, version
+from datetime import UTC
+from datetime import datetime
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version
 from pathlib import Path
 
 import torch
@@ -24,7 +26,9 @@ from ..corpus.tile_ref import ref_of
 from ..data.checksum import sha256
 from .features import CHANNEL_SETS
 from .manifest_inputs import ManifestInputs
-from .model import DEPTH, WIDTH, ResponseUNet
+from .model import DEPTH
+from .model import WIDTH
+from .model import ResponseUNet
 
 MANIFEST_FILE = "manifest.json"
 EPOCHS_FILE = "epochs.csv"
@@ -93,9 +97,7 @@ def tile_ref(bundle: Path) -> str:
     tile = _provenance(bundle).get("tile", {})
     centre, tile_id = tile.get("urban_centre"), tile.get("id")
     if not centre or not tile_id:
-        raise ValueError(
-            f"{bundle} has no tile record in its provenance; rebuild it with 'sdc build'"
-        )
+        raise ValueError(f"{bundle} has no tile record in its provenance; rebuild it with 'sdc build'")
     return ref_of(int(centre), str(tile_id))
 
 
@@ -155,9 +157,7 @@ def _package_version() -> str:
 
 
 def _code_commit() -> str:
-    completed = subprocess.run(
-        ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False
-    )
+    completed = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False)
     return completed.stdout.strip() if completed.returncode == 0 else "unknown"
 
 
@@ -190,9 +190,7 @@ def write(model_dir: Path, manifest: dict) -> Path:
 def read(model_dir: Path) -> dict:
     path = Path(model_dir) / MANIFEST_FILE
     if not path.exists():
-        raise FileNotFoundError(
-            f"{path} does not exist; this model has no manifest. Retrain to create one."
-        )
+        raise FileNotFoundError(f"{path} does not exist; this model has no manifest. Retrain to create one.")
     manifest = json.loads(path.read_text())
     check(manifest)
     return manifest

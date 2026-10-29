@@ -60,9 +60,7 @@ def _check_entry(entry: dict, path: Path) -> None:
     key = entry.get("key", "?")
     unknown = sorted(set(entry) - set(SELECTION_FIELDS))
     if unknown:
-        raise ValueError(
-            f"{path.name}: city {key!r} has fields that belong to the database, not here: {unknown}"
-        )
+        raise ValueError(f"{path.name}: city {key!r} has fields that belong to the database, not here: {unknown}")
     missing = [name for name in REQUIRED_FIELDS if name not in entry]
     if missing:
         raise ValueError(f"{path.name}: city {key!r} lacks {missing}")
@@ -118,9 +116,7 @@ def _city(entry: dict, centres: UrbanCentres) -> City:
     )
 
 
-def corpus(
-    entries: list[dict] | None = None, centres: UrbanCentres | None = None
-) -> dict[str, City]:
+def corpus(entries: list[dict] | None = None, centres: UrbanCentres | None = None) -> dict[str, City]:
     """The selected cities keyed by short key, in selection order."""
     chosen = entries if entries is not None else selection()
     database = centres if centres is not None else urban_centres()

@@ -13,15 +13,13 @@ from typing import Annotated
 
 import typer
 
-from .console import (
-    centre_details,
-    centres_table,
-    console,
-    error_console,
-    pairs_table,
-    records_table,
-    stage_line,
-)
+from .console import centre_details
+from .console import centres_table
+from .console import console
+from .console import error_console
+from .console import pairs_table
+from .console import records_table
+from .console import stage_line
 from .corpus import tile_paths
 from .corpus.draw import Draw
 from .corpus.sampling import sample as draw_sample
@@ -76,9 +74,7 @@ def as_record(centre: UrbanCentre) -> dict:
 def search(
     text: Annotated[str, typer.Argument(help="Part of a name; empty matches everything.")] = "",
     country: Annotated[str | None, typer.Option("--country", help="Country name.")] = None,
-    min_population: Annotated[
-        int, typer.Option("--min-population", help="Smallest 2025 population to list.")
-    ] = 0,
+    min_population: Annotated[int, typer.Option("--min-population", help="Smallest 2025 population to list.")] = 0,
     limit: Annotated[int, typer.Option("--limit", help="Rows to show.")] = 30,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
@@ -117,15 +113,11 @@ def show(
 
 @app.command("sample")
 def sample(
-    per_stratum: Annotated[
-        int, typer.Option("--per-stratum", help="Centres per Koppen and income stratum.")
-    ] = 2,
+    per_stratum: Annotated[int, typer.Option("--per-stratum", help="Centres per Koppen and income stratum.")] = 2,
     min_population: Annotated[
         int, typer.Option("--min-population", help="Smallest 2025 population to draw from.")
     ] = 500_000,
-    seed: Annotated[
-        int, typer.Option("--seed", help="Random seed, so the draw is reproducible.")
-    ] = 0,
+    seed: Annotated[int, typer.Option("--seed", help="Random seed, so the draw is reproducible.")] = 0,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """Draw a stratified set of urban centres, k per Koppen class and income group."""
@@ -152,11 +144,7 @@ def stats(
         return
     console.print(pairs_table("Corpus", summary.get("totals", {})))
     console.print(records_table("By continent", summary.get("by_continent", [])))
-    console.print(
-        records_table("Countries with most urban centres", summary.get("top_countries", []))
-    )
+    console.print(records_table("Countries with most urban centres", summary.get("top_countries", [])))
     console.print(pairs_table("By Koppen class", summary.get("by_koppen", {})))
     console.print(pairs_table("By income group", summary.get("by_income", {})))
-    console.print(
-        pairs_table("Urban centres by size, in 1 km tiles", summary.get("size_bands", {}))
-    )
+    console.print(pairs_table("Urban centres by size, in 1 km tiles", summary.get("size_bands", {})))

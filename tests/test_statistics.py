@@ -1,6 +1,7 @@
 """Corpus and tile statistics are plain counts and quantiles over what the data says."""
 
-from shadecast.corpus.statistics import corpus_stats, tile_stats
+from shadecast.corpus.statistics import corpus_stats
+from shadecast.corpus.statistics import tile_stats
 from shadecast.corpus.urban_centre import UrbanCentre
 
 

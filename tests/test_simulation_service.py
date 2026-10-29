@@ -4,7 +4,9 @@ import json
 from pathlib import Path
 
 import pytest
-from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
+from support.fixtures import fixture_tiles
 
 from shadecast.service import simulation_service
 from shadecast.service.city_catalog import CityCatalog
@@ -84,9 +86,7 @@ def test_an_output_directory_applies_to_one_tile_only(tmp_path, service):
         service.tiles_for(SimulationRequest(target="ahmedabad", tiles="all", out=tmp_path / "o"))
 
 
-def test_simulate_runs_the_simulation_beside_the_bundle_or_where_asked(
-    tmp_path, service, monkeypatch
-):
+def test_simulate_runs_the_simulation_beside_the_bundle_or_where_asked(tmp_path, service, monkeypatch):
     bundle = _built(tmp_path, DENSE)
     seen: list[tuple] = []
 
@@ -101,7 +101,5 @@ def test_simulate_runs_the_simulation_beside_the_bundle_or_where_asked(
     assert seen == [(bundle, bundle.parent / "physics", 3, "tree")]
     assert outcome.tile == DENSE and outcome.entries == 1
     assert outcome.destination == str(bundle.parent / "physics")
-    service.simulate(
-        paths, SimulationRequest(target="ahmedabad", out=tmp_path / "o"), NullProgress()
-    )
+    service.simulate(paths, SimulationRequest(target="ahmedabad", out=tmp_path / "o"), NullProgress())
     assert seen[-1][1] == tmp_path / "o"

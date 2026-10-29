@@ -4,7 +4,9 @@ import os
 
 import pytest
 from support import synthetic_tile
-from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
+from support.fixtures import fixture_tiles
 
 from shadecast.corpus.tile_paths import TilePaths
 from shadecast.service.city_catalog import CityCatalog
@@ -12,7 +14,8 @@ from shadecast.service.missing_stage import MissingStage
 from shadecast.service.model_catalog import ModelCatalog
 from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
-from shadecast.service.tile_reporter import TileReporter, report_of
+from shadecast.service.tile_reporter import TileReporter
+from shadecast.service.tile_reporter import report_of
 
 
 @pytest.fixture
@@ -32,12 +35,7 @@ def test_a_bundle_only_tile_reports_its_facts_and_nothing_it_lacks(tmp_path, cat
     assert report.facts.tier == "A" and report.facts.urban_centre.koppen == "BSh"
     assert report.facts.sources.get("terrain") == "Copernicus DEM"
     assert report.stages.bundle is True and report.stages.baseline is False
-    assert (
-        report.baseline is None
-        and report.hourly == []
-        and report.plans == []
-        and report.physics is None
-    )
+    assert report.baseline is None and report.hourly == [] and report.plans == [] and report.physics is None
 
 
 def test_a_tile_with_a_baseline_reports_its_score_meteorology_and_hours(tmp_path, catalog):

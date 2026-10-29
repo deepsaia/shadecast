@@ -6,8 +6,11 @@ import pandas as pd
 import pytest
 
 from shadecast.corpus import ucdb
-from shadecast.corpus.legend import KOPPEN, income_code, koppen_symbol
-from shadecast.corpus.slugs import assign_slugs, slugify
+from shadecast.corpus.legend import KOPPEN
+from shadecast.corpus.legend import income_code
+from shadecast.corpus.legend import koppen_symbol
+from shadecast.corpus.slugs import assign_slugs
+from shadecast.corpus.slugs import slugify
 from shadecast.corpus.urban_centre import UrbanCentre
 from shadecast.corpus.urban_centres import UrbanCentres
 

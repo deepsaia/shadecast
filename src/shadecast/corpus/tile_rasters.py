@@ -5,8 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..data.built import GHS_BUILT_H, GHS_BUILT_S
-from ..data.ghs_product import CACHE_ROOT, read_window
+from ..data.built import GHS_BUILT_H
+from ..data.built import GHS_BUILT_S
+from ..data.ghs_product import CACHE_ROOT
+from ..data.ghs_product import read_window
 from ..data.ghs_types import Bounds
 from ..data.population import GHS_POP
 from ..data.raster_window import RasterWindow

@@ -6,7 +6,9 @@ import torch
 
 from shadecast.surrogate import training
 from shadecast.surrogate.patch_set import PatchSet
-from shadecast.surrogate.training import evaluate_skill, split_by_city, train
+from shadecast.surrogate.training import evaluate_skill
+from shadecast.surrogate.training import split_by_city
+from shadecast.surrogate.training import train
 from shadecast.surrogate.training_settings import TrainingSettings
 from shadecast.surrogate.training_state import CHECKPOINT_NAME
 

@@ -16,7 +16,10 @@ from .build_target import BuildTarget
 from .built_tile import BuiltTile
 from .city_catalog import CityCatalog
 from .progress_listener import ProgressListener
-from .tile_choice import chosen_tiles, every_tile, means_all, names_tiles
+from .tile_choice import chosen_tiles
+from .tile_choice import every_tile
+from .tile_choice import means_all
+from .tile_choice import names_tiles
 from .unknown_city import UnknownCity
 from .unknown_tile import UnknownTile
 
@@ -49,17 +52,13 @@ class BuildService:
             if city is None:
                 raise UnknownCity(key, "it is not a selected city")
             for tile in self._tiles_of(key, request):
-                targets.append(
-                    BuildTarget(city, tile, TilePaths(self._tiles_root, city.ucdb_id, tile))
-                )
+                targets.append(BuildTarget(city, tile, TilePaths(self._tiles_root, city.ucdb_id, tile)))
         return targets
 
     def build(self, request: BuildRequest, progress: ProgressListener) -> BuildOutcome:
         """Build every target; a tile whose sources fail is recorded and the rest go on."""
         targets = self.targets(request)
-        outcome = BuildOutcome(
-            chosen=_counts(targets), totals={key: self._total(key) for key in _counts(targets)}
-        )
+        outcome = BuildOutcome(chosen=_counts(targets), totals={key: self._total(key) for key in _counts(targets)})
         progress.started("assembling bundles", len(targets), 0)
         for target in targets:
             label = f"{target.city.key} {target.tile.id}"
@@ -71,9 +70,7 @@ class BuildService:
             # logged with its type and never swallowed; the outcome names it.
             except Exception as error:
                 logger.exception("build failed for %s after %.1fs", label, time.time() - started)
-                progress.step_failed(
-                    label, str(error).splitlines()[0] if str(error) else type(error).__name__
-                )
+                progress.step_failed(label, str(error).splitlines()[0] if str(error) else type(error).__name__)
                 outcome.failed.append(label)
                 continue
             seconds = round(time.time() - started, 1)

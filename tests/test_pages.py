@@ -13,9 +13,7 @@ def test_the_landing_and_pipeline_pages_are_self_contained():
 
 def test_no_page_carries_an_em_dash():
     for path in pages.PAGES_DIR.glob("*.html"):
-        assert chr(0x2014) not in path.read_text(), (
-            f"{path.name}: no em-dashes anywhere in this project"
-        )
+        assert chr(0x2014) not in path.read_text(), f"{path.name}: no em-dashes anywhere in this project"
 
 
 def test_the_landing_page_links_the_pages_and_the_repository():

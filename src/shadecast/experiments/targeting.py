@@ -28,9 +28,13 @@ from ..baselines import orchard
 from ..bundles import aoi_from_provenance
 from ..interventions import apply
 from ..network import graph as netgraph
-from ..network import heat, rasterize, routing
-from ..objectives import benefit, score
-from ..pipeline import BUNDLE_FILES, daylight_mean
+from ..network import heat
+from ..network import rasterize
+from ..network import routing
+from ..objectives import benefit
+from ..objectives import score
+from ..pipeline import BUNDLE_FILES
+from ..pipeline import daylight_mean
 from ..sim.runner import run
 from .layers import city_layers
 
@@ -85,9 +89,7 @@ def plan_overlap(first: np.ndarray, second: np.ndarray) -> float:
     return float((first & second).sum() / union) if union else 1.0
 
 
-def simulate(
-    bundle: Path, layers: dict, placement: np.ndarray, *, work: Path, design_day: str
-) -> np.ndarray:
+def simulate(bundle: Path, layers: dict, placement: np.ndarray, *, work: Path, design_day: str) -> np.ndarray:
     """Apply a placement and run the engine, returning the daylight-mean Tmrt field."""
     work.mkdir(parents=True, exist_ok=True)
     for name in BUNDLE_FILES:
@@ -104,15 +106,11 @@ def simulate(
     return tmrt
 
 
-def run_city(
-    city: str, bundle: Path, layers: dict, *, budget: float, aoi: AOI, work_root: Path
-) -> dict:
+def run_city(city: str, bundle: Path, layers: dict, *, budget: float, aoi: AOI, work_root: Path) -> dict:
     """Build both plans at one budget, simulate both, score both on both objectives."""
     design_day = json.loads((Path(bundle) / "provenance.json").read_text())["met"]["design_day"]
     baseline = layers["baseline"]
-    multigraph, node_weights, endpoints = prepare_network(
-        bundle, aoi, baseline, layers["population"]
-    )
+    multigraph, node_weights, endpoints = prepare_network(bundle, aoi, baseline, layers["population"])
     base_routes = score_routes(multigraph, baseline, aoi, weights=node_weights, endpoints=endpoints)
     digraph = routing.to_routable(multigraph)
     surface = rasterize.corridor_surface(digraph, base_routes.corridor, aoi)
@@ -197,9 +195,7 @@ def verdict(rows: list[dict]) -> dict:
     if not scored:
         return {"conclusive": False}
     overlaps = [r["plan_overlap"] for r in scored]
-    advantages = [
-        r["route"]["route_exposure_drop_C"] - r["area"]["route_exposure_drop_C"] for r in scored
-    ]
+    advantages = [r["route"]["route_exposure_drop_C"] - r["area"]["route_exposure_drop_C"] for r in scored]
     mean_overlap = float(np.mean(overlaps))
     mean_advantage = float(np.mean(advantages))
     return {

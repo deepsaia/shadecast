@@ -13,16 +13,25 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
 
-from rich.console import Console, Group, RenderableType
-from rich.progress import BarColumn, MofNCompleteColumn, Progress, TaskID, TextColumn
+from rich.console import Console
+from rich.console import Group
+from rich.console import RenderableType
+from rich.progress import BarColumn
+from rich.progress import MofNCompleteColumn
+from rich.progress import Progress
+from rich.progress import TaskID
+from rich.progress import TextColumn
 from rich.table import Table
 from rich.text import Text
 
 from ..hardware import Hardware
-from .live_display import LiveDisplay, clock, sparkline
+from .live_display import LiveDisplay
+from .live_display import clock
+from .live_display import sparkline
 
 logger = logging.getLogger(__name__)
 
@@ -217,10 +226,7 @@ class TrainingProgress:
         """
         values = self.series(key)
         text.append(title, style="bold")
-        text.append(
-            f"first {form.format(values[0])}   last {form.format(values[-1])}   "
-            f"{sparkline(values)}\n"
-        )
+        text.append(f"first {form.format(values[0])}   last {form.format(values[-1])}   {sparkline(values)}\n")
 
     def _hardware_line(self, hardware: Hardware) -> Text:
         text = Text()

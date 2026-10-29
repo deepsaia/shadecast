@@ -10,9 +10,11 @@ import pytest
 from shadecast.service import training_service
 from shadecast.service.null_progress import NullProgress
 from shadecast.service.training_request import TrainingRequest
-from shadecast.service.training_service import TrainingService, unfinished_model
+from shadecast.service.training_service import TrainingService
+from shadecast.service.training_service import unfinished_model
 from shadecast.surrogate.manifest import EPOCHS_FILE
-from shadecast.surrogate.training_state import CHECKPOINT_NAME, STARTED_NAME
+from shadecast.surrogate.training_state import CHECKPOINT_NAME
+from shadecast.surrogate.training_state import STARTED_NAME
 
 CENTRE = 6143
 
@@ -147,18 +149,14 @@ def test_train_crops_fits_and_writes_the_model_its_manifest_and_its_curve(tmp_pa
     _physics(_bundle(tmp_path, "t43N_249_2547"))
     monkeypatch.setattr(training_service, "crop_batch", _fake_crop)
     monkeypatch.setattr(training_service, "train", _fake_train)
-    outcome = _service(tmp_path).train(
-        TrainingRequest(target="ahmedabad", epochs=6), NullProgress()
-    )
+    outcome = _service(tmp_path).train(TrainingRequest(target="ahmedabad", epochs=6), NullProgress())
     destination = Path(outcome.destination)
     assert destination.parent == tmp_path / "models"
     started = STARTED[-1]
     assert started["cities"] == ["ahmedabad"] and started["tiles"] == [f"{CENTRE}/t43N_249_2547"]
     assert not (destination / STARTED_NAME).exists(), "the manifest replaces the start record"
     assert destination.name.startswith("response-unet-ahmedabad-")
-    assert (destination / "model.pt").exists() and not (
-        destination / "training_report.json"
-    ).exists()
+    assert (destination / "model.pt").exists() and not (destination / "training_report.json").exists()
     written = json.loads((destination / "manifest.json").read_text())
     assert written["data"]["tiles"] == [f"{CENTRE}/t43N_249_2547"]
     assert written["data"]["patch_px"] == 256 and written["training"]["best_epoch"] == 4
@@ -176,9 +174,7 @@ def test_resume_continues_the_newest_unfinished_model(tmp_path, monkeypatch):
     (unfinished / CHECKPOINT_NAME).write_bytes(b"c")
     monkeypatch.setattr(training_service, "crop_batch", _fake_crop)
     monkeypatch.setattr(training_service, "train", _fake_train)
-    outcome = _service(tmp_path).train(
-        TrainingRequest(target="ahmedabad", resume=True), NullProgress()
-    )
+    outcome = _service(tmp_path).train(TrainingRequest(target="ahmedabad", resume=True), NullProgress())
     assert Path(outcome.destination) == unfinished and outcome.resumed is True
 
 

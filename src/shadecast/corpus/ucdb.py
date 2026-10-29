@@ -30,8 +30,7 @@ SOURCE = "ghs_ucdb"  # key in cited_sources.json
 RELEASE = "R2024A"
 VERSION = "V1_2"
 BASE_URL = (
-    "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/"
-    f"GHS_UCDB_GLOBE_{RELEASE}/GHS_UCDB_THEME_GLOBE_{RELEASE}"
+    f"https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_{RELEASE}/GHS_UCDB_THEME_GLOBE_{RELEASE}"
 )
 CACHE = Path.home() / ".cache" / "shadecast" / "ucdb"
 

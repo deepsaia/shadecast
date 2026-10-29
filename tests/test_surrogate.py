@@ -11,22 +11,18 @@ from scipy import ndimage
 
 from shadecast.bundles import aoi_from_provenance
 from shadecast.surrogate import designs
-from shadecast.surrogate.features import (
-    CHANNEL_SETS,
-    IN_CHANNELS_ORDER,
-    channel_set_for,
-    select,
-    sky_openness,
-    stack,
-)
-from shadecast.surrogate.metrics import (
-    aggregate_error,
-    distance_bands,
-    ranking,
-    skill,
-    speedup,
-    zero_baseline,
-)
+from shadecast.surrogate.features import CHANNEL_SETS
+from shadecast.surrogate.features import IN_CHANNELS_ORDER
+from shadecast.surrogate.features import channel_set_for
+from shadecast.surrogate.features import select
+from shadecast.surrogate.features import sky_openness
+from shadecast.surrogate.features import stack
+from shadecast.surrogate.metrics import aggregate_error
+from shadecast.surrogate.metrics import distance_bands
+from shadecast.surrogate.metrics import ranking
+from shadecast.surrogate.metrics import skill
+from shadecast.surrogate.metrics import speedup
+from shadecast.surrogate.metrics import zero_baseline
 from shadecast.surrogate.model import ResponseUNet
 from shadecast.surrogate.scene import Scene
 from shadecast.surrogate.sun import SunNoon
@@ -240,9 +236,7 @@ def test_backfill_writes_onto_the_recorded_grid(tmp_path):
     bundle = tmp_path / "testville"
     bundle.mkdir()
     (bundle / "provenance.json").write_text(
-        json.dumps(
-            {"aoi": {"name": "testville", "lat": 23.0, "lon": 72.5, "side_m": 100, "res_m": 1.0}}
-        )
+        json.dumps({"aoi": {"name": "testville", "lat": 23.0, "lon": 72.5, "side_m": 100, "res_m": 1.0}})
     )
     profile = {
         "driver": "GTiff",

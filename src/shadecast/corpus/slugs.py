@@ -39,9 +39,7 @@ def assign_slugs(frame: pd.DataFrame) -> pd.Series:
         centre_id = int(record.get(ucdb.ID, 0))
         base = slugify(record.get(ucdb.NAME, "")) or f"uc{centre_id}"
         country = str(record.get(ucdb.COUNTRY, ""))
-        slug = next(
-            option for option in _candidates(base, country, centre_id) if option not in taken
-        )
+        slug = next(option for option in _candidates(base, country, centre_id) if option not in taken)
         taken.add(slug)
         chosen[centre_id] = slug
     return pd.Series(

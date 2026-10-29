@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
+from fastapi import Depends
 
-from ..dependencies import services, settings
+from ..dependencies import services
+from ..dependencies import settings
 from ..health import Health
 from ..services import Services
 from ..settings import ServerSettings

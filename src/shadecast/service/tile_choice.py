@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from ..corpus.tile import Tile
-from ..corpus.tiling import select_densest, select_stratified
+from ..corpus.tiling import select_densest
+from ..corpus.tiling import select_stratified
 
 ALL = "all"
 

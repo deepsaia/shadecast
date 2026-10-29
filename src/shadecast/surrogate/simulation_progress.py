@@ -14,19 +14,30 @@ import logging
 import threading
 import time
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
 from pathlib import Path
 
-from rich.console import Console, Group, RenderableType
-from rich.progress import BarColumn, MofNCompleteColumn, Progress, TaskID, TextColumn
+from rich.console import Console
+from rich.console import Group
+from rich.console import RenderableType
+from rich.progress import BarColumn
+from rich.progress import MofNCompleteColumn
+from rich.progress import Progress
+from rich.progress import TaskID
+from rich.progress import TextColumn
 from rich.table import Table
 from rich.text import Text
 
 from ..hardware import Hardware
-from ..surrogate.simulation_events import BASELINE, BASELINE_PHASE
-from .engine_phase import design_phase, phase_bar
-from .live_display import LiveDisplay, clock, sparkline
+from ..surrogate.simulation_events import BASELINE
+from ..surrogate.simulation_events import BASELINE_PHASE
+from .engine_phase import design_phase
+from .engine_phase import phase_bar
+from .live_display import LiveDisplay
+from .live_display import clock
+from .live_display import sparkline
 
 LAST_ROWS = 10
 logger = logging.getLogger(__name__)
@@ -189,9 +200,7 @@ class SimulationProgress:
         text.append(f"{self.state:<8}", style="bold green" if self.state == "done" else "bold")
         text.append(f" elapsed {clock(time.time() - self.started_at)}   started {started}")
         if self.done_at_start:
-            text.append(
-                f"   resumed with {self.done_at_start} of {self.total} on disk", style="dim"
-            )
+            text.append(f"   resumed with {self.done_at_start} of {self.total} on disk", style="dim")
         return text
 
     def _pace(self) -> str:

@@ -20,9 +20,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter
 
 
-def outdoor_weights(
-    pop: np.ndarray, building_h: np.ndarray, reach_m: float = 25.0, res_m: float = 1.0
-) -> np.ndarray:
+def outdoor_weights(pop: np.ndarray, building_h: np.ndarray, reach_m: float = 25.0, res_m: float = 1.0) -> np.ndarray:
     """Redistribute residents onto outdoor pixels within walking reach.
 
     reach_m is the decay scale, roughly "the outdoor space right by home".

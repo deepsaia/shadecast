@@ -147,8 +147,7 @@ def provenance() -> dict:
 
 def _met_text() -> str:
     header = (
-        "iy id it imin Q* QH QE Qs Qf Wind RH Td press rain Kdn snow ldown fcld wuh xsmd lai_hr "
-        "Kdiff Kdir Wd uhii"
+        "iy id it imin Q* QH QE Qs Qf Wind RH Td press rain Kdn snow ldown fcld wuh xsmd lai_hr Kdiff Kdir Wd uhii"
     )
     rows = []
     for hour in range(24):
@@ -156,9 +155,7 @@ def _met_text() -> str:
         values[0], values[1], values[2], values[3] = 2025, 140, hour, 0
         values[11] = 30.0 + hour / 10
         values[14] = 800.0 if 6 <= hour <= 18 else 0.0
-        rows.append(
-            " ".join(f"{value:.4f}" if isinstance(value, float) else str(value) for value in values)
-        )
+        rows.append(" ".join(f"{value:.4f}" if isinstance(value, float) else str(value) for value in values))
     return header + "\n" + "\n".join(rows) + "\n"
 
 

@@ -2,7 +2,9 @@
 
 import pytest
 from support import synthetic_tile
-from support.fixtures import fixture_centres, fixture_corpus, fixture_tiles
+from support.fixtures import fixture_centres
+from support.fixtures import fixture_corpus
+from support.fixtures import fixture_tiles
 from support.recording_progress import RecordingProgress
 
 from shadecast.service import plan_service
@@ -56,9 +58,7 @@ def service(tmp_path, monkeypatch) -> PlanService:
 def test_plan_runs_over_the_densest_built_tile_and_reports_the_headline(tmp_path, service):
     tile = synthetic_tile.write_bundle(tmp_path)
     progress = RecordingProgress()
-    outcome = service.plan(
-        PlanRequest(target="ahmedabad", kind="tree", budget_usd=2_000_000), progress
-    )
+    outcome = service.plan(PlanRequest(target="ahmedabad", kind="tree", budget_usd=2_000_000), progress)
     assert [(tile / "bundle", "tree", 2_000_000)] == SEEN
     assert outcome.tile == synthetic_tile.TILE_ID and outcome.kind == "tree"
     assert outcome.exposure_drop == 1.5 and outcome.people == 112 and outcome.efficiency == 14.4

@@ -12,7 +12,8 @@ air temperature which barely moves at street scale.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -57,9 +58,7 @@ def equity_gap(field: np.ndarray, pop: np.ndarray, deciles: int = 10) -> float:
     return float(field[hi_mask].mean() - field[lo_mask].mean())
 
 
-def score(
-    tmrt: np.ndarray, pop: np.ndarray, cost_usd: float = 0.0, threshold: float = TMRT_STRESS_C
-) -> Score:
+def score(tmrt: np.ndarray, pop: np.ndarray, cost_usd: float = 0.0, threshold: float = TMRT_STRESS_C) -> Score:
     """Score one Tmrt field. `tmrt` may be a daylight-hour mean or a single hour."""
     over = np.clip(tmrt - threshold, 0, None)
     return Score(
@@ -81,7 +80,5 @@ def benefit(baseline: Score, after: Score) -> dict:
         "delta_equity_gap_C": round(baseline.equity_gap - after.equity_gap, 4),
         "cost_usd": round(after.cost_usd, 2),
         # The headline efficiency number the benchmark ranks on.
-        "excess_reduced_per_1k_usd": round(d_excess / (after.cost_usd / 1000), 4)
-        if after.cost_usd > 0
-        else 0.0,
+        "excess_reduced_per_1k_usd": round(d_excess / (after.cost_usd / 1000), 4) if after.cost_usd > 0 else 0.0,
     }

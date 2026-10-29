@@ -15,7 +15,8 @@ from shadecast.sim.result import RunResult
 from shadecast.sim.runner import thread_environment
 from shadecast.surrogate import dataset
 from shadecast.surrogate.assessment import designs_for_tile
-from shadecast.surrogate.engine_phase import design_phase, phase_bar
+from shadecast.surrogate.engine_phase import design_phase
+from shadecast.surrogate.engine_phase import phase_bar
 from shadecast.surrogate.patches import tile_key
 from shadecast.surrogate.simulation_progress import SimulationProgress
 from shadecast.surrogate.simulation_settings import SimulationSettings
@@ -159,9 +160,7 @@ def test_engine_threads_share_the_cores():
 def test_thread_environment_caps_every_pool():
     env = thread_environment(6)
     assert env["OMP_NUM_THREADS"] == "6" and env["NUMBA_NUM_THREADS"] == "6"
-    assert "OMP_NUM_THREADS" not in {
-        k: v for k, v in thread_environment(None).items() if k not in os.environ
-    }
+    assert "OMP_NUM_THREADS" not in {k: v for k, v in thread_environment(None).items() if k not in os.environ}
 
 
 def test_quiet_progress_counts_and_renders_nothing():
@@ -212,9 +211,7 @@ def test_tile_label_says_one_tile_of_the_centre():
         "tile": {"id": "t17N_488_3550"},
         "urban_centre": {"tiles": 64},
     }
-    assert (
-        dataset.tile_label(Path("x"), provenance) == "savannah, tile t17N_488_3550, one of 64 tiles"
-    )
+    assert dataset.tile_label(Path("x"), provenance) == "savannah, tile t17N_488_3550, one of 64 tiles"
     assert dataset.tile_label(Path("plain"), {}) == "plain"
 
 

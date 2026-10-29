@@ -30,9 +30,7 @@ SEARCH_KM = 16.0
 GHS_POP_RES_M = 100.0
 
 
-def select(
-    city: City, *, search_km: float = SEARCH_KM, side_m: int = 1000, res_m: float = 1.0
-) -> AOI:
+def select(city: City, *, search_km: float = SEARCH_KM, side_m: int = 1000, res_m: float = 1.0) -> AOI:
     """Return the densest populated window of `side_m` near the city seed."""
     scan = AOI(city.key, city.lat, city.lon, side_m=int(search_km * 1000), res_m=GHS_POP_RES_M)
     population = coarse(scan)
@@ -54,7 +52,5 @@ def select(
     transformer = Transformer.from_crs(scan.crs, "EPSG:4326", always_xy=True)
     lon, lat = transformer.transform(easting, northing)
 
-    logger.info(
-        "%s: study area at %.4f,%.4f (seed %.4f,%.4f)", city.key, lat, lon, city.lat, city.lon
-    )
+    logger.info("%s: study area at %.4f,%.4f (seed %.4f,%.4f)", city.key, lat, lon, city.lat, city.lon)
     return AOI(city.key, lat, lon, side_m=side_m, res_m=res_m)

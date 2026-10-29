@@ -24,7 +24,8 @@ from pathlib import Path
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import LinearSegmentedColormap, PowerNorm
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import PowerNorm
 from scipy import ndimage
 
 # Headless rendering. Set after importing pyplot, which modern matplotlib supports,
@@ -34,12 +35,8 @@ matplotlib.use("Agg")
 logger = logging.getLogger(__name__)
 
 # Single hue, light to dark, monotonic lightness. Never a rainbow.
-COOLING_CMAP = LinearSegmentedColormap.from_list(
-    "cooling", ["#f4f7fb", "#b9d3ef", "#6ba3de", "#2a78d6", "#17457c"]
-)
-HEAT_CMAP = LinearSegmentedColormap.from_list(
-    "heat", ["#fdf3e7", "#f7c99a", "#eb8f4e", "#d1552a", "#7e2412"]
-)
+COOLING_CMAP = LinearSegmentedColormap.from_list("cooling", ["#f4f7fb", "#b9d3ef", "#6ba3de", "#2a78d6", "#17457c"])
+HEAT_CMAP = LinearSegmentedColormap.from_list("heat", ["#fdf3e7", "#f7c99a", "#eb8f4e", "#d1552a", "#7e2412"])
 PLACEMENT_CMAP = LinearSegmentedColormap.from_list("placement", ["#00000000", "#1baf7a"])
 
 COOLING_GAMMA = 0.45
@@ -110,17 +107,13 @@ def cooling(
     )
 
 
-def temperature(
-    values: np.ndarray, path: Path, *, vmin: float, vmax: float, size_px: int = 600
-) -> Path:
+def temperature(values: np.ndarray, path: Path, *, vmin: float, vmax: float, size_px: int = 600) -> Path:
     figure, axes = _bare_axes(size_px)
     axes.imshow(values, cmap=HEAT_CMAP, vmin=vmin, vmax=vmax, interpolation="nearest")
     return _save(figure, path)
 
 
-def placement(
-    mask: np.ndarray, path: Path, *, buildings: np.ndarray | None = None, size_px: int = 600
-) -> Path:
+def placement(mask: np.ndarray, path: Path, *, buildings: np.ndarray | None = None, size_px: int = 600) -> Path:
     """Where the trees went. Dilated so single pixels remain visible when downscaled."""
     figure, axes = _bare_axes(size_px)
     if buildings is not None:

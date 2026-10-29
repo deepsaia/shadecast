@@ -8,7 +8,8 @@ import pytest
 from support import synthetic_tile
 from typer.testing import CliRunner
 
-from shadecast import cities, tile_cli
+from shadecast import cities
+from shadecast import tile_cli
 from shadecast.cities import City
 from shadecast.cli import app
 from shadecast.corpus import tile_paths
@@ -86,9 +87,7 @@ TILES = [
         "mean_height_m": 0.0,
     },
 ]
-AHMEDABAD = City(
-    "ahmedabad", 6143, "Ahmedabad", "India", 23.0, 72.6, "BSh", "LM", "South Asia", 7898650, 6
-)
+AHMEDABAD = City("ahmedabad", 6143, "Ahmedabad", "India", 23.0, 72.6, "BSh", "LM", "South Asia", 7898650, 6)
 
 
 def _fixture_centres() -> UrbanCentres:
@@ -170,9 +169,7 @@ def test_select_stratified_spreads_over_built_fraction_terciles():
 def test_select_ids_keeps_the_asked_order():
     chosen = _select("--ids", "t43N_250_2546", "--ids", "t43N_249_2547")
     assert [row["id"] for row in chosen] == ["t43N_250_2546", "t43N_249_2547"]
-    table = runner.invoke(
-        app, ["tile", "select", "ahmedabad", "--ids", "t43N_250_2546", "--ids", "t43N_249_2547"]
-    )
+    table = runner.invoke(app, ["tile", "select", "ahmedabad", "--ids", "t43N_250_2546", "--ids", "t43N_249_2547"])
     assert table.stdout.index("t43N_250_2546") < table.stdout.index("t43N_249_2547")
 
 
@@ -184,9 +181,7 @@ def test_select_random_is_reproducible_and_populated():
 
 def test_select_needs_exactly_one_strategy():
     assert runner.invoke(app, ["tile", "select", "ahmedabad"]).exit_code != 0
-    both = runner.invoke(
-        app, ["tile", "select", "ahmedabad", "--densest", "1", "--stratified", "1"]
-    )
+    both = runner.invoke(app, ["tile", "select", "ahmedabad", "--densest", "1", "--stratified", "1"])
     assert both.exit_code != 0
 
 
@@ -234,9 +229,7 @@ def test_stats_report_k_of_n_per_stage(tmp_path):
 
 
 def test_stats_of_an_untouched_centre_are_zero_of_n():
-    stages = json.loads(runner.invoke(app, ["tile", "stats", "ahmedabad", "--json"]).stdout)[
-        "stages"
-    ]
+    stages = json.loads(runner.invoke(app, ["tile", "stats", "ahmedabad", "--json"]).stdout)["stages"]
     assert stages["bundle"] == 0 and stages["tiles"] == 6
 
 
@@ -281,9 +274,7 @@ def test_report_renders_a_tiles_plans_and_physics(tmp_path):
     tile = synthetic_tile.write_bundle(tmp_path)
     synthetic_tile.write_baseline(tile)
     synthetic_tile.write_designs(tile)
-    result = runner.invoke(
-        app, ["tile", "report", "ahmedabad", "--tile", synthetic_tile.TILE_ID, "--json"]
-    )
+    result = runner.invoke(app, ["tile", "report", "ahmedabad", "--tile", synthetic_tile.TILE_ID, "--json"])
     assert result.exit_code == 0, result.output
     report = json.loads(result.stdout)
     assert report["tile"] == synthetic_tile.TILE_ID

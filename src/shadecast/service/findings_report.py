@@ -11,7 +11,8 @@ from pathlib import Path
 
 from ..experiments.factorial import verdict as factorial_verdict
 from .findings import Findings
-from .json_file import read_json, read_object
+from .json_file import read_json
+from .json_file import read_object
 
 logger = logging.getLogger(__name__)
 
@@ -33,16 +34,12 @@ class FindingsReport:
         rows = read_json(self._root / "factorial.json")
         verdict = factorial_verdict(rows) if isinstance(rows, list) and rows else {}
         findings = Findings(
-            surrogate=surrogate_summary(
-                self.latest_assessment(), self._root / "transfer_curve.json"
-            ),
+            surrogate=surrogate_summary(self.latest_assessment(), self._root / "transfer_curve.json"),
             factorial=factorial_summary(self._root / "factorial.json", verdict),
             targeting=targeting_summary(self._root / "targeting.json"),
             channel=channel_summary(self._root / "channel.json"),
         )
-        done = [
-            name for name, part in findings.model_dump().items() if part.get("status") == "done"
-        ]
+        done = [name for name, part in findings.model_dump().items() if part.get("status") == "done"]
         logger.info("findings: %d settled, %d pending", len(done), 4 - len(done))
         return findings
 

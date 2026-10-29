@@ -33,7 +33,8 @@ from .model import ResponseUNet
 from .patch_set import PatchSet
 from .trainables import Trainables
 from .training_settings import TrainingSettings
-from .training_state import CHECKPOINT_NAME, TrainingState
+from .training_state import CHECKPOINT_NAME
+from .training_state import TrainingState
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +50,7 @@ def pick_device(preferred: str | None = None) -> torch.device:
     return torch.device("cpu")
 
 
-def split_by_design(
-    origins: list[str], holdout: float = 0.25, seed: int = 0
-) -> tuple[np.ndarray, np.ndarray]:
+def split_by_design(origins: list[str], holdout: float = 0.25, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
     """Index masks that keep every patch of a design on the same side of the split."""
     unique = sorted(set(origins))
     rng = np.random.default_rng(seed)
@@ -77,10 +76,7 @@ def split_by_city(origins: list[str], holdout_city: str) -> tuple[np.ndarray, np
     if holdout_city not in labels and holdout_city not in cities:
         raise ValueError(f"{holdout_city!r} not among {sorted(labels)}")
     test = np.array(
-        [
-            origin.startswith(f"{holdout_city}/") or origin.startswith(f"{holdout_city}:")
-            for origin in origin_array
-        ]
+        [origin.startswith(f"{holdout_city}/") or origin.startswith(f"{holdout_city}:") for origin in origin_array]
     )
     return ~test, test
 
@@ -94,12 +90,7 @@ def split(patches: PatchSet, settings: TrainingSettings) -> tuple[np.ndarray, np
 def _predict(model: nn.Module, inputs: torch.Tensor, batch_size: int) -> torch.Tensor:
     model.eval()
     with torch.no_grad():
-        return torch.cat(
-            [
-                model(inputs[start : start + batch_size])
-                for start in range(0, len(inputs), batch_size)
-            ]
-        )
+        return torch.cat([model(inputs[start : start + batch_size]) for start in range(0, len(inputs), batch_size)])
 
 
 def _skill(predicted: torch.Tensor, targets: torch.Tensor) -> tuple[float, float]:
@@ -113,9 +104,7 @@ def _skill(predicted: torch.Tensor, targets: torch.Tensor) -> tuple[float, float
     return mae, 1.0 - mae / max(baseline_mae, 1e-12)
 
 
-def evaluate_skill(
-    state_dict: Mapping[str, torch.Tensor], patches: PatchSet, settings: TrainingSettings
-) -> float:
+def evaluate_skill(state_dict: Mapping[str, torch.Tensor], patches: PatchSet, settings: TrainingSettings) -> float:
     """Skill of saved weights on the held-out side of the same split the training used.
 
     Three arguments because the split is a property of the patches and the settings together.
@@ -243,9 +232,7 @@ def train(
             if checkpoint is not None:
                 state.save(checkpoint, trainables, fingerprint, time.time() - started)
             if epoch - state.best_epoch >= settings.patience:
-                logger.info(
-                    "no better skill for %d epochs, stopping at %d", settings.patience, epoch
-                )
+                logger.info("no better skill for %d epochs, stopping at %d", settings.patience, epoch)
                 break
     except KeyboardInterrupt:
         # The epoch under way is lost; everything before it is on disk and the best weights
@@ -290,9 +277,7 @@ def train(
     return report
 
 
-def _fresh_or_resumed(
-    checkpoint: Path | None, trainables: Trainables, fingerprint: dict
-) -> TrainingState:
+def _fresh_or_resumed(checkpoint: Path | None, trainables: Trainables, fingerprint: dict) -> TrainingState:
     """A fresh state, or the one a checkpoint holds when there is one to continue from."""
     if checkpoint is None:
         return TrainingState.fresh(trainables.model)

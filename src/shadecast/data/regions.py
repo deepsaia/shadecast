@@ -17,8 +17,10 @@ import pandas as pd
 import requests
 from numpy.typing import ArrayLike
 
-from . import checksum, ghs_grid
-from .ghs_product import CACHE_ROOT, DOWNLOAD_TIMEOUT_S
+from . import checksum
+from . import ghs_grid
+from .ghs_product import CACHE_ROOT
+from .ghs_product import DOWNLOAD_TIMEOUT_S
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +55,7 @@ def countries(cache_root: Path = CACHE_ROOT) -> gpd.GeoDataFrame:
 
 def _nearest(points: gpd.GeoDataFrame, polygons: gpd.GeoDataFrame) -> pd.DataFrame:
     """Nearest country for points no polygon contains, measured in metres."""
-    joined = gpd.sjoin_nearest(
-        points.to_crs(ghs_grid.CRS), polygons.to_crs(ghs_grid.CRS), how="left"
-    )
+    joined = gpd.sjoin_nearest(points.to_crs(ghs_grid.CRS), polygons.to_crs(ghs_grid.CRS), how="left")
     return joined.loc[~joined.index.duplicated(keep="first"), list(REGION_COLUMNS)]
 
 

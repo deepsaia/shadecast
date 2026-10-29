@@ -20,21 +20,27 @@ import os
 import shutil
 import subprocess
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 from pathlib import Path
 
 import numpy as np
 import rasterio
 
 from ..data.landcover import to_umep
-from ..interventions import apply, feasibility_mask
-from ..pipeline import BUNDLE_FILES, daylight_mean, read_band
+from ..interventions import apply
+from ..interventions import feasibility_mask
+from ..pipeline import BUNDLE_FILES
+from ..pipeline import daylight_mean
+from ..pipeline import read_band
 from ..service.null_progress import NullProgress
 from ..service.progress_listener import ProgressListener
 from ..sim.result import RunResult
-from ..sim.runner import run, stop_running_engines
+from ..sim.runner import run
+from ..sim.runner import stop_running_engines
 from . import designs
-from .simulation_events import BASELINE, BASELINE_PHASE
+from .simulation_events import BASELINE
+from .simulation_events import BASELINE_PHASE
 from .simulation_settings import SimulationSettings
 from .tile_context import TileContext
 
@@ -180,9 +186,7 @@ def engine_threads(settings: SimulationSettings) -> int | None:
     return max(1, (os.cpu_count() or 1) // settings.jobs)
 
 
-def _simulate(
-    bundle: Path, out_dir: Path, settings: SimulationSettings, progress: ProgressListener
-) -> dict:
+def _simulate(bundle: Path, out_dir: Path, settings: SimulationSettings, progress: ProgressListener) -> dict:
     """Body of :func:`simulate`, run while the directory lock is held."""
     provenance = json.loads((bundle / "provenance.json").read_text())
     design_day = provenance["met"]["design_day"]
@@ -240,17 +244,13 @@ def _simulate(
     return summary
 
 
-def ensure_baseline(
-    bundle: Path, out_dir: Path, design_day: str, progress: ProgressListener
-) -> np.ndarray:
+def ensure_baseline(bundle: Path, out_dir: Path, design_day: str, progress: ProgressListener) -> np.ndarray:
     """The untouched tile's daylight mean Tmrt, run through the engine once and kept."""
     run_baseline_once(bundle, out_dir, design_day, progress)
     return np.load(out_dir / "baseline" / "tmrt_daylight.npy")
 
 
-def run_baseline_once(
-    bundle: Path, out_dir: Path, design_day: str, progress: ProgressListener
-) -> RunResult | None:
+def run_baseline_once(bundle: Path, out_dir: Path, design_day: str, progress: ProgressListener) -> RunResult | None:
     """The engine over the untouched tile, unless its daylight field is already on disk.
 
     Four arguments: the bundle, where the baseline lives, the day, and who to tell. Returns
@@ -288,17 +288,13 @@ def run_designs(
             # Stop the engines that are running and never start the queued designs. The
             # finished ones are on disk; a rerun of the same command continues from them.
             stopped = stop_running_engines()
-            logger.warning(
-                "interrupted: stopped %d running engine run(s), cancelled the rest", stopped
-            )
+            logger.warning("interrupted: stopped %d running engine run(s), cancelled the rest", stopped)
             pool.shutdown(wait=False, cancel_futures=True)
             raise
     return failures
 
 
-def collect_results(
-    futures: dict, progress: ProgressListener, results: dict[str, dict], failures: list[str]
-) -> None:
+def collect_results(futures: dict, progress: ProgressListener, results: dict[str, dict], failures: list[str]) -> None:
     """Gather each design as it finishes, recording failures instead of stopping."""
     for future in as_completed(futures):
         spec = futures[future]
@@ -337,9 +333,7 @@ def run_design(context: TileContext, spec: dict, progress: ProgressListener) -> 
     engine_run = run(target, context.design_day, threads=context.engine_threads)
     response = context.baseline_tmrt - daylight_mean(engine_run.tmrt_path)
 
-    np.savez_compressed(
-        target / "response.npz", placement=placement, response=response.astype("float32")
-    )
+    np.savez_compressed(target / "response.npz", placement=placement, response=response.astype("float32"))
     meta = {
         "id": name,
         "family": spec["family"],

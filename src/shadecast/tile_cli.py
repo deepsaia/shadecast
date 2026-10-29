@@ -17,18 +17,19 @@ from typing import Annotated
 import typer
 
 from . import cities
-from .console import (
-    console,
-    error_console,
-    pairs_table,
-    plans_table,
-    stage_line,
-    stages_reached,
-    tiles_table,
-)
+from .console import console
+from .console import error_console
+from .console import pairs_table
+from .console import plans_table
+from .console import stage_line
+from .console import stages_reached
+from .console import tiles_table
 from .corpus import tile_paths
 from .corpus.tile_description import describe
-from .corpus.tiling import select_densest, select_ids, select_random, select_stratified
+from .corpus.tiling import select_densest
+from .corpus.tiling import select_ids
+from .corpus.tiling import select_random
+from .corpus.tiling import select_stratified
 from .corpus.urban_centres import UrbanCentres
 from .service.city_catalog import CityCatalog
 from .service.missing_stage import MissingStage
@@ -86,9 +87,7 @@ def answer[Answer](ask: Callable[[], Answer]) -> Answer:
 def list_tiles(
     centre: Annotated[str, typer.Argument(help="A city key, an id, a slug or a name.")],
     limit: Annotated[int, typer.Option("--limit", help="Rows to show.")] = 20,
-    refresh: Annotated[
-        bool, typer.Option("--refresh", help="Describe again, ignoring tiles.json.")
-    ] = False,
+    refresh: Annotated[bool, typer.Option("--refresh", help="Describe again, ignoring tiles.json.")] = False,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """List every tile of an urban centre, densest first, with the stages each has reached."""
@@ -106,8 +105,7 @@ def list_tiles(
         return
     console.print(tiles_table(tiles[:limit]))
     console.print(
-        f"[dim]{len(tiles)} tiles, {min(limit, len(tiles))} shown. "
-        f"Written to {found.tiles_file(centre)}.[/]"
+        f"[dim]{len(tiles)} tiles, {min(limit, len(tiles))} shown. Written to {found.tiles_file(centre)}.[/]"
     )
 
 
@@ -119,12 +117,8 @@ def select(
         int | None,
         typer.Option("--stratified", help="k tiles spread over built-fraction terciles."),
     ] = None,
-    ids: Annotated[
-        list[str] | None, typer.Option("--ids", help="Named tile ids, repeatable.")
-    ] = None,
-    random: Annotated[
-        int | None, typer.Option("--random", help="k populated tiles drawn at random.")
-    ] = None,
+    ids: Annotated[list[str] | None, typer.Option("--ids", help="Named tile ids, repeatable.")] = None,
+    random: Annotated[int | None, typer.Option("--random", help="k populated tiles drawn at random.")] = None,
     seed: Annotated[int, typer.Option("--seed", help="Seed for --random.")] = 0,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
@@ -228,9 +222,7 @@ def show(
             )
         )
     if tile is None:
-        console.print(
-            f"[dim]{len(listed)} tile{'s' if len(listed) != 1 else ''} on disk for {centre}.[/]"
-        )
+        console.print(f"[dim]{len(listed)} tile{'s' if len(listed) != 1 else ''} on disk for {centre}.[/]")
 
 
 @app.command("report")
@@ -244,11 +236,7 @@ def report(
 ) -> None:
     """A tile's report: its facts, the baseline, the physics run and every scored plan."""
     reporter = TileReporter(catalog())
-    ask = (
-        partial(reporter.report, centre, tile)
-        if tile
-        else partial(reporter.report_furthest, centre)
-    )
+    ask = partial(reporter.report, centre, tile) if tile else partial(reporter.report_furthest, centre)
     found = answer(ask)
     if as_json:
         console.print_json(found.model_dump_json())
@@ -256,8 +244,7 @@ def report(
     console.print(pairs_table(f"{found.name} {found.tile}", _fact_rows(found)))
     if found.baseline is None:
         console.print(
-            f"[dim]no baseline physics yet; run 'sdc simulate baseline {centre} "
-            f"--tile {found.tile}' first.[/]"
+            f"[dim]no baseline physics yet; run 'sdc simulate baseline {centre} --tile {found.tile}' first.[/]"
         )
         return
     console.print(
@@ -267,10 +254,7 @@ def report(
         )
     )
     if not found.plans:
-        console.print(
-            f"[dim]no plans yet; run 'sdc simulate treeshade {centre} "
-            f"--tiles {found.tile}' first.[/]"
-        )
+        console.print(f"[dim]no plans yet; run 'sdc simulate treeshade {centre} --tiles {found.tile}' first.[/]")
         return
     console.print(plans_table(found.plans))
     if found.physics is not None:

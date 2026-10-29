@@ -13,7 +13,8 @@ from typing import Annotated
 
 import typer
 
-from .console import console, error_console
+from .console import console
+from .console import error_console
 from .corpus import tile_paths
 from .service.city_catalog import CityCatalog
 from .service.experiment_request import ExperimentRequest

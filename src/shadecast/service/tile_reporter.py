@@ -47,9 +47,7 @@ def report_of(paths: TilePaths) -> TileReport:
 def _compute(paths: TilePaths, store: FieldStore) -> TileReport:
     stages = paths.stages()
     facts = facts_from(store.provenance(), str(paths.urban_centre))
-    report = TileReport(
-        city=facts.key, tile=paths.tile.id, name=facts.name, stages=stages, facts=facts
-    )
+    report = TileReport(city=facts.key, tile=paths.tile.id, name=facts.name, stages=stages, facts=facts)
     if not stages.baseline:
         return report
     scoring = PlanScoring(store)
@@ -70,8 +68,6 @@ def _hourly(store: FieldStore) -> list[HourlyStatistic]:
     if not store.has_hourly():
         return []
     return [
-        HourlyStatistic(
-            hour=hour, median=round(float(np.median(band)), 1), max=round(float(band.max()), 1)
-        )
+        HourlyStatistic(hour=hour, median=round(float(np.median(band)), 1), max=round(float(band.max()), 1))
         for hour, band in enumerate(store.hourly_temperature())
     ]

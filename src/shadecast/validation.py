@@ -25,7 +25,8 @@ import pystac_client
 import rasterio
 from rasterio.enums import Resampling
 from rasterio.warp import reproject
-from scipy import ndimage, stats
+from scipy import ndimage
+from scipy import stats
 
 from .aoi import AOI
 

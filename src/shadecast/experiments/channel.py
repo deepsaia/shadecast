@@ -30,8 +30,10 @@ import rasterio
 
 from ..baselines import greedy
 from ..interventions import apply
-from ..objectives import benefit, score
-from ..pipeline import BUNDLE_FILES, daylight_mean
+from ..objectives import benefit
+from ..objectives import score
+from ..pipeline import BUNDLE_FILES
+from ..pipeline import daylight_mean
 from ..sim.runner import run
 from .layers import city_layers
 

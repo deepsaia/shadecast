@@ -39,9 +39,7 @@ def test_serve_exports_the_settings_and_runs_the_factory(monkeypatch):
     monkeypatch.delenv("SDC_HOST", raising=False)
     monkeypatch.delenv("SDC_PORT", raising=False)
     monkeypatch.delenv("SDC_DATA", raising=False)
-    monkeypatch.setattr(
-        serve_cli.uvicorn, "run", lambda target, **kwargs: seen.update(target=target, **kwargs)
-    )
+    monkeypatch.setattr(serve_cli.uvicorn, "run", lambda target, **kwargs: seen.update(target=target, **kwargs))
     result = runner.invoke(app, ["serve", "--port", "9000", "--no-open"])
     assert result.exit_code == 0, result.output
     assert seen["target"] == "shadecast.server.app:create_app" and seen["factory"] is True
@@ -56,9 +54,7 @@ def test_a_port_already_in_use_is_named_before_anything_starts(monkeypatch):
     holder.listen(1)
     port = holder.getsockname()[1]
     try:
-        monkeypatch.setattr(
-            serve_cli.uvicorn, "run", lambda *args, **kwargs: pytest.fail("uvicorn ran")
-        )
+        monkeypatch.setattr(serve_cli.uvicorn, "run", lambda *args, **kwargs: pytest.fail("uvicorn ran"))
         result = runner.invoke(app, ["serve", "--port", str(port), "--no-open"])
     finally:
         holder.close()

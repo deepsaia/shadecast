@@ -21,7 +21,8 @@ from pathlib import Path
 import requests
 
 from . import ghs_grid
-from .ghs_types import Bounds, TileRC
+from .ghs_types import Bounds
+from .ghs_types import TileRC
 from .raster_window import RasterWindow
 
 logger = logging.getLogger(__name__)
@@ -79,11 +80,7 @@ def tiles_for_bounds(bounds: Bounds) -> list[TileRC]:
     minx, miny, maxx, maxy = bounds
     first_row, first_col = ghs_grid.tile_rc(minx, maxy)
     last_row, last_col = ghs_grid.tile_rc(maxx - 1e-6, miny + 1e-6)
-    return [
-        (row, col)
-        for row in range(first_row, last_row + 1)
-        for col in range(first_col, last_col + 1)
-    ]
+    return [(row, col) for row in range(first_row, last_row + 1) for col in range(first_col, last_col + 1)]
 
 
 def read_window(product: GhsProduct, bounds: Bounds, cache_root: Path = CACHE_ROOT) -> RasterWindow:

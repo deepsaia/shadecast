@@ -48,9 +48,7 @@ def tile_name(lon: float, lat: float) -> str:
     """GBA tiles are 5x5 degrees, named by their west/north/east/south edges."""
     lon0 = int(math.floor(lon / 5) * 5)
     lat0 = int(math.floor(lat / 5) * 5)
-    return (
-        f"{_east_west(lon0)}_{_north_south(lat0 + 5)}_{_east_west(lon0 + 5)}_{_north_south(lat0)}"
-    )
+    return f"{_east_west(lon0)}_{_north_south(lat0 + 5)}_{_east_west(lon0 + 5)}_{_north_south(lat0)}"
 
 
 def tiles_for(aoi: AOI) -> list[str]:

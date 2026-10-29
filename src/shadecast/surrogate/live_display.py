@@ -12,7 +12,8 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 
-from rich.console import Console, RenderableType
+from rich.console import Console
+from rich.console import RenderableType
 from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text

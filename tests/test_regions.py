@@ -5,7 +5,8 @@ import pandas as pd
 import pytest
 from shapely.geometry import box
 
-from shadecast.data import checksum, regions
+from shadecast.data import checksum
+from shadecast.data import regions
 
 COUNTRIES = gpd.GeoDataFrame(
     {

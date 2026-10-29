@@ -60,6 +60,5 @@ def summarise(umep: np.ndarray) -> dict[str, float]:
     }
     u, c = np.unique(umep, return_counts=True)
     return {
-        names.get(int(code), str(code)): round(float(count) / umep.size, 4)
-        for code, count in zip(u, c, strict=True)
+        names.get(int(code), str(code)): round(float(count) / umep.size, 4) for code, count in zip(u, c, strict=True)
     }
