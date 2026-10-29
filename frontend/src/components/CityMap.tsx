@@ -1,8 +1,19 @@
-import { type GeoJSONSource, type ImageSource, Map as MapLibreMap, type MapLayerMouseEvent } from "maplibre-gl";
+import {
+  type GeoJSONSource,
+  type ImageSource,
+  Map as MapLibreMap,
+  type MapLayerMouseEvent,
+  setWorkerUrl,
+} from "maplibre-gl";
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import type { FeatureCollection } from "geojson";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import "maplibre-gl/dist/maplibre-gl.css";
+
+// The library looks for its worker next to its own module, which a bundled build does not provide;
+// Vite ships the worker file as an asset and this names it before any map is made.
+setWorkerUrl(workerUrl);
 
 import { integer } from "@/lib/format";
 import {

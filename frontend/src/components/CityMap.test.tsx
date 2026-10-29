@@ -7,6 +7,7 @@ import type { Cell } from "@/lib/tile_grid";
 
 vi.mock("maplibre-gl", () => ({ default: fakeMaplibre, ...fakeMaplibre }));
 vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
+vi.mock("maplibre-gl/dist/maplibre-gl-worker.mjs?url", () => ({ default: "/assets/worker.mjs" }));
 
 const cell = (id: string, west: number, modelled: boolean): Cell => ({
   id,
