@@ -141,6 +141,7 @@ function renderSimulator(path = "/") {
 afterEach(() => vi.unstubAllGlobals());
 beforeEach(() => {
   FakeMap.instances.length = 0;
+  window.localStorage.clear();
 });
 
 it("opens on the first city with a model and its densest tile, with the outcomes row on top", async () => {
@@ -157,6 +158,9 @@ it("opens on the first city with a model and its densest tile, with the outcomes
   expect(within(outcomes).getByText(/1\.6% of the 78,568 above it today/)).toBeInTheDocument();
   expect(within(outcomes).getByText("People moved below 45 C")).toBeInTheDocument();
   expect(screen.getByText(/The red mark is 30% of the plantable ground/)).toBeInTheDocument();
+  expect(screen.getByRole("slider", { name: "Stress threshold" })).toHaveAttribute("aria-valuenow", "45");
+  fireEvent.focus(screen.getByRole("button", { name: "How this is counted" }));
+  expect(await screen.findByText(/spread each person over the open ground/)).toBeInTheDocument();
   expect(urls.some((url) => url.includes("/tiles/t43N_249_2547/scenario?arrangement=clustered&coverage=0.05"))).toBe(true);
   expect(screen.getByRole("heading", { level: 2, name: /^Policy/ })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Pavement/ })).toBeDisabled();
@@ -196,10 +200,19 @@ it("reprices the scenario from the assumptions", async () => {
   expect(screen.getByText(/priced at 40 USD per m², 8% a year/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Unit cost, USD per square metre"), { target: { value: "80" } });
   fireEvent.change(screen.getByLabelText("Maintenance, percent of capital a year"), { target: { value: "5" } });
-  fireEvent.change(screen.getByLabelText("Stress threshold, C mean radiant temperature"), { target: { value: "50" } });
   await waitFor(() =>
-    expect(urls.some((url) => url.includes("coverage=0.05&unit_cost=80&maintenance=0.05&threshold=50"))).toBe(true),
+    expect(urls.some((url) => url.includes("coverage=0.05&unit_cost=80&maintenance=0.05&threshold=45"))).toBe(true),
   );
+});
+
+it("remembers the threshold a person chose across a reload", async () => {
+  window.localStorage.setItem("shadecast.threshold", "50");
+  const urls: string[] = [];
+  vi.stubGlobal("fetch", fetchFor(urls));
+  renderSimulator("/?city=ahmedabad");
+  await screen.findByRole("region", { name: "Outcomes" });
+  expect(screen.getByRole("slider", { name: "Stress threshold" })).toHaveAttribute("aria-valuenow", "50");
+  await waitFor(() => expect(urls.some((url) => url.includes("coverage=0.05&threshold=50"))).toBe(true));
 });
 
 it("offers the tile presets and lists tiles without a model as not selectable", async () => {
