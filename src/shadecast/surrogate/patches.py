@@ -2,7 +2,7 @@
 
 One engine call produces a full square kilometre of response, which is a million
 pixels of signal. Cropping it into patches turns each call into thousands of
-training examples, and is why a plan of 17 physics runs is enough to fit a model.
+training examples, and is why a plan of 22 physics runs is enough to fit a model.
 
 Patches are sampled with a bias towards places where something happened. A uniform
 crop over a field that is 95 percent near-zero would spend almost all its capacity

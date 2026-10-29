@@ -49,40 +49,29 @@ logger = logging.getLogger(__name__)
 SIMULATION_LOCK = ".simulating.lock"
 
 
-def default_plan() -> list[dict]:
-    """The standard simulation plan for one city.
+# The share of the feasible ground each dense family is drawn at. One ladder for all three, so
+# the simulator's coverage slider has a stored, engine-verified design near every stop in every
+# arrangement, and so matched pairs exist at every rung.
+LADDER = (0.01, 0.02, 0.05, 0.10, 0.20, 0.30)
+PROBES = 4
+# Seeds are family hundreds plus the coverage in percent: unique, and sorted by coverage within a family.
+SEED_BASE = {"clustered": 100, "random_uniform": 200, "corridor": 300}
 
-    Four probe lattices at different offsets give clean isolated responses across
-    varied geometry. The dense families then supply the interaction signal, which
-    is the part no single-tree kernel can predict.
+
+def default_plan() -> list[dict]:
+    """The standard simulation plan for one tile: four probe lattices and the ladder in every dense family.
+
+    The probes at different offsets give clean isolated responses across varied geometry. The dense
+    families then supply the interaction signal, which is the part no single-tree kernel can predict.
+    A design already on disk is kept, so extending the ladder runs only the new rungs.
     """
-    plan: list[dict] = []
-    for seed in range(4):
-        plan.append({"family": "sparse_probe", "seed": seed, "params": {}})
-    for coverage in (0.01, 0.02, 0.05, 0.10, 0.20, 0.30):
-        plan.append(
-            {
-                "family": "clustered",
-                "seed": 100 + int(coverage * 100),
-                "params": {"coverage": coverage, "blob_m": 20.0},
-            }
-        )
-    for coverage in (0.01, 0.05, 0.10, 0.20):
-        plan.append(
-            {
-                "family": "random_uniform",
-                "seed": 200 + int(coverage * 100),
-                "params": {"coverage": coverage},
-            }
-        )
-    for coverage in (0.02, 0.05, 0.10):
-        plan.append(
-            {
-                "family": "corridor",
-                "seed": 300 + int(coverage * 100),
-                "params": {"coverage": coverage},
-            }
-        )
+    plan: list[dict] = [{"family": "sparse_probe", "seed": seed, "params": {}} for seed in range(PROBES)]
+    for family, base in SEED_BASE.items():
+        for coverage in LADDER:
+            params: dict = {"coverage": coverage}
+            if family == "clustered":
+                params["blob_m"] = 20.0
+            plan.append({"family": family, "seed": base + round(coverage * 100), "params": params})
     return plan
 
 
