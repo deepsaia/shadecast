@@ -257,6 +257,12 @@ def scenario(
         float | None,
         typer.Option("--maintenance", help="Yearly maintenance as a share of capital; the catalogue's when absent."),
     ] = None,
+    threshold: Annotated[
+        float | None,
+        typer.Option(
+            "--threshold", help="Mean radiant temperature in C above which people count as exposed; 45 when absent."
+        ),
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """Move the levers on a tile and read the outcomes from its surrogate, against doing nothing.
@@ -279,6 +285,7 @@ def scenario(
             budget_usd=budget,
             unit_cost=unit_cost,
             maintenance=maintenance,
+            threshold=threshold,
         )
         with console.status(f"[cyan]{city}[/]: the surrogate over the tile"):
             outcome = service.evaluate(asked).outcome

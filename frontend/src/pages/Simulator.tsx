@@ -23,16 +23,19 @@ import { band, type NpyArray } from "@/lib/npy";
 import { POLICIES, policyOf } from "@/lib/policies";
 import { COOL, extent } from "@/lib/ramp";
 import {
-  BUDGET,
   COVERAGE,
   INITIAL_SCALE,
+  SIMULATED_COVERAGE,
   type Scale,
   alignToAnswer,
+  budgetRange,
+  extrapolating,
   leversOf,
   moveBudget,
   moveCoverage,
   rateOf,
   setLocked,
+  simulatedBudget,
 } from "@/lib/scale";
 import { seriesColor } from "@/lib/series";
 import { type Cell, cellBounds, cellsOf } from "@/lib/tile_grid";
@@ -282,8 +285,13 @@ function Scenario({
 
   return (
     <>
-      {failed ? <Unanswered error={failed} /> : <OutcomesRow totals={totals} busy={busy} />}
-      <section aria-label="Levers" className="mt-8 grid gap-8 md:grid-cols-3">
+      {failed ? (
+        <Unanswered error={failed} />
+      ) : (
+        <OutcomesRow totals={totals} busy={busy} threshold={focusedOutcome?.threshold ?? 45} />
+      )}
+      <div className="mt-8 grid gap-10 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <aside aria-label="Levers" className="space-y-8">
         <Lever title="Policy" question="What to build">
           <Chips
             label="Policy"
@@ -309,7 +317,47 @@ function Scenario({
           <ScaleSliders scale={shown} rate={rate} outcome={focusedOutcome} onChange={setScale} />
           <AssumptionsPanel assumptions={assumptions} outcome={focusedOutcome} onChange={setAssumptions} />
         </Lever>
+      </aside>
+      <section aria-label="The focused tile">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+          <h2>
+            Tile {focused} <span className="font-normal text-muted-foreground">in {city.name}</span>
+          </h2>
+          {chosen.length > 1 && (
+            <Chips
+              label="Focused tile"
+              options={chosen.map((tile) => ({ key: tile, label: tile }))}
+              value={focused}
+              onChange={onFocus}
+            />
+          )}
+          <Link to={`/cities/${city.key}/tiles/${focused}`} className="text-sm underline underline-offset-4">
+            The tile's own page
+          </Link>
+        </div>
+        <Fields fields={fields.data} busy={fields.isFetching} />
+        {report.data && report.data.plans.length > 0 && focusedOutcome && (
+          <div className="mt-8">
+            <h3 className="font-medium">Against the physics</h3>
+            <p className="mt-1 max-w-[60ch] text-sm text-muted-foreground">
+              The stored designs were each run through the engine. This scenario is the diamond among them
+              {focusedOutcome.threshold !== 45 && "; the stored designs count people against 45 C"}.
+            </p>
+            <div className="mt-3">
+              <TradeoffChart
+                plans={report.data.plans}
+                live={{ exposure_drop: focusedOutcome.exposure_drop, people: focusedOutcome.people, label: "this scenario" }}
+              />
+            </div>
+          </div>
+        )}
+        {focusedOutcome && (
+          <p className="mt-6 text-sm text-muted-foreground">
+            Answered by {focusedOutcome.model_id} in {decimal(focusedOutcome.surrogate_seconds, 2)} s.
+          </p>
+        )}
       </section>
+      </div>
       {cells.length > 0 && basemap && (
         <section aria-label="Where in the city" className="mt-10 border-t pt-6">
           <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
@@ -345,44 +393,6 @@ function Scenario({
           </div>
         </section>
       )}
-      <section className="mt-10 border-t pt-6">
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-          <h2>
-            Tile {focused} <span className="font-normal text-muted-foreground">in {city.name}</span>
-          </h2>
-          {chosen.length > 1 && (
-            <Chips
-              label="Focused tile"
-              options={chosen.map((tile) => ({ key: tile, label: tile }))}
-              value={focused}
-              onChange={onFocus}
-            />
-          )}
-          <Link to={`/cities/${city.key}/tiles/${focused}`} className="text-sm underline underline-offset-4">
-            The tile's own page
-          </Link>
-        </div>
-        <Fields fields={fields.data} busy={fields.isFetching} />
-        {report.data && report.data.plans.length > 0 && focusedOutcome && (
-          <div className="mt-8">
-            <h3 className="font-medium">Against the physics</h3>
-            <p className="mt-1 max-w-[60ch] text-sm text-muted-foreground">
-              The stored designs were each run through the engine. This scenario is the diamond among them.
-            </p>
-            <div className="mt-3">
-              <TradeoffChart
-                plans={report.data.plans}
-                live={{ exposure_drop: focusedOutcome.exposure_drop, people: focusedOutcome.people, label: "this scenario" }}
-              />
-            </div>
-          </div>
-        )}
-        {focusedOutcome && (
-          <p className="mt-6 text-sm text-muted-foreground">
-            Answered by {focusedOutcome.model_id} in {decimal(focusedOutcome.surrogate_seconds, 2)} s.
-          </p>
-        )}
-      </section>
       {report.data && (
         <>
           <Panel title="The day's heat">
@@ -433,6 +443,8 @@ function ScaleSliders({
   onChange: (scale: Scale) => void;
 }) {
   const drives = (driver: Scale["driver"]) => !scale.locked && scale.driver === driver;
+  const budgets = budgetRange(rate);
+  const beyond = extrapolating(scale, rate);
   return (
     <div className="space-y-4">
       <div>
@@ -443,14 +455,12 @@ function ScaleSliders({
           </span>
           <strong className="tabular-nums">{percent(scale.coverage, 1)}</strong>
         </div>
-        <Slider
-          value={[scale.coverage]}
-          min={COVERAGE.min}
-          max={COVERAGE.max}
-          step={COVERAGE.step}
-          onValueChange={([value]) => onChange(moveCoverage(scale, value, rate))}
-          aria-label="Coverage of the plantable ground"
-          className="mt-2"
+        <MarkedSlider
+          value={scale.coverage}
+          range={COVERAGE}
+          mark={SIMULATED_COVERAGE}
+          onChange={(value) => onChange(moveCoverage(scale, value, rate))}
+          label="Coverage of the plantable ground"
         />
         {outcome && (
           <p className="mt-1 text-xs text-muted-foreground">
@@ -466,14 +476,12 @@ function ScaleSliders({
           </span>
           <strong className="tabular-nums">{decimal(scale.budget / 1e6, 2)} M USD</strong>
         </div>
-        <Slider
-          value={[scale.budget]}
-          min={BUDGET.min}
-          max={BUDGET.max}
-          step={BUDGET.step}
-          onValueChange={([value]) => onChange(moveBudget(scale, value, rate))}
-          aria-label="Budget per tile"
-          className="mt-2"
+        <MarkedSlider
+          value={scale.budget}
+          range={budgets}
+          mark={simulatedBudget(rate)}
+          onChange={(value) => onChange(moveBudget(scale, value, rate))}
+          label="Budget per tile"
         />
         {outcome && !scale.locked && scale.driver === "coverage" && (
           <p className="mt-1 text-xs text-muted-foreground">
@@ -489,6 +497,48 @@ function ScaleSliders({
         />
         Move the two together through the cost table
       </label>
+      <p className={cn("text-xs", beyond ? "text-destructive" : "text-muted-foreground")} role={beyond ? "status" : undefined}>
+        {beyond
+          ? `Beyond ${percent(SIMULATED_COVERAGE)} of the plantable ground the surrogate extrapolates past the simulated designs.`
+          : `The red mark is ${percent(SIMULATED_COVERAGE)} of the plantable ground, as far as the designs were simulated.`}
+      </p>
+    </div>
+  );
+}
+
+/** A slider with a red mark at one value: where the simulated designs stop and the surrogate goes on alone. */
+function MarkedSlider({
+  value,
+  range,
+  mark,
+  onChange,
+  label,
+}: {
+  value: number;
+  range: { min: number; max: number; step: number };
+  mark: number | null;
+  onChange: (value: number) => void;
+  label: string;
+}) {
+  const fraction = mark === null ? null : Math.min(1, Math.max(0, (mark - range.min) / (range.max - range.min)));
+  return (
+    <div className="relative mt-2">
+      <Slider
+        value={[Math.min(range.max, value)]}
+        min={range.min}
+        max={range.max}
+        step={range.step}
+        onValueChange={([next]) => onChange(next)}
+        aria-label={label}
+      />
+      {fraction !== null && (
+        <span
+          className="pointer-events-none absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-destructive ring-2 ring-background"
+          style={{ left: `${fraction * 100}%` }}
+          title="as far as the designs were simulated"
+          aria-hidden="true"
+        />
+      )}
     </div>
   );
 }
@@ -497,6 +547,7 @@ function ScaleSliders({
 interface Assumptions {
   unit_cost?: number;
   maintenance?: number;
+  threshold?: number;
 }
 
 function AssumptionsPanel({
@@ -518,7 +569,9 @@ function AssumptionsPanel({
   return (
     <details className="mt-5 rounded-md border px-3 py-2 text-sm">
       <summary className="cursor-pointer text-muted-foreground">
-        Assumptions{outcome && `, priced at ${outcome.unit_cost} USD per m², ${percent(outcome.maintenance)} a year`}
+        Assumptions
+        {outcome &&
+          `, priced at ${outcome.unit_cost} USD per m², ${percent(outcome.maintenance)} a year, exposed above ${outcome.threshold} C`}
       </summary>
       <div className="mt-3 grid gap-3">
         <label className="grid gap-1">
@@ -548,25 +601,41 @@ function AssumptionsPanel({
             className="w-32 rounded-sm border bg-background px-2 py-1 tabular-nums"
           />
         </label>
+        <label className="grid gap-1">
+          <span className="text-xs text-muted-foreground">Stress threshold, C mean radiant temperature</span>
+          <input
+            type="number"
+            min={20}
+            max={80}
+            step={1}
+            inputMode="decimal"
+            value={assumptions.threshold ?? ""}
+            placeholder={outcome ? String(outcome.threshold) : "45"}
+            onChange={(event) => set("threshold", event.target.value)}
+            className="w-32 rounded-sm border bg-background px-2 py-1 tabular-nums"
+          />
+        </label>
         <p className="text-xs text-muted-foreground">
-          The catalogue's prices are placeholders. Yours change the cost and what it buys, never the cooling.
+          The catalogue's prices are placeholders, and 45 C is this project's line for heat stress outdoors, not a
+          standard. Yours change the cost and who counts as exposed, never the cooling.
         </p>
       </div>
     </details>
   );
 }
 
-function OutcomesRow({ totals, busy }: { totals: Totals | null; busy: boolean }) {
+function OutcomesRow({ totals, busy, threshold }: { totals: Totals | null; busy: boolean; threshold: number }) {
   if (!totals) {
     return (
       <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-busy="true">
         {Array.from({ length: 5 }, (_, index) => (
-          <div key={index} className="h-24 rounded-md bg-secondary" />
+          <div key={index} className="h-[4.5rem] rounded-md bg-secondary" />
         ))}
       </div>
     );
   }
   const over = totals.tiles > 1 ? ` over ${totals.tiles} tiles` : "";
+  const share = totals.baseline_at_risk > 0 ? percent(totals.people / totals.baseline_at_risk, 1) : "0%";
   return (
     <section
       aria-label="Outcomes"
@@ -582,12 +651,12 @@ function OutcomesRow({ totals, busy }: { totals: Totals | null; busy: boolean })
       <Outcome
         label="Degree-hours removed"
         value={integer(totals.excess_removed)}
-        note={`above 45 C, summed over the people exposed${over}`}
+        note={`above ${threshold} C, summed over the people exposed${over}`}
       />
       <Outcome
-        label="People moved below 45 C"
+        label={`People moved below ${threshold} C`}
         value={integer(totals.people)}
-        note={`of ${integer(totals.baseline_at_risk)} above it today${over}`}
+        note={`${share} of the ${integer(totals.baseline_at_risk)} above it today${over}`}
       />
       <Outcome
         label="Equity gap change"
@@ -607,13 +676,13 @@ function OutcomesRow({ totals, busy }: { totals: Totals | null; busy: boolean })
 
 function Outcome({ label, value, unit, note }: { label: string; value: string; unit?: string; note: string }) {
   return (
-    <div className="rounded-md border bg-card p-4">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 font-display text-3xl font-bold tracking-tight">
+    <div className="rounded-md border bg-card px-3 py-2">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="font-display text-2xl font-bold leading-tight tracking-tight">
         {value}
-        {unit && <span className="ml-1.5 font-sans text-base font-normal text-muted-foreground">{unit}</span>}
+        {unit && <span className="ml-1 font-sans text-sm font-normal text-muted-foreground">{unit}</span>}
       </p>
-      <p className="mt-1 text-xs text-muted-foreground">{note}</p>
+      <p className="text-[11px] leading-snug text-muted-foreground">{note}</p>
     </div>
   );
 }

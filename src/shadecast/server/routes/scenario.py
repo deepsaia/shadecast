@@ -36,6 +36,10 @@ def levers(
     maintenance: Annotated[
         float | None, Query(description="Yearly maintenance as a share of capital; the catalogue's when absent.")
     ] = None,
+    threshold: Annotated[
+        float | None,
+        Query(description="Mean radiant temperature in C above which people count as exposed; 45 when absent."),
+    ] = None,
 ) -> Scenario:
     """The scenario a request asks for: one parameter per lever, since FastAPI reads them from the signature."""
     return Scenario(
@@ -47,6 +51,7 @@ def levers(
         budget_usd=budget_usd,
         unit_cost=unit_cost,
         maintenance=maintenance,
+        threshold=threshold,
     )
 
 

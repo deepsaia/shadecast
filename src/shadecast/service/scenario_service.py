@@ -9,14 +9,15 @@ import numpy as np
 
 from ..corpus.tile_paths import TilePaths
 from ..data.landcover import to_umep
-from ..interventions import InterventionSpec
 from ..interventions import feasibility_mask
 from ..interventions import priced
 from ..interventions import spec_cost
+from ..objectives import TMRT_STRESS_C
 from ..surrogate.dataset import make_placement
 from ..surrogate.predictor import Predictor
 from ..surrogate.tile_surrogate import TileSurrogate
 from .arrangements import family_of
+from .assumptions import Assumptions
 from .city_catalog import CityCatalog
 from .field_store import FieldStore
 from .model_catalog import WEIGHTS
@@ -55,11 +56,14 @@ class ScenarioService:
         if scenario.kind not in LIVE_KINDS:
             raise ValueError(f"{scenario.kind!r} has no surrogate yet; tree is the one live kind")
         tile = self._tile(scenario)
-        spec = priced(scenario.kind, scenario.unit_cost, scenario.maintenance)
-        placement = self._placement(scenario, tile, spec)
+        judged = Assumptions(
+            spec=priced(scenario.kind, scenario.unit_cost, scenario.maintenance),
+            threshold=TMRT_STRESS_C if scenario.threshold is None else scenario.threshold,
+        )
+        placement = self._placement(scenario, tile, judged)
         cooling, seconds = tile.surrogate.predict(placement)
-        gain = tile.scoring.benefit_of(placement, cooling, spec)
-        baseline = tile.scoring.baseline()
+        gain = tile.scoring.benefit_of(placement, cooling, judged)
+        baseline = tile.scoring.baseline(judged)
         outcome = ScenarioOutcome(
             city=tile.city,
             tile=tile.paths.tile.id,
@@ -70,8 +74,9 @@ class ScenarioService:
             tile_fraction=round(float(placement.mean()), 4),
             trees=int(placement.sum()),
             cost_usd=float(gain.get("cost_usd", 0.0)),
-            unit_cost=spec.unit_cost,
-            maintenance=spec.maintenance_frac,
+            unit_cost=judged.spec.unit_cost,
+            maintenance=judged.spec.maintenance_frac,
+            threshold=judged.threshold,
             baseline_exposure=baseline.exposure,
             baseline_at_risk=baseline.at_risk,
             exposure_drop=float(gain.get("delta_exposure_C", 0.0)),
@@ -111,14 +116,15 @@ class ScenarioService:
         )
 
     # Three arguments: the levers, the tile they act on, and the prices a budget is converted at.
-    def _placement(self, scenario: Scenario, tile: ScenarioTile, spec: InterventionSpec) -> np.ndarray:
-        coverage = scenario.coverage if scenario.coverage is not None else _coverage_bought(scenario, tile, spec)
+    def _placement(self, scenario: Scenario, tile: ScenarioTile, judged: Assumptions) -> np.ndarray:
+        coverage = scenario.coverage if scenario.coverage is not None else _coverage_bought(scenario, tile, judged)
         return make_placement(family_of(scenario.arrangement), tile.feasible, SEED, {"coverage": coverage})
 
 
-# Three arguments: the budget comes from the levers, the feasible ground from the tile, the price from the spec.
-def _coverage_bought(scenario: Scenario, tile: ScenarioTile, spec: InterventionSpec) -> float:
+# Three arguments: the budget comes from the levers, the feasible ground from the tile, the price from the
+# assumptions.
+def _coverage_bought(scenario: Scenario, tile: ScenarioTile, judged: Assumptions) -> float:
     """The share of the feasible ground a budget buys at the price per square metre."""
-    per_pixel = spec_cost(spec, np.ones((1, 1), dtype=bool), RESOLUTION_M)
+    per_pixel = spec_cost(judged.spec, np.ones((1, 1), dtype=bool), RESOLUTION_M)
     pixels = int(float(scenario.budget_usd or 0.0) // per_pixel)
     return min(1.0, pixels / max(1, int(tile.feasible.sum())))

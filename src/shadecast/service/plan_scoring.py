@@ -8,13 +8,12 @@ import numpy as np
 
 from ..exposure import outdoor_mask
 from ..exposure import outdoor_weights
-from ..interventions import CATALOGUE
-from ..interventions import InterventionSpec
 from ..interventions import spec_cost
 from ..objectives import Score
 from ..objectives import benefit
 from ..objectives import score
 from .arrangements import arrangement_of
+from .assumptions import Assumptions
 from .baseline_score import BaselineScore
 from .field_store import FieldStore
 from .physics_facts import PhysicsFacts
@@ -23,6 +22,8 @@ from .tile_layers import TileLayers
 
 KIND = "tree"
 RESOLUTION_M = 1.0
+# What the stored designs are judged with, so they are all judged alike: the catalogue's prices, the project's line.
+JUDGED_ALIKE = Assumptions.catalogue(KIND)
 
 
 class PlanScoring:
@@ -30,9 +31,10 @@ class PlanScoring:
 
     def __init__(self, store: FieldStore) -> None:
         self._store = store
+        self._baselines: dict[float, Score] = {}
 
-    def baseline(self) -> BaselineScore:
-        scored = self._baseline_score
+    def baseline(self, assumptions: Assumptions = JUDGED_ALIKE) -> BaselineScore:
+        scored = self._baseline_at(assumptions.threshold)
         return BaselineScore(exposure=round(scored.exposure, 2), at_risk=round(scored.people_at_risk))
 
     def plans(self) -> list[Plan]:
@@ -40,14 +42,13 @@ class PlanScoring:
         plans = [self._plan(design_id) for design_id in self._store.design_ids() if arrangement_of(design_id)]
         return sorted(plans, key=_by_arrangement_then_coverage)
 
-    # Three arguments: the placement, the cooling it causes, and the prices it is costed at, which
-    # default to the catalogue's so the stored designs are all priced alike.
-    def benefit_of(
-        self, placement: np.ndarray, response: np.ndarray, spec: InterventionSpec = CATALOGUE[KIND]
-    ) -> dict:
+    # Three arguments: the placement, the cooling it causes, and what it is judged with, which defaults
+    # to the catalogue's prices and the project's threshold so the stored designs are all judged alike.
+    def benefit_of(self, placement: np.ndarray, response: np.ndarray, assumptions: Assumptions = JUDGED_ALIKE) -> dict:
         """What a placement buys, given the cooling it causes, against doing nothing; cost included."""
-        spent = spec_cost(spec, placement, RESOLUTION_M)
-        return benefit(self._baseline_score, self._score(self._layers.baseline - response, spent))
+        spent = spec_cost(assumptions.spec, placement, RESOLUTION_M)
+        after = self._score(self._layers.baseline - response, spent, assumptions.threshold)
+        return benefit(self._baseline_at(assumptions.threshold), after)
 
     def physics(self) -> PhysicsFacts:
         """How many designs the engine ran and how long each took, from the manifest."""
@@ -68,9 +69,13 @@ class PlanScoring:
             baseline=self._store.baseline_daylight(),
         )
 
-    @cached_property
-    def _baseline_score(self) -> Score:
-        return self._score(self._layers.baseline, 0.0)
+    def _baseline_at(self, threshold: float) -> Score:
+        """Doing nothing, judged at a threshold, scored once per threshold asked."""
+        found = self._baselines.get(threshold)
+        if found is None:
+            found = self._score(self._layers.baseline, 0.0, threshold)
+            self._baselines[threshold] = found
+        return found
 
     def _plan(self, design_id: str) -> Plan:
         placement, response = self._store.response(design_id)
@@ -88,8 +93,9 @@ class PlanScoring:
             efficiency=float(gain.get("excess_reduced_per_1k_usd", 0.0)),
         )
 
-    def _score(self, field: np.ndarray, spent: float) -> Score:
-        return score(np.where(self._layers.outdoor, field, 0), self._layers.weights, spent)
+    # Three arguments: the field, what it cost, and the threshold it is judged at.
+    def _score(self, field: np.ndarray, spent: float, threshold: float) -> Score:
+        return score(np.where(self._layers.outdoor, field, 0), self._layers.weights, spent, threshold)
 
 
 def _by_arrangement_then_coverage(plan: Plan) -> tuple[str, float]:

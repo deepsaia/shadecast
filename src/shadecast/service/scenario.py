@@ -15,6 +15,7 @@ class Scenario(BaseModel):
     budget_usd: float | None = None
     unit_cost: float | None = None  # USD per square metre; the catalogue's price when not given
     maintenance: float | None = None  # annual maintenance as a share of capital; the catalogue's when not given
+    threshold: float | None = None  # mean radiant temperature in C above which people count as exposed
 
     @model_validator(mode="after")
     def one_lever_sets_the_size(self) -> Scenario:
@@ -28,4 +29,6 @@ class Scenario(BaseModel):
             raise ValueError("unit_cost is USD per square metre, above 0")
         if self.maintenance is not None and not 0.0 <= self.maintenance < 1.0:
             raise ValueError("maintenance is a yearly share of capital, from 0 up to but not including 1")
+        if self.threshold is not None and not 20.0 <= self.threshold <= 80.0:
+            raise ValueError("threshold is a mean radiant temperature in C, from 20 to 80")
         return self
