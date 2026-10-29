@@ -3,7 +3,7 @@
 The model is fully convolutional, so it can be applied to a full study area in one
 pass when memory allows, and tiled with overlap when it does not. Tiles are blended
 with a cosine window rather than butt-joined, because a visible seam in the response
-field would corrupt the spatial statistics the benchmark scores on.
+field would corrupt the spatial statistics the outcomes are computed from.
 
 This is the module that turns the surrogate from a trained artifact into something
 that can stand in for an engine call inside a search loop.

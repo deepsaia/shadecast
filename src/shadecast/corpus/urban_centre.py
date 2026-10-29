@@ -9,7 +9,7 @@ GLOBAL_SOUTH_INCOMES = ("L", "LM", "UM")
 
 @dataclass(frozen=True)
 class UrbanCentre:
-    """An urban centre from GHS-UCDB with the strata the benchmark is reported on.
+    """An urban centre from GHS-UCDB with the strata results are reported on.
 
     `area_km2` doubles as the number of 1 km tiles, because every urban centre boundary is an
     exact union of 1 km cells of the GHS grid. Missing strata are None, never a guess.

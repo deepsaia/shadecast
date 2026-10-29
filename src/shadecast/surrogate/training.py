@@ -3,13 +3,13 @@
 The held-out split is by *design*, never by patch. Splitting patches at random
 would leak: patches from the same intervention field overlap and share context, so
 a model could score well by memorising one design rather than learning the response.
-What the benchmark needs is generalisation to an intervention pattern never seen,
+What the simulator needs is generalisation to an intervention pattern never seen,
 which is exactly what a design-level split measures.
 
 Loss is Huber rather than plain squared error. The target is extremely skewed,
 roughly 18 C at a planted pixel against under 0.1 C beyond 26 m, and squared error
 would let the near field dominate. The far field is the spillover, which is the
-whole reason the benchmark exists, so it has to survive training.
+whole reason the simulator exists, so it has to survive training.
 
 The weights kept are the best epoch's by held-out skill, and training stops once that
 skill has not improved for a patience of epochs. A last-epoch model depends on where the
@@ -68,7 +68,7 @@ def split_by_city(origins: list[str], holdout_city: str) -> tuple[np.ndarray, np
     Origins are tagged ``city/design``. Holding out a design measures whether the
     model generalises to an unseen intervention pattern. Holding out a city measures
     whether it generalises to unseen *geometry*, which is a much harder question and
-    the one that decides whether this is a benchmark or a single city demo.
+    the one that decides whether this is a simulator for any city or a single city demo.
     """
     origin_array = np.array(origins)
     labels = {origin.split("/", 1)[0] for origin in origins}

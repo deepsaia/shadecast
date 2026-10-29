@@ -1,7 +1,7 @@
 [project]
 name = "shadecast"
 version = "0.1.0"
-description = "A global open benchmark for urban heat adaptation planning"
+description = "An open, physics-grounded simulator of urban heat adaptation planning"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "solweig-gpu>=2.0.0",

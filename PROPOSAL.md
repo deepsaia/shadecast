@@ -1,9 +1,9 @@
-# CoolBench
+# shadecast
 
-**A global, open benchmark for urban heat adaptation planning.**
+**An open, physics-grounded simulator of urban heat adaptation planning.**
 
 Research proposal v3 . 2026-08-26 . Phases 0 and 1 passed.
-Repo and library: `shadecast`. Benchmark artifact: **CoolBench**. Interactive instrument: **Umbra**.
+Repo and library: `shadecast`. The instrument: **Umbra**, the simulator a decision-maker moves the levers of.
 
 ---
 
@@ -12,13 +12,11 @@ Repo and library: `shadecast`. Benchmark artifact: **CoolBench**. Interactive in
 WRI's Cool Cities Lab solved the forward model: given an intervention, how much cooler?
 Nobody has solved the inverse problem: **given a budget, what should you build?**
 
-CoolBench is a reproducible, physics-grounded environment in which an agent allocates a
-finite adaptation budget across a real city to minimise heat-attributable exposure under
-equity and robustness constraints. Built entirely from open global data requiring no
-account, key or quota, with baselines spanning greedy, MILP, evolutionary,
-quality-diversity and deep RL, plus zero-shot transfer to held-out cities.
-
-**Target venues:** NeurIPS Datasets and Benchmarks, ICLR, Nature Cities, Climate Change AI.
+shadecast is a reproducible, physics-grounded simulator in which a decision-maker allocates a
+finite adaptation budget across a real city and sees the heat exposure, the people reached, the
+equity gap and the cost change at once. Built entirely from open global data requiring no
+account, key or quota. A search layer over the same simulator, from greedy to evolutionary
+methods, comes after the instrument itself.
 
 ## 2. Phase 0 result (passed 2026-08-26)
 
@@ -35,14 +33,14 @@ peak, every input from open sources with no credentials. A greedy planner was gi
 Greedy targets correctly, planting where baseline Tmrt averages 64.8 C against an outdoor
 mean of 55.8 C. Local cooling where planted: **17.84 C mean, 27.19 C max**.
 
-### The finding that shapes the benchmark
+### The finding that shapes the simulator
 
 Cooling spilled over to **unplanted** outdoor pixels by **1.52 C**. That is spatial
 interaction: a tree shades its neighbours, so the marginal value of any placement depends
 on every other placement. Greedy assumes independence and structurally cannot see it. The
-gap between greedy and an interaction-aware search is the headroom this benchmark exists
-to measure, now quantified rather than asserted. It is the empirical reason evolutionary
-search, quality-diversity and RL belong in the paper.
+gap between greedy and an interaction-aware search is the headroom the simulator makes
+visible, now quantified rather than asserted. It is the empirical reason a search layer
+belongs on top of the instrument.
 
 ### Timing, and why the surrogate is load-bearing
 
@@ -53,8 +51,8 @@ search, quality-diversity and RL belong in the paper.
 | SOLWEIG per km2, cold (geometry changed) | 283 s |
 | One 1,000-evaluation search, one city | 45 to 78 h |
 
-The corpus is 30 cities. Without a learned response model the benchmark is not runnable,
-which makes the surrogate a contribution rather than an implementation detail. Useful
+The corpus is 30 cities. Without a learned response model the simulator cannot answer while
+a person waits, which makes the surrogate the core of the instrument rather than a detail. Useful
 asymmetry: sky-view factor is cached, so albedo interventions (cool roofs, paving) are
 1.7x cheaper to evaluate than geometry interventions (trees, shade).
 
@@ -163,7 +161,7 @@ rather than an Ahmedabad artefact. Greedy still cannot see it.
 > **Credentials at build time, never at use time.**
 
 `cities-cif` needs Earth Engine, a CDS key, and an AWS profile whose credentials live in
-WRI's internal secrets. Fine for a hosted platform, fatal for a reproducible benchmark.
+WRI's internal secrets. Fine for a hosted platform, fatal for a simulator anyone can run.
 Build time (us, once, network but no accounts): pull layers, run physics, design the
 sampling, fit the surrogate. Use time (anyone, offline): download a frozen bundle and run.
 
@@ -228,7 +226,8 @@ Quality-diversity (MAP-Elites) . Deep RL (PPO, graph RL) . Robust decision makin
 - **Equity is proxied by population density, which is weak.** Phase 0 measured a negative
   equity gap: the densest areas are cooler at pedestrian level by day, probably because
   dense low-rise fabric self-shades its own streets. Real, but needs a deprivation surface.
-- **A benchmark is not a deployment.**
+- **A simulator is not a deployment.** It shows what a budget buys on a tile; it does not tell
+  a city what to build.
 
 ## 10. Phases
 
@@ -241,7 +240,7 @@ Quality-diversity (MAP-Elites) . Deep RL (PPO, graph RL) . Robust decision makin
 | 4 | Tracks C and D | 18 to 24 | |
 | 5 | Validation, ablations, paper | 24 to 30 | |
 
-## 11. Umbra, the second artifact
+## 11. Umbra, the instrument
 
 Named for the fully shaded core of a shadow, which is what SOLWEIG computes.
 

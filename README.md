@@ -8,22 +8,21 @@ run, maps drawn in your browser from raw model output so that hovering any pixel
 temperature.
 
 Open, credential-free pipeline that turns any city into an urban heat **decision**
-problem, plus baselines and a benchmark.
+problem, plus the simulator that lets a decision-maker move the levers and see the outcomes.
 
 WRI's Cool Cities Lab solved the *forward* model: given an intervention, how much
 cooler? shadecast solves the *inverse* problem: **given a budget, what should you
 build?**
 
 - **shadecast** is this repo and library.
-- **CoolBench** is the benchmark artifact it publishes.
-- **Umbra** is the interactive instrument built on the same surrogate.
+- **Umbra** is the interactive simulator built on its surrogates.
 
 ## The one rule
 
 > Credentials at build time, never at use time.
 
 Build time needs network but no account, key or quota anywhere. Use time is a frozen
-bundle, offline, forever. A benchmark that requires three accounts is not a benchmark.
+bundle, offline, forever. A simulator that needs three accounts before it answers is not open.
 
 ## Quick start
 

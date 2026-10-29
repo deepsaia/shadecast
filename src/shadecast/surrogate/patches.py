@@ -75,7 +75,7 @@ def crop_cities(pairs: list[tuple[Path, Path]], settings: PatchSettings) -> tupl
     Origins are tagged ``city/design`` so a split can hold out either a design
     within a city, which measures generalisation to an unseen intervention, or a
     whole city, which measures transfer. Those are different questions and the
-    benchmark reports both.
+    assessment reports both.
     """
     all_inputs: list[np.ndarray] = []
     all_targets: list[np.ndarray] = []

@@ -6,7 +6,7 @@ heat-exposure harm sits on it, then buy from the top until the budget runs out.
 It ignores interaction between placements entirely. A tree shades its neighbours,
 so the true marginal benefit of the tenth tree on a street depends on the first
 nine, and greedy cannot see that. That blindness is deliberate. It is the floor
-that search methods have to beat, and if they cannot beat it the benchmark should
+that search methods have to beat, and if they cannot beat it the results should
 say so.
 """
 

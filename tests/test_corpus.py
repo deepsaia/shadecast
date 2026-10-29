@@ -1,4 +1,4 @@
-"""The benchmark corpus is a selection of urban centre ids joined to the database. No network."""
+"""The city corpus is a selection of urban centre ids joined to the database. No network."""
 
 import json
 from pathlib import Path

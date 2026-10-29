@@ -2,7 +2,7 @@
 
 Copies the bundle twice, runs the physics on the untouched baseline, builds a plan
 against that baseline, runs the physics again on the perturbed geometry, and scores
-the difference. Everything the benchmark reports comes out of this cycle.
+the difference. Every engine-verified result comes out of this cycle.
 """
 
 from __future__ import annotations

@@ -127,7 +127,7 @@ solar radiation skyward instead of scattering it onto the street, with reported 
 surface reductions up to 20 C (Nature Cities, 2024). They cannot be represented here at
 all: SOLWEIG assumes Lambertian reflection, and building albedo is a single module-level
 scalar in this engine rather than a spatial field. This is recorded as a stated limit of
-the benchmark, not carried as an untested arm.
+the simulator, not carried as an untested arm.
 
 ## Hypotheses, round two
 

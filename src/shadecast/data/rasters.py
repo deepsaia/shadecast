@@ -3,7 +3,7 @@
 Originally these came through Microsoft Planetary Computer's STAC. That was
 dropped: PC issues short-lived SAS tokens per container, and on 2026-08-26 the
 token endpoint began returning 404 for both `elevationeuwest/copernicus` and
-`esaworldcover/esaworldcover` while continuing to serve Landsat. A benchmark
+`esaworldcover/esaworldcover` while continuing to serve Landsat. A simulator
 cannot depend on a token broker that can partially fail.
 
 AWS Open Data serves the identical products as plain unsigned HTTP with range

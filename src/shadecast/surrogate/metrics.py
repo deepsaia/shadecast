@@ -5,9 +5,9 @@ Pixel error alone is the wrong measure. Three things matter, in this order.
 **The tail must survive.** Cooling is about 18 C at a planted pixel and under 0.1 C
 beyond 26 m. A model that nails the near field and flattens the tail would look
 excellent on mean error while destroying the spillover, which is the effect this
-whole benchmark exists to measure. So error is reported per distance band.
+whole simulator exists to capture. So error is reported per distance band.
 
-**The aggregate must be right.** The benchmark scores plans on population weighted
+**The aggregate must be right.** The simulator scores scenarios on population weighted
 exposure, which integrates the whole field. A surrogate can be locally noisy and
 still be perfectly useful if that integral is unbiased.
 
@@ -111,7 +111,7 @@ def speedup(engine_seconds: float, surrogate_seconds: float) -> dict:
         "surrogate_seconds": round(surrogate_seconds, 5),
         "speedup": round(factor, 1),
         # A 1,000 evaluation search on one city, which is the number that decides
-        # whether the benchmark is runnable by anyone else.
+        # whether a search is affordable for anyone else.
         "search_hours_engine": round(engine_seconds * 1000 / 3600, 1),
         "search_hours_surrogate": round(surrogate_seconds * 1000 / 3600, 4),
     }

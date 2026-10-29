@@ -1,6 +1,6 @@
 """Does training on more cities improve transfer to an unseen one?
 
-This is the question that decides whether shadecast is a benchmark or a single city
+This is the question that decides whether shadecast is a simulator for any city or a single city
 demonstration, and it is worth answering as a curve rather than a single comparison.
 
 Hold one city out entirely. Train on one of the remaining cities, then two, then

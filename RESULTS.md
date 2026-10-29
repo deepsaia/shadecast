@@ -88,7 +88,7 @@ reproduce a spatial pattern.
 **Retro-reflective materials**, which return solar radiation skyward instead of scattering it
 onto the street, are the physically correct version of the albedo arm. They cannot be
 modelled here at all: SOLWEIG assumes Lambertian reflection, and building albedo is a single
-module-level scalar rather than a spatial field. Recorded as a limit of the benchmark rather
+module-level scalar rather than a spatial field. Recorded as a limit of the simulator rather
 than carried as an untested arm.
 
 ## Retracted
