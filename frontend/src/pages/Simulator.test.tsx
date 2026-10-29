@@ -9,6 +9,7 @@ import { SimulatorPage } from "./Simulator";
 
 vi.mock("maplibre-gl", () => ({ default: fakeMaplibre, ...fakeMaplibre }));
 vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
+vi.mock("maplibre-gl/dist/maplibre-gl-worker.mjs?url", () => ({ default: "/assets/worker.mjs" }));
 
 const STAGES = (model: boolean) => ({ bundle: true, baseline: model, physics: model, model, results: false });
 

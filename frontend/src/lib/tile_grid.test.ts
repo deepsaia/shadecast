@@ -32,8 +32,8 @@ it("draws polygons closed on their first corner and shades by density up to a ce
   expect(features.features[0].properties.id).toBe("a");
   const ceiling = densityCeiling(cells);
   expect(ceiling).toBe(9000);
-  expect(densityColor(0, ceiling)).toBe("rgb(228 234 231)");
-  expect(densityColor(ceiling, ceiling)).toBe("rgb(27 43 52)");
+  expect(densityColor(0, ceiling)).toBe("#e4eae7");
+  expect(densityColor(ceiling, ceiling)).toBe("#1b2b34");
 });
 
 it("fits the grid into a square thumbnail with the modelled cell marked", () => {

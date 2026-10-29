@@ -70,4 +70,4 @@ export class FakeMap {
   }
 }
 
-export const fakeMaplibre = { Map: FakeMap };
+export const fakeMaplibre = { Map: FakeMap, setWorkerUrl: () => undefined };
