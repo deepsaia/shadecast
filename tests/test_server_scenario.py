@@ -86,6 +86,12 @@ def test_a_unit_cost_reprices_the_scenario(client):
     assert client.get(SCENARIO, params={**SCATTERED_QUARTER, "maintenance": 1.5}).status_code == 400
 
 
+def test_the_threshold_is_a_lever_too(client):
+    payload = client.get(SCENARIO, params={**SCATTERED_QUARTER, "threshold": 49}).json()
+    assert payload["threshold"] == 49.0 and payload["people"] > 0
+    assert client.get(SCENARIO, params={**SCATTERED_QUARTER, "threshold": 5}).status_code == 400
+
+
 def test_a_budget_sets_the_coverage_and_is_not_exceeded(client):
     payload = client.get(SCENARIO, params={"budget_usd": 10_000}).json()
     assert 0 < payload["cost_usd"] <= 10_000 and payload["coverage"] > 0

@@ -94,6 +94,7 @@ const OUTCOME = {
   cost_usd: 2_980_000,
   unit_cost: 40,
   maintenance: 0.08,
+  threshold: 45,
   baseline_exposure: 58.68,
   baseline_at_risk: 78568,
   exposure_drop: 3.06,
@@ -152,6 +153,9 @@ it("opens on the first city with a model and its densest tile, with the outcomes
   const outcomes = await screen.findByRole("region", { name: "Outcomes" });
   expect(within(outcomes).getByText("3.06")).toBeInTheDocument();
   expect(within(outcomes).getByText(/^3,?07,032$/)).toBeInTheDocument();
+  expect(within(outcomes).getByText(/1\.6% of the 78,568 above it today/)).toBeInTheDocument();
+  expect(within(outcomes).getByText("People moved below 45 C")).toBeInTheDocument();
+  expect(screen.getByText(/The red mark is 30% of the plantable ground/)).toBeInTheDocument();
   expect(urls.some((url) => url.includes("/tiles/t43N_249_2547/scenario?arrangement=clustered&coverage=0.05"))).toBe(true);
   expect(screen.getByRole("heading", { level: 2, name: /^Policy/ })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Pavement/ })).toBeDisabled();
@@ -191,8 +195,9 @@ it("reprices the scenario from the assumptions", async () => {
   expect(screen.getByText(/priced at 40 USD per m², 8% a year/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Unit cost, USD per square metre"), { target: { value: "80" } });
   fireEvent.change(screen.getByLabelText("Maintenance, percent of capital a year"), { target: { value: "5" } });
+  fireEvent.change(screen.getByLabelText("Stress threshold, C mean radiant temperature"), { target: { value: "50" } });
   await waitFor(() =>
-    expect(urls.some((url) => url.includes("coverage=0.05&unit_cost=80&maintenance=0.05"))).toBe(true),
+    expect(urls.some((url) => url.includes("coverage=0.05&unit_cost=80&maintenance=0.05&threshold=50"))).toBe(true),
   );
 });
 

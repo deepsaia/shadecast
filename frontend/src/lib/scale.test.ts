@@ -1,4 +1,15 @@
-import { INITIAL_SCALE, alignToAnswer, leversOf, moveBudget, moveCoverage, rateOf, setLocked } from "./scale";
+import {
+  INITIAL_SCALE,
+  alignToAnswer,
+  budgetRange,
+  extrapolating,
+  leversOf,
+  moveBudget,
+  moveCoverage,
+  rateOf,
+  setLocked,
+  simulatedBudget,
+} from "./scale";
 
 const RATE = 60_000_000; // USD for all of the plantable ground
 
@@ -29,8 +40,18 @@ describe("the two sliders", () => {
     expect(alignToAnswer(byBudget, { coverage: 0.0497, cost_usd: 2_980_000 } as never).coverage).toBe(0.0497);
   });
 
+  it("run over the whole ground, mark where the designs stop, and size the budget slider from the rate", () => {
+    expect(moveBudget(INITIAL_SCALE, 120_000_000, RATE).coverage).toBe(1);
+    expect(budgetRange(RATE)).toEqual({ min: 500_000, max: 60_000_000, step: 500_000 });
+    expect(budgetRange(null).max).toBe(25_000_000);
+    expect(simulatedBudget(RATE)).toBe(18_000_000);
+    expect(extrapolating(moveCoverage(INITIAL_SCALE, 0.3, RATE), RATE)).toBe(false);
+    expect(extrapolating(moveCoverage(INITIAL_SCALE, 0.35, RATE), RATE)).toBe(true);
+    expect(extrapolating(moveBudget(setLocked(INITIAL_SCALE, false, RATE), 20_000_000, RATE), RATE)).toBe(true);
+  });
+
   it("clamp the follower to its slider and read the rate off an answer", () => {
-    expect(moveBudget(INITIAL_SCALE, 25_000_000, RATE).coverage).toBe(0.3);
+    expect(moveBudget(INITIAL_SCALE, 25_000_000, RATE).coverage).toBeCloseTo(0.4167, 4);
     expect(rateOf({ coverage: 0.05, cost_usd: 3_000_000 } as never)).toBe(60_000_000);
     expect(rateOf(undefined)).toBeNull();
   });

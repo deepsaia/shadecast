@@ -96,6 +96,17 @@ def test_prices_change_the_cost_and_never_the_cooling(service):
         Scenario(target="ahmedabad", coverage=0.1, maintenance=1.0)
 
 
+def test_the_threshold_changes_who_counts_as_exposed_and_never_the_cooling(service):
+    at_45 = service.evaluate(Scenario(target="ahmedabad", arrangement="scattered", coverage=0.25))
+    at_49 = service.evaluate(Scenario(target="ahmedabad", arrangement="scattered", coverage=0.25, threshold=49.0))
+    assert np.array_equal(at_45.cooling, at_49.cooling)
+    assert (at_45.outcome.threshold, at_49.outcome.threshold) == (45.0, 49.0)
+    assert at_45.outcome.people == 0 and at_49.outcome.people > 0  # 50 C cooled by 2 C crosses 49, not 45
+    assert at_49.outcome.excess_removed < at_45.outcome.excess_removed
+    with pytest.raises(ValidationError, match="from 20 to 80"):
+        Scenario(target="ahmedabad", coverage=0.1, threshold=10.0)
+
+
 def test_a_tile_is_loaded_once_for_any_number_of_scenarios(service):
     for coverage in (0.05, 0.1, 0.2):
         service.evaluate(Scenario(target="ahmedabad", coverage=coverage))

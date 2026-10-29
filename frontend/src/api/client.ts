@@ -35,6 +35,7 @@ export interface ScenarioLevers {
   budget_usd?: number;
   unit_cost?: number;
   maintenance?: number;
+  threshold?: number;
   size?: number;
 }
 

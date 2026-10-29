@@ -17,6 +17,7 @@ class ScenarioOutcome(BaseModel):
     cost_usd: float
     unit_cost: float  # USD per square metre the cost was priced at
     maintenance: float  # yearly maintenance share of capital the cost was priced at
+    threshold: float  # mean radiant temperature in C the exposed people and degree-hours were counted above
     baseline_exposure: float
     baseline_at_risk: int
     exposure_drop: float

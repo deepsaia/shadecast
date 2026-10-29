@@ -7,8 +7,43 @@
 import type { ScenarioLevers } from "@/api/client";
 import type { ScenarioOutcome } from "@/api/models";
 
-export const COVERAGE = { min: 0.005, max: 0.3, step: 0.005 };
-export const BUDGET = { min: 250_000, max: 25_000_000, step: 250_000 };
+export interface Range {
+  min: number;
+  max: number;
+  step: number;
+}
+
+export const COVERAGE: Range = { min: 0.005, max: 1, step: 0.005 };
+/** The budget slider before any answer tells the rate; after one it runs to what the whole ground costs. */
+export const BUDGET: Range = { min: 250_000, max: 25_000_000, step: 250_000 };
+/** The coverage the designs were simulated up to; past it the surrogate extrapolates. */
+export const SIMULATED_COVERAGE = 0.3;
+
+/** The budget slider's range: up to what all of the plantable ground costs, in two hundred steps. */
+export function budgetRange(rate: number | null): Range {
+  if (rate === null) return BUDGET;
+  const step = niceStep(rate / 200);
+  return { min: step, max: Math.ceil(rate / step) * step, step };
+}
+
+/** The budget that buys the simulated coverage, where the red mark on the budget slider sits. */
+export function simulatedBudget(rate: number | null): number | null {
+  return rate === null ? null : rate * SIMULATED_COVERAGE;
+}
+
+/** True when the scale asks beyond the coverage the designs reached, by either slider. */
+export function extrapolating(scale: Scale, rate: number | null): boolean {
+  if (scale.driver === "coverage") return scale.coverage > SIMULATED_COVERAGE + 1e-9;
+  const limit = simulatedBudget(rate);
+  return limit !== null && scale.budget > limit + 1e-6;
+}
+
+function niceStep(rough: number): number {
+  const magnitude = 10 ** Math.floor(Math.log10(rough));
+  const unit = rough / magnitude;
+  const nice = unit <= 1 ? 1 : unit <= 2 ? 2 : unit <= 5 ? 5 : 10;
+  return nice * magnitude;
+}
 
 export type Driver = "coverage" | "budget";
 
@@ -28,7 +63,7 @@ export function rateOf(outcome: ScenarioOutcome | undefined): number | null {
 }
 
 export function moveCoverage(scale: Scale, coverage: number, rate: number | null): Scale {
-  const budget = scale.locked && rate ? clamp(coverage * rate, BUDGET) : scale.budget;
+  const budget = scale.locked && rate ? clamp(coverage * rate, budgetRange(rate)) : scale.budget;
   return { ...scale, driver: "coverage", coverage, budget };
 }
 
@@ -52,7 +87,7 @@ export function alignToAnswer(scale: Scale, outcome: ScenarioOutcome): Scale {
   if (!scale.locked) return scale;
   if (scale.driver === "coverage") {
     const answered = Math.abs(outcome.coverage - scale.coverage) <= COVERAGE.step / 2;
-    return answered ? { ...scale, budget: clamp(outcome.cost_usd, BUDGET) } : scale;
+    return answered ? { ...scale, budget: clamp(outcome.cost_usd, budgetRange(rateOf(outcome))) } : scale;
   }
   const answered = outcome.cost_usd <= scale.budget && scale.budget - outcome.cost_usd <= scale.budget * 0.02;
   return answered ? { ...scale, coverage: clamp(outcome.coverage, COVERAGE) } : scale;
@@ -63,6 +98,6 @@ export function leversOf(design: string, scale: Scale): ScenarioLevers {
   return { arrangement: design, budget_usd: Math.round(scale.budget) };
 }
 
-function clamp(value: number, range: { min: number; max: number }): number {
+function clamp(value: number, range: Range): number {
   return Math.min(range.max, Math.max(range.min, value));
 }

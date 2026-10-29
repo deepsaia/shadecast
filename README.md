@@ -97,6 +97,11 @@ residents, with the tiles that have a model outlined, and lays the cooling over 
 basemap under it comes from OpenFreeMap at view time, the one layer not from our data; everything above it draws
 without it. The cities list is at `/cities`.
 
+The outcomes count people and degree-hours above a stress threshold of 45 C mean radiant temperature. That
+threshold is this project's choice, where heat stress rises steeply outdoors, not a standard and not a mortality
+threshold; the published mean radiant temperature thresholds for heat mortality sit higher. It is an assumption on
+the page beside the prices, and `--threshold` on `sdc scenario`, so a city can judge by its own line.
+
 An installed copy needs no Node. `make wheel` builds the client and then a wheel that carries it, so
 `sdc serve` from a `pip install dist/shadecast-*.whl` serves the dashboard too.
 

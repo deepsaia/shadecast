@@ -662,6 +662,8 @@ export interface components {
             people: number;
             /** Surrogate Seconds */
             surrogate_seconds: number;
+            /** Threshold */
+            threshold: number;
             /** Tile */
             tile: string;
             /** Tile Fraction */
@@ -1283,6 +1285,8 @@ export interface operations {
                 unit_cost?: number | null;
                 /** @description Yearly maintenance as a share of capital; the catalogue's when absent. */
                 maintenance?: number | null;
+                /** @description Mean radiant temperature in C above which people count as exposed; 45 when absent. */
+                threshold?: number | null;
             };
             header?: never;
             path: {
@@ -1330,6 +1334,8 @@ export interface operations {
                 unit_cost?: number | null;
                 /** @description Yearly maintenance as a share of capital; the catalogue's when absent. */
                 maintenance?: number | null;
+                /** @description Mean radiant temperature in C above which people count as exposed; 45 when absent. */
+                threshold?: number | null;
             };
             header?: never;
             path: {
