@@ -183,6 +183,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cities/{city}/tiles/{tile}/scenario": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Scenario
+         * @description The outcomes of the levers on this tile against doing nothing, from the tile's surrogate.
+         */
+        get: operations["scenario_api_v1_cities__city__tiles__tile__scenario_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cities/{city}/tiles/{tile}/scenario/field": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Scenario Field
+         * @description The cooling field and the placement, stacked in that order, in NPY format, shrunk when asked.
+         */
+        get: operations["scenario_field_api_v1_cities__city__tiles__tile__scenario_field_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/findings": {
         parameters: {
             query?: never;
@@ -540,6 +580,43 @@ export interface components {
             started: string;
             /** Tile */
             tile: string | null;
+        };
+        /** ScenarioOutcome */
+        ScenarioOutcome: {
+            /** Arrangement */
+            arrangement: string;
+            /** Baseline At Risk */
+            baseline_at_risk: number;
+            /** Baseline Exposure */
+            baseline_exposure: number;
+            /** City */
+            city: string;
+            /** Cost Usd */
+            cost_usd: number;
+            /** Coverage */
+            coverage: number;
+            /** Efficiency */
+            efficiency: number;
+            /** Equity Gap Change */
+            equity_gap_change: number;
+            /** Excess Removed */
+            excess_removed: number;
+            /** Exposure Drop */
+            exposure_drop: number;
+            /** Kind */
+            kind: string;
+            /** Model Id */
+            model_id: string;
+            /** People */
+            people: number;
+            /** Surrogate Seconds */
+            surrogate_seconds: number;
+            /** Tile */
+            tile: string;
+            /** Tile Fraction */
+            tile_fraction: number;
+            /** Trees */
+            trees: number;
         };
         /** StageCounts */
         StageCounts: {
@@ -1053,6 +1130,88 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TileReport"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scenario_api_v1_cities__city__tiles__tile__scenario_get: {
+        parameters: {
+            query?: {
+                /** @description Intervention kind; tree is the one with a surrogate. */
+                kind?: string;
+                /** @description clustered, scattered or corridor. */
+                arrangement?: string;
+                /** @description Share of the feasible ground planted, 0 to 1. */
+                coverage?: number | null;
+                /** @description Budget in USD; sets the coverage through the cost table. */
+                budget_usd?: number | null;
+            };
+            header?: never;
+            path: {
+                city: string;
+                tile: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioOutcome"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scenario_field_api_v1_cities__city__tiles__tile__scenario_field_get: {
+        parameters: {
+            query?: {
+                /** @description Long side in pixels. */
+                size?: number | null;
+                /** @description Intervention kind; tree is the one with a surrogate. */
+                kind?: string;
+                /** @description clustered, scattered or corridor. */
+                arrangement?: string;
+                /** @description Share of the feasible ground planted, 0 to 1. */
+                coverage?: number | null;
+                /** @description Budget in USD; sets the coverage through the cost table. */
+                budget_usd?: number | null;
+            };
+            header?: never;
+            path: {
+                city: string;
+                tile: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

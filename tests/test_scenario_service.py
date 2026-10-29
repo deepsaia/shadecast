@@ -1,13 +1,12 @@
 """A scenario is answered from the tile's surrogate: levers in, outcomes and the cooling field out."""
 
-import json
 from pathlib import Path
-from typing import ClassVar
 
 import numpy as np
 import pytest
 from pydantic import ValidationError
 from support import synthetic_tile
+from support.fake_surrogate import FakeSurrogate
 from support.fixtures import fixture_centres
 from support.fixtures import fixture_corpus
 from support.fixtures import fixture_tiles
@@ -21,23 +20,8 @@ from shadecast.service.selection import Selection
 from shadecast.service.tile_index import TileIndex
 from shadecast.service.unknown_arrangement import UnknownArrangement
 
-COOLING_C = 2.0
-MODEL_ID = "response-unet-ahmedabad-20261028T154005"
+MODEL_ID = synthetic_tile.MODEL_ID
 FEASIBLE_PIXELS = synthetic_tile.SIZE**2 - 8 * 8  # the whole tile less the block of buildings
-
-
-class FakeSurrogate:
-    """Cools every planted pixel by a fixed amount and nothing else, and counts its loads."""
-
-    loads: ClassVar[list[tuple[Path, Path, Path]]] = []
-
-    @classmethod
-    def load(cls, checkpoint: Path, bundle: Path, physics_dir: Path) -> "FakeSurrogate":
-        cls.loads.append((checkpoint, bundle, physics_dir))
-        return cls()
-
-    def predict(self, placement: np.ndarray) -> tuple[np.ndarray, float]:
-        return placement.astype("float32") * COOLING_C, 0.01
 
 
 def _tile_on_disk(root: Path) -> Path:
@@ -45,15 +29,6 @@ def _tile_on_disk(root: Path) -> Path:
     synthetic_tile.write_baseline(tile)
     synthetic_tile.write_designs(tile)
     return tile
-
-
-def _model(root: Path) -> Path:
-    model = root / "models" / MODEL_ID
-    model.mkdir(parents=True)
-    (model / "model.pt").write_bytes(b"w")
-    tiles = [f"{synthetic_tile.URBAN_CENTRE}/{synthetic_tile.TILE_ID}"]
-    (model / "manifest.json").write_text(json.dumps({"created": "2026-10-28T15:40:05", "data": {"tiles": tiles}}))
-    return model
 
 
 def _service(root: Path) -> ScenarioService:
@@ -67,7 +42,7 @@ def _service(root: Path) -> ScenarioService:
 @pytest.fixture
 def service(tmp_path) -> ScenarioService:
     _tile_on_disk(tmp_path)
-    _model(tmp_path)
+    synthetic_tile.write_model(tmp_path / "models")
     FakeSurrogate.loads.clear()
     return _service(tmp_path)
 

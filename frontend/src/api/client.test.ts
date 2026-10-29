@@ -13,6 +13,13 @@ describe("paths", () => {
     expect(paths.field("a", "t", "cooling", { design: "clustered_0101" })).toBe(
       "/cities/a/tiles/t/fields/cooling?design=clustered_0101",
     );
+    expect(paths.scenario("ahmedabad", "t43N_249_2547", { arrangement: "scattered", coverage: 0.05 })).toBe(
+      "/cities/ahmedabad/tiles/t43N_249_2547/scenario?arrangement=scattered&coverage=0.05",
+    );
+    expect(paths.scenarioField("a", "t", { budget_usd: 5000000, size: 256 })).toBe(
+      "/cities/a/tiles/t/scenario/field?budget_usd=5000000&size=256",
+    );
+    expect(paths.scenario("a", "t", {})).toBe("/cities/a/tiles/t/scenario");
   });
 });
 

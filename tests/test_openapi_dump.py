@@ -11,3 +11,5 @@ def test_the_schema_prints_without_a_running_server_or_data(capsys, monkeypatch,
     schema = json.loads(capsys.readouterr().out)
     assert "/api/v1/cities/{city}/tiles/{tile}/report" in schema["paths"]
     assert "TileReport" in schema["components"]["schemas"]
+    assert "/api/v1/cities/{city}/tiles/{tile}/scenario" in schema["paths"]
+    assert "ScenarioOutcome" in schema["components"]["schemas"]

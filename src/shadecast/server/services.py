@@ -12,6 +12,7 @@ from ..service.missing_stage import MissingStage
 from ..service.model_catalog import ModelCatalog
 from ..service.results_report import ResultsReport
 from ..service.run_status import RunStatus
+from ..service.scenario_service import ScenarioService
 from ..service.selection import Selection
 from ..service.tile_index import TileIndex
 from ..service.tile_reporter import TileReporter
@@ -26,6 +27,7 @@ class Services:
     findings: FindingsReport
     models: ModelCatalog
     runs: RunStatus
+    scenarios: ScenarioService
 
     @classmethod
     def open(cls, settings: ServerSettings) -> Services:
@@ -44,6 +46,7 @@ class Services:
             findings=FindingsReport(settings.data_root),
             models=models,
             runs=RunStatus(catalog, settings.models_root),
+            scenarios=ScenarioService(catalog, models),
         )
 
 

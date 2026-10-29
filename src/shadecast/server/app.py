@@ -19,6 +19,7 @@ from .routes import fields
 from .routes import health
 from .routes import results
 from .routes import runs
+from .routes import scenario
 from .routes import tiles
 from .services import Services
 from .settings import ServerSettings
@@ -54,6 +55,7 @@ def build_app(settings: ServerSettings, services: Services) -> FastAPI:
         channels.router,
         results.router,
         runs.router,
+        scenario.router,
     )
     for router in routers:
         app.include_router(router, prefix=API)

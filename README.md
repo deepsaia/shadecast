@@ -36,6 +36,7 @@ sdc tile report savannah          # the tile's baseline, its physics run and eve
 sdc simulate treeshade savannah --jobs 4   # physics for the 17 tree designs, 4 at a time
 sdc surrogate treeshade train savannah      # fit the tree shade surrogate on that tile
 sdc surrogate treeshade assess savannah     # judge the newest model against the engine
+sdc scenario savannah --arrangement scattered --coverage 0.05   # move the levers, read the outcomes
 sdc results                       # the measured results across every tile with physics
 sdc runs                          # what is simulating or training right now, and whether it is alive
 sdc serve                         # the API and the dashboard for whatever data is on disk
@@ -64,7 +65,7 @@ over several are found the same way.
 
 ## Scripting
 
-The commands that answer a question take `--json`: `cities`, `results`, `runs`, `plan`, the `tile` and `corpus`
+The commands that answer a question take `--json`: `cities`, `results`, `runs`, `plan`, `scenario`, the `tile` and `corpus`
 commands, `simulate baseline`, `surrogate treeshade describe` and the experiments print one JSON document on stdout,
 with logs on stderr, so `sdc results --json | jq .` works. The commands that show a dashboard, `build`,
 `simulate treeshade` and `surrogate treeshade train` and `assess`, write their results to disk instead, where

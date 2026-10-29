@@ -13,6 +13,7 @@ from typing import NoReturn
 import typer
 
 from .console import error_console
+from .service.error_message import error_message
 from .service.unknown_arrangement import UnknownArrangement
 from .service.unknown_channel import UnknownChannel
 from .service.unknown_city import UnknownCity
@@ -40,10 +41,8 @@ def exit_code(error: Exception) -> int:
 
 
 def message(error: Exception) -> str:
-    """The message as written; a KeyError would print its own in quotes."""
-    if isinstance(error, KeyError) and error.args:
-        return str(error.args[0])
-    return str(error)
+    """The message as written; a KeyError would print its own in quotes, a validation error its scaffolding."""
+    return error_message(error)
 
 
 def fail(error: Exception) -> NoReturn:
