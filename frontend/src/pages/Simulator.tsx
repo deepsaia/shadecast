@@ -82,10 +82,7 @@ export function SimulatorPage() {
   return (
     <article>
       <header>
-        <h1>
-          Simulator{" "}
-          <span className="font-sans text-lg font-normal text-muted-foreground">Heatwave Resilient Cities Simulator</span>
-        </h1>
+        <h1>Heatwave Resilient Cities</h1>
       </header>
       <Where
         cities={cities.data ?? []}

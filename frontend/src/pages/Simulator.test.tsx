@@ -170,8 +170,7 @@ it("opens on the first city with a model and its densest tile, with the outcomes
   const urls: string[] = [];
   vi.stubGlobal("fetch", fetchFor(urls));
   renderSimulator();
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Simulator");
-  expect(screen.getByText("Heatwave Resilient Cities Simulator")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Heatwave Resilient Cities");
   await waitFor(() => expect(screen.getByRole("combobox", { name: "City" })).toHaveTextContent("Ahmedabad, India"));
   await waitFor(() => expect(screen.getByRole("combobox", { name: "Tiles" })).toHaveTextContent("t43N_249_2547"));
   const outcomes = await screen.findByRole("region", { name: "Outcomes" });
