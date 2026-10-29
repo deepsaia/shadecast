@@ -254,6 +254,7 @@ def scenario_table(outcome: ScenarioOutcome) -> Table:
             "coverage of feasible ground": f"{outcome.coverage:.1%}",
             "trees": f"{outcome.trees:,}",
             "cost": f"{outcome.cost_usd / 1e6:.2f} M USD",
+            "priced at": f"{outcome.unit_cost:g} USD per m2, {outcome.maintenance:.0%} a year to maintain",
             "baseline": f"{outcome.baseline_exposure:.2f} C, {outcome.baseline_at_risk:,} people above 45 C",
             "exposure drop": f"{outcome.exposure_drop:.2f} C",
             "degree-hours removed": f"{outcome.excess_removed:,.0f}",

@@ -9,8 +9,10 @@ import numpy as np
 
 from ..corpus.tile_paths import TilePaths
 from ..data.landcover import to_umep
-from ..interventions import cost
+from ..interventions import InterventionSpec
 from ..interventions import feasibility_mask
+from ..interventions import priced
+from ..interventions import spec_cost
 from ..surrogate.dataset import make_placement
 from ..surrogate.predictor import Predictor
 from ..surrogate.tile_surrogate import TileSurrogate
@@ -53,9 +55,10 @@ class ScenarioService:
         if scenario.kind not in LIVE_KINDS:
             raise ValueError(f"{scenario.kind!r} has no surrogate yet; tree is the one live kind")
         tile = self._tile(scenario)
-        placement = self._placement(scenario, tile)
+        spec = priced(scenario.kind, scenario.unit_cost, scenario.maintenance)
+        placement = self._placement(scenario, tile, spec)
         cooling, seconds = tile.surrogate.predict(placement)
-        gain = tile.scoring.benefit_of(placement, cooling)
+        gain = tile.scoring.benefit_of(placement, cooling, spec)
         baseline = tile.scoring.baseline()
         outcome = ScenarioOutcome(
             city=tile.city,
@@ -67,6 +70,8 @@ class ScenarioService:
             tile_fraction=round(float(placement.mean()), 4),
             trees=int(placement.sum()),
             cost_usd=float(gain.get("cost_usd", 0.0)),
+            unit_cost=spec.unit_cost,
+            maintenance=spec.maintenance_frac,
             baseline_exposure=baseline.exposure,
             baseline_at_risk=baseline.at_risk,
             exposure_drop=float(gain.get("delta_exposure_C", 0.0)),
@@ -105,12 +110,15 @@ class ScenarioService:
             scoring=PlanScoring(store),
         )
 
-    def _placement(self, scenario: Scenario, tile: ScenarioTile) -> np.ndarray:
-        coverage = scenario.coverage if scenario.coverage is not None else self._coverage_bought(scenario, tile)
+    # Three arguments: the levers, the tile they act on, and the prices a budget is converted at.
+    def _placement(self, scenario: Scenario, tile: ScenarioTile, spec: InterventionSpec) -> np.ndarray:
+        coverage = scenario.coverage if scenario.coverage is not None else _coverage_bought(scenario, tile, spec)
         return make_placement(family_of(scenario.arrangement), tile.feasible, SEED, {"coverage": coverage})
 
-    def _coverage_bought(self, scenario: Scenario, tile: ScenarioTile) -> float:
-        """The share of the feasible ground a budget buys at the kind's cost per square metre."""
-        per_pixel = cost(scenario.kind, np.ones((1, 1), dtype=bool), RESOLUTION_M)
-        pixels = int(float(scenario.budget_usd or 0.0) // per_pixel)
-        return min(1.0, pixels / max(1, int(tile.feasible.sum())))
+
+# Three arguments: the budget comes from the levers, the feasible ground from the tile, the price from the spec.
+def _coverage_bought(scenario: Scenario, tile: ScenarioTile, spec: InterventionSpec) -> float:
+    """The share of the feasible ground a budget buys at the price per square metre."""
+    per_pixel = spec_cost(spec, np.ones((1, 1), dtype=bool), RESOLUTION_M)
+    pixels = int(float(scenario.budget_usd or 0.0) // per_pixel)
+    return min(1.0, pixels / max(1, int(tile.feasible.sum())))

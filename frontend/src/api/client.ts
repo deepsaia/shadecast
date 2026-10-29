@@ -33,6 +33,8 @@ export interface ScenarioLevers {
   arrangement?: string;
   coverage?: number;
   budget_usd?: number;
+  unit_cost?: number;
+  maintenance?: number;
   size?: number;
 }
 

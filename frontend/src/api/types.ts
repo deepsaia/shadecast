@@ -654,6 +654,8 @@ export interface components {
             exposure_drop: number;
             /** Kind */
             kind: string;
+            /** Maintenance */
+            maintenance: number;
             /** Model Id */
             model_id: string;
             /** People */
@@ -666,6 +668,8 @@ export interface components {
             tile_fraction: number;
             /** Trees */
             trees: number;
+            /** Unit Cost */
+            unit_cost: number;
         };
         /** StageCounts */
         StageCounts: {
@@ -1275,6 +1279,10 @@ export interface operations {
                 coverage?: number | null;
                 /** @description Budget in USD; sets the coverage through the cost table. */
                 budget_usd?: number | null;
+                /** @description USD per square metre of the kind; the catalogue's price when absent. */
+                unit_cost?: number | null;
+                /** @description Yearly maintenance as a share of capital; the catalogue's when absent. */
+                maintenance?: number | null;
             };
             header?: never;
             path: {
@@ -1318,6 +1326,10 @@ export interface operations {
                 coverage?: number | null;
                 /** @description Budget in USD; sets the coverage through the cost table. */
                 budget_usd?: number | null;
+                /** @description USD per square metre of the kind; the catalogue's price when absent. */
+                unit_cost?: number | null;
+                /** @description Yearly maintenance as a share of capital; the catalogue's when absent. */
+                maintenance?: number | null;
             };
             header?: never;
             path: {

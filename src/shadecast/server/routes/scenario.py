@@ -30,10 +30,23 @@ def levers(
     budget_usd: Annotated[
         float | None, Query(description="Budget in USD; sets the coverage through the cost table.")
     ] = None,
+    unit_cost: Annotated[
+        float | None, Query(description="USD per square metre of the kind; the catalogue's price when absent.")
+    ] = None,
+    maintenance: Annotated[
+        float | None, Query(description="Yearly maintenance as a share of capital; the catalogue's when absent.")
+    ] = None,
 ) -> Scenario:
     """The scenario a request asks for: one parameter per lever, since FastAPI reads them from the signature."""
     return Scenario(
-        target=city, tile=tile, kind=kind, arrangement=arrangement, coverage=coverage, budget_usd=budget_usd
+        target=city,
+        tile=tile,
+        kind=kind,
+        arrangement=arrangement,
+        coverage=coverage,
+        budget_usd=budget_usd,
+        unit_cost=unit_cost,
+        maintenance=maintenance,
     )
 
 

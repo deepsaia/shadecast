@@ -92,6 +92,8 @@ const OUTCOME = {
   tile_fraction: 0.034,
   trees: 34028,
   cost_usd: 2_980_000,
+  unit_cost: 40,
+  maintenance: 0.08,
   baseline_exposure: 58.68,
   baseline_at_risk: 78568,
   exposure_drop: 3.06,
@@ -179,6 +181,19 @@ it("lets a person pick a design and another city from the dropdown", async () =>
   fireEvent.change(screen.getByRole("searchbox", { name: "Search city" }), { target: { value: "lon" } });
   fireEvent.click(within(list).getByRole("button", { name: /London/ }));
   expect(await screen.findByText("sdc surrogate treeshade train london")).toBeInTheDocument();
+});
+
+it("reprices the scenario from the assumptions", async () => {
+  const urls: string[] = [];
+  vi.stubGlobal("fetch", fetchFor(urls));
+  renderSimulator("/?city=ahmedabad");
+  await screen.findByRole("region", { name: "Outcomes" });
+  expect(screen.getByText(/priced at 40 USD per m², 8% a year/)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Unit cost, USD per square metre"), { target: { value: "80" } });
+  fireEvent.change(screen.getByLabelText("Maintenance, percent of capital a year"), { target: { value: "5" } });
+  await waitFor(() =>
+    expect(urls.some((url) => url.includes("coverage=0.05&unit_cost=80&maintenance=0.05"))).toBe(true),
+  );
 });
 
 it("offers the tile presets and lists tiles without a model as not selectable", async () => {
