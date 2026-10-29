@@ -1,7 +1,7 @@
 """A small tile on disk with every file the pipeline writes, so services run without the engine.
 
-Sixteen by sixteen metres: a block of buildings in one corner, two people on every pixel, a hot
-baseline, three designs of known arrangements and one sparse probe. Every number is chosen so a
+Sixteen by sixteen metres: a block of buildings in one corner, grassland everywhere else, two people on
+every pixel, a hot baseline, three designs of known arrangements and one sparse probe. Every number is chosen so a
 test can predict the answer.
 """
 
@@ -15,6 +15,7 @@ import rasterio
 from rasterio.transform import from_origin
 
 SIZE = 16
+GRASSLAND = 30  # the ESA WorldCover class, open ground a tree may be planted on
 URBAN_CENTRE = 6143
 TILE_ID = "t43N_249_2547"
 DESIGN_DAY = "2025-05-20"
@@ -34,16 +35,19 @@ def write_bundle(root: Path) -> Path:
     _write_raster(bundle / "Building_DSM.tif", dem + heights())
     _write_raster(bundle / "population.tif", np.full((SIZE, SIZE), 2.0, dtype="float32"))
     _write_raster(bundle / "Trees.tif", np.zeros((SIZE, SIZE), dtype="float32"))
+    _write_raster(bundle / "landcover.tif", np.full((SIZE, SIZE), GRASSLAND, dtype="float32"))
     (bundle / "met.txt").write_text(_met_text())
     (bundle / "provenance.json").write_text(json.dumps(provenance()))
     return tile
 
 
 def write_baseline(tile: Path) -> Path:
-    """The baseline physics: the daylight mean field and the 24 band hourly raster."""
+    """The baseline physics: the daylight mean, the engine layers the scene reads, the hourly raster."""
     baseline = Path(tile) / "physics" / "baseline"
     baseline.mkdir(parents=True, exist_ok=True)
     np.save(baseline / "tmrt_daylight.npy", np.full((SIZE, SIZE), BASELINE_C, dtype="float32"))
+    np.save(baseline / "svf.npy", np.ones((SIZE, SIZE), dtype="float32"))
+    np.save(baseline / "sunlit_daylight.npy", np.ones((SIZE, SIZE), dtype="float32"))
     write_hourly_raster(baseline / "output_folder" / "0_0" / "TMRT_0_0.tif")
     return baseline
 

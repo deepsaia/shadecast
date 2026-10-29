@@ -13,6 +13,7 @@ from typing import NoReturn
 import typer
 
 from .console import error_console
+from .service.unknown_arrangement import UnknownArrangement
 from .service.unknown_channel import UnknownChannel
 from .service.unknown_city import UnknownCity
 from .service.unknown_model import UnknownModel
@@ -23,6 +24,7 @@ BAD_ARGUMENTS = 2
 STOPPED = 130
 # MissingStage is a LookupError too, but it is about the data, not the command line.
 BAD_ARGUMENT_ERRORS: tuple[type[Exception], ...] = (
+    UnknownArrangement,
     UnknownCity,
     UnknownTile,
     UnknownModel,
