@@ -16,6 +16,7 @@ import typer
 
 from .console import console
 from .console import error_console
+from .exit_codes import FAILED
 from .server.settings import ServerSettings
 
 FACTORY = "shadecast.server.app:create_app"
@@ -42,7 +43,7 @@ def serve(
             style="red",
             markup=False,
         )
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=FAILED)
     # A reloading server imports the app by name in a child process; the variables carry the
     # resolved settings to it. Writing them here is the one place the environment is touched.
     os.environ.update(settings.environment())

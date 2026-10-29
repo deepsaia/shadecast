@@ -126,7 +126,6 @@ class TrainingService:
             best_epoch=int(report.get("best_epoch", 0)),
             last_epoch=int(report.get("last_epoch", 0)),
             interrupted=bool(report.get("interrupted", False)),
-            report=report,
         )
 
     def _destination(

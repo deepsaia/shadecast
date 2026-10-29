@@ -11,6 +11,7 @@ from shadecast.cli import app
 from shadecast.corpus import tile_lookup
 from shadecast.corpus import tile_paths
 from shadecast.service import simulation_service
+from shadecast.service.missing_stage import MissingStage
 
 runner = CliRunner()
 
@@ -37,7 +38,7 @@ def test_only_tiles_with_a_bundle_count_as_built(tmp_path):
 
 
 def test_one_built_tile_is_chosen_named_or_refused(tmp_path):
-    with pytest.raises(ValueError, match="run 'sdc build ahmedabad' first"):
+    with pytest.raises(MissingStage, match="run 'sdc build ahmedabad' first"):
         tile_lookup.one_built_tile("ahmedabad", None, tmp_path)
     _bundle(tmp_path, 6143, "t43N_249_2547")
     assert tile_lookup.one_built_tile("ahmedabad", None, tmp_path).tile.id == "t43N_249_2547"

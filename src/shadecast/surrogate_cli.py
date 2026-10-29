@@ -15,9 +15,10 @@ from typing import Annotated
 import typer
 
 from .console import console
-from .console import error_console
 from .console import pairs_table
 from .corpus import tile_paths
+from .exit_codes import STOPPED
+from .exit_codes import fail
 from .service.assessment_request import AssessmentRequest
 from .service.channels import channel
 from .service.null_progress import NullProgress
@@ -146,19 +147,18 @@ def train_model(
     try:
         with progress:
             outcome = service.train(request, progress)
-    except ValueError as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
+    except (ValueError, LookupError) as exc:
+        fail(exc)
     except KeyboardInterrupt:
         console.print("\n[bold]stopped[/] before the first epoch finished; nothing was saved.")
-        raise typer.Exit(code=130) from None
+        raise typer.Exit(code=STOPPED) from None
     if outcome.interrupted:
         console.print(
             f"\n[bold]stopped[/] after epoch {outcome.last_epoch}; the best weights, epoch "
             f"{outcome.best_epoch}, are saved in {outcome.destination}.\n"
             f"Continue with: [cyan]{train_resume_command(request)}[/]"
         )
-        raise typer.Exit(code=130)
+        raise typer.Exit(code=STOPPED)
     verdict = "green" if outcome.beats_nothing else "red"
     console.print(
         f"[{verdict}]skill {outcome.skill:+.3f}[/]  "
@@ -210,8 +210,7 @@ def assess_model(
         with console.status("[cyan]comparing surrogate against engine truth[/]"):
             outcome = service.assess(request, NullProgress())
     except (ValueError, LookupError) as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
+        fail(exc)
     verdict = "green" if outcome.beats_nothing else "red"
     console.print(f"[dim]assessed {outcome.model_dir}[/]")
     console.print(f"[{verdict}]mean skill {outcome.skill:+.3f}[/]  (above zero means it beats predicting nothing)")
@@ -236,8 +235,7 @@ def describe(
         model_dir = Path(target) if Path(target).is_dir() else _model_dir(target, model)
         found = manifest.read(model_dir)
     except (FileNotFoundError, ValueError, LookupError) as exc:
-        error_console.print(str(exc), style="red", markup=False)
-        raise typer.Exit(code=1) from exc
+        fail(exc)
     if as_json:
         console.print_json(json.dumps(found))
         return

@@ -3,6 +3,10 @@
 A corpus key such as ``savannah`` is answered from the selection file without loading the
 urban centre database, and a bare number is taken as the centre id. Anything else is a
 slug or a name resolved through the database. Only tiles with a bundle count as built.
+
+A city with nothing built or simulated yet raises the services' ``MissingStage``, so every command
+names the stage to run and leaves the same way. A named tile that is not there is a ``ValueError``,
+with the tiles that are.
 """
 
 from __future__ import annotations
@@ -11,6 +15,7 @@ import json
 from pathlib import Path
 
 from .. import cities
+from ..service.missing_stage import MissingStage
 from .tile_paths import TilePaths
 from .tile_selection import TileSelection
 from .tiling import select_densest
@@ -47,7 +52,7 @@ def one_built_tile(text: str, tile: str | None, tiles_root: Path) -> TilePaths:
                 return paths
         raise ValueError(f"{text} has no built tile {tile}; built tiles: {ids}")
     if not found:
-        raise ValueError(f"{text} has no built tile yet; run 'sdc build {text}' first")
+        raise MissingStage("bundle", text, f"sdc build {text}")
     if len(found) > 1:
         raise ValueError(f"{text} has {len(found)} built tiles ({ids}); add --tile <id>")
     return found[0]
@@ -57,7 +62,7 @@ def densest_built_tile(text: str, tiles_root: Path) -> TilePaths:
     """The built tile with most residents, by the centre's tiles file; the only one when one."""
     found = built_tiles(text, tiles_root)
     if not found:
-        raise ValueError(f"{text} has no built tile yet; run 'sdc build {text}' first")
+        raise MissingStage("bundle", text, f"sdc build {text}")
     return _densest_of(text, found, "--tiles")
 
 
@@ -83,7 +88,7 @@ def simulated_tiles(
     """
     with_physics = [paths for paths in TilePaths.existing(tiles_root, centre_id(text)) if paths.stages().physics]
     if not with_physics:
-        raise ValueError(f"{text} has no simulated physics yet; run 'sdc simulate treeshade {text}' first")
+        raise MissingStage("physics", text, f"sdc simulate treeshade {text}")
     if selection is not None and selection.wants():
         return _selected(text, with_physics, selection)
     if tiles is None or tiles.strip().lower() in ("", ALL):
@@ -119,7 +124,7 @@ def _selected(text: str, found: list[TilePaths], selection: TileSelection) -> li
     """The K densest or K stratified tiles among ``found``, using the centre's tiles file."""
     tiles_json = found[0].tiles_json
     if not tiles_json.exists():
-        raise ValueError(f"{text} has no tiles.json to rank tiles; run 'sdc tile list {text}' first")
+        raise MissingStage("tile list", text, f"sdc tile list {text}")
     by_id = {paths.tile.id: paths for paths in found}
     rows = [row for row in json.loads(tiles_json.read_text()).get("tiles", []) if row.get("id") in by_id]
     if selection.densest:

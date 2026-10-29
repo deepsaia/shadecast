@@ -13,7 +13,6 @@ from ..surrogate.patches import tile_key
 from .assessment_outcome import AssessmentOutcome
 from .assessment_request import AssessmentRequest
 from .json_file import read_object
-from .missing_stage import MissingStage
 from .model_catalog import ModelCatalog
 from .model_summary import ModelSummary
 from .progress_listener import ProgressListener
@@ -70,10 +69,7 @@ class AssessmentService:
         return self.model_for(request.target, request.model, request.tile)
 
     def _assessment_tile(self, target: str, tile: str | None) -> TilePaths:
-        try:
-            found = tile_lookup.simulated_tiles(target, None, self._tiles_root)
-        except ValueError as exc:
-            raise MissingStage("physics", target, f"sdc simulate treeshade {target}") from exc
+        found = tile_lookup.simulated_tiles(target, None, self._tiles_root)
         if tile is None:
             return tile_lookup.densest_simulated_tile(target, self._tiles_root)
         chosen = [paths for paths in found if paths.tile.id == tile]

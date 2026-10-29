@@ -143,7 +143,7 @@ def test_show_prints_one_centre_with_its_tile_count():
 
 def test_show_refuses_an_ambiguous_name_and_names_the_candidates():
     result = runner.invoke(app, ["corpus", "show", "san"])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "sanjose" in result.output and "sanjose-costarica" in result.output
 
 

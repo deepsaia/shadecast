@@ -148,7 +148,7 @@ def test_list_reads_the_written_file_instead_of_describing_again(monkeypatch):
 
 def test_an_unknown_centre_is_refused_by_name():
     result = runner.invoke(app, ["tile", "list", "atlantis"])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "atlantis" in result.output
 
 
@@ -188,7 +188,7 @@ def test_select_needs_exactly_one_strategy():
 
 def test_select_refuses_an_unknown_tile_id_by_name():
     result = runner.invoke(app, ["tile", "select", "ahmedabad", "--ids", "t1_1"])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "t1_1" in result.output
 
 
@@ -247,7 +247,7 @@ def test_show_prints_where_a_tile_lives_and_its_stages(tmp_path):
 
 def test_show_refuses_a_malformed_tile_id():
     result = runner.invoke(app, ["tile", "show", "ahmedabad", "--tile", "6908"])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "6908" in result.output
 
 

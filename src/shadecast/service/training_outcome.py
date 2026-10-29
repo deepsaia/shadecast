@@ -20,4 +20,3 @@ class TrainingOutcome(BaseModel):
     best_epoch: int
     last_epoch: int
     interrupted: bool
-    report: dict
