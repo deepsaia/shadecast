@@ -78,7 +78,7 @@ def run_city(city: str, bundle: Path, layers: dict, *, budget: float, work_root:
     control = _simulate(bundle, layers, layers["umep"], work_root / f"{city}_control", day)
     logger.info("%s: matched control done, mean Tmrt %.2f C", city, float(np.nanmean(control)))
 
-    cells = []
+    cells: list[dict[str, object]] = []
     for kind in KINDS:
         placement, spent, pixels = greedy.select(
             kind,

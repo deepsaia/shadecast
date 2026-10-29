@@ -77,7 +77,7 @@ def corridor_surface(
     # and the planner breaks the tie on raster order, which is arbitrary. Decay by
     # distance from the street instead: a tree at the kerb shades the footway a walker
     # is on, one six metres back shades a wall.
-    distance = distance_transform_edt(surface == 0)
+    distance = np.asarray(distance_transform_edt(surface == 0), dtype="float64")
     decayed = widened * np.clip(1.0 - distance / radius_px, 0.0, 1.0)
 
     logger.info(

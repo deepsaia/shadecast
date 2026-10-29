@@ -20,6 +20,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from itertools import pairwise
+from typing import cast
 
 import networkx as nx
 import numpy as np
@@ -123,6 +124,13 @@ def sample_nodes(weights: dict[int, float], n: int, *, seed: int = 0) -> list[in
     return [int(nodes[i]) for i in chosen]
 
 
+def _paths(graph: nx.DiGraph, origin: int, weight: str) -> dict[int, list[int]]:
+    """Shortest paths from one origin by the named edge weight, keyed by the node reached."""
+    _, paths = nx.single_source_dijkstra(graph, origin, weight=weight)
+    # Without a target the function returns every path keyed by node; the stub types both cases.
+    return cast(dict[int, list[int]], paths)
+
+
 def _walk(path: list[int], graph: nx.DiGraph) -> tuple[float, float]:
     """Total length and total heat-metres along a node path."""
     length = 0.0
@@ -142,8 +150,8 @@ def evaluate(graph: nx.DiGraph, weights: dict[int, float], endpoints: list[int])
     corridor: dict[tuple[int, int], float] = {}
 
     for origin in endpoints:
-        _, cool_paths = nx.single_source_dijkstra(graph, origin, weight="perceived")
-        _, fast_paths = nx.single_source_dijkstra(graph, origin, weight="length")
+        cool_paths = _paths(graph, origin, "perceived")
+        fast_paths = _paths(graph, origin, "length")
         for target in endpoints:
             if target == origin:
                 continue
