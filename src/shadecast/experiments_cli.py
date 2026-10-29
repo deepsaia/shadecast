@@ -3,6 +3,7 @@
 Each command names an experiment and the cities to run it over; the experiment service pairs
 every city's densest tile with a baseline to its simulated physics and applies the fixed verdict
 rule. These commands only parse flags and render the outcome.
+What a command runs is imported inside it, so ``sdc --help`` answers before any heavy library loads.
 """
 
 from __future__ import annotations
@@ -16,9 +17,7 @@ import typer
 from .console import console
 from .console import error_console
 from .corpus import tile_paths
-from .service.city_catalog import CityCatalog
 from .service.experiment_request import ExperimentRequest
-from .service.experiment_service import ExperimentService
 from .service.missing_stage import MissingStage
 from .service.null_progress import NullProgress
 from .service.unknown_city import UnknownCity
@@ -36,6 +35,9 @@ DEFAULT_BUDGET = 2_288_000.0
 
 
 def _run(request: ExperimentRequest, as_json: bool) -> None:
+    from .service.city_catalog import CityCatalog
+    from .service.experiment_service import ExperimentService
+
     service = ExperimentService(
         CityCatalog.open(tile_paths.TILES_ROOT, tile_paths.MODELS_ROOT),
         tile_paths.TILES_ROOT.parent,

@@ -6,15 +6,21 @@ file. Models live apart, under
 one root for all of them, ``data/models/<model id>/``, whatever tiles they learned from: their
 manifests name the tiles. Status is read from the files that prove a stage ran, never from a
 separate record: the directories are the record.
+
+The tile class, with its geometry library, is imported where an id is parsed, not at the top:
+this module sits on the path of every command, including ``--help``.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from .tile import Tile
 from .tile_stages import TileStages
+
+if TYPE_CHECKING:
+    from .tile import Tile
 
 TILES_ROOT = Path("data/tiles")
 # Every model, from one tile or pooled over many, in one place with one reader.
@@ -83,12 +89,16 @@ class TilePaths:
     @classmethod
     def of_root(cls, root: Path) -> TilePaths:
         """The record for a tile directory ``<tiles root>/<urban centre id>/<tile id>``."""
+        from .tile import Tile
+
         root = Path(root)
         return cls(root.parent.parent, int(root.parent.name), Tile.from_id(root.name))
 
     @classmethod
     def existing(cls, tiles_root: Path, urban_centre: int) -> list[TilePaths]:
         """Every tile directory present for an urban centre, in id order."""
+        from .tile import Tile
+
         parent = Path(tiles_root) / str(urban_centre)
         if not parent.is_dir():
             return []

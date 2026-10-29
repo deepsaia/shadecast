@@ -10,7 +10,6 @@ import os
 from dataclasses import dataclass
 
 import psutil
-import torch
 
 GIGABYTE = 1e9
 
@@ -28,6 +27,8 @@ class Hardware:
     @classmethod
     def snapshot(cls) -> Hardware:
         """Read the machine now. cpu_percent is since the previous call, 0 on the first."""
+        import torch  # only the engine's device choice needs it, the slowest import in the project
+
         memory = psutil.virtual_memory()
         return cls(
             cores=os.cpu_count() or 1,

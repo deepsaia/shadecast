@@ -3,12 +3,14 @@
 The corpus is the GHS Urban Centre Database, fetched once with no credentials and read from
 the cache after that. These commands are the way into it: find a centre, see its strata and
 tile count, or draw a stratified set with a seed so the benchmark selection is reproducible.
+What a command runs is imported inside it, so ``sdc --help`` answers before any heavy library loads.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+from typing import TYPE_CHECKING
 from typing import Annotated
 
 import typer
@@ -22,13 +24,10 @@ from .console import records_table
 from .console import stage_line
 from .corpus import tile_paths
 from .corpus.draw import Draw
-from .corpus.sampling import sample as draw_sample
-from .corpus.sampling import strata
-from .corpus.slugs import slugify
-from .corpus.statistics import corpus_stats
 from .corpus.urban_centre import UrbanCentre
-from .corpus.urban_centres import UrbanCentres
-from .service.city_catalog import CityCatalog
+
+if TYPE_CHECKING:
+    from .corpus.urban_centres import UrbanCentres
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +40,15 @@ app = typer.Typer(
 
 def load_centres() -> UrbanCentres:
     """The database, fetched on first use and cached after that."""
+    from .corpus.urban_centres import UrbanCentres
+
     return UrbanCentres.load()
 
 
 def matched_name(centre: UrbanCentre, text: str) -> str:
     """The name that made a centre match a search, which is often not its main name."""
+    from .corpus.slugs import slugify  # the slug module also builds the corpus table, with pandas
+
     key = slugify(text)
     for name in centre.names:
         if key and key in slugify(name):
@@ -96,6 +99,8 @@ def show(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """Show one urban centre: strata, population, and how many 1 km tiles it holds."""
+    from .service.city_catalog import CityCatalog
+
     centres = load_centres()
     try:
         found = centres.resolve(centre)
@@ -121,6 +126,9 @@ def sample(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """Draw a stratified set of urban centres, k per Koppen class and income group."""
+    from .corpus.sampling import sample as draw_sample
+    from .corpus.sampling import strata
+
     draw = Draw(per_stratum=per_stratum, min_population_2025=min_population, seed=seed)
     drawn = draw_sample(load_centres().all(), draw)
     if as_json:
@@ -138,6 +146,8 @@ def stats(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of tables.")] = False,
 ) -> None:
     """Statistics over the whole corpus: totals, continents, countries, strata and sizes."""
+    from .corpus.statistics import corpus_stats
+
     summary = corpus_stats(load_centres().all())
     if as_json:
         console.print_json(json.dumps(summary))

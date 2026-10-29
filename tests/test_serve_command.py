@@ -1,9 +1,11 @@
 """Settings resolve once, from the constant, the environment, then the flags, and reach uvicorn."""
 
+import os
 import socket
 from pathlib import Path
 
 import pytest
+import uvicorn
 from typer.testing import CliRunner
 
 from shadecast import serve_cli
@@ -39,12 +41,12 @@ def test_serve_exports_the_settings_and_runs_the_factory(monkeypatch):
     monkeypatch.delenv("SDC_HOST", raising=False)
     monkeypatch.delenv("SDC_PORT", raising=False)
     monkeypatch.delenv("SDC_DATA", raising=False)
-    monkeypatch.setattr(serve_cli.uvicorn, "run", lambda target, **kwargs: seen.update(target=target, **kwargs))
+    monkeypatch.setattr(uvicorn, "run", lambda target, **kwargs: seen.update(target=target, **kwargs))
     result = runner.invoke(app, ["serve", "--port", "9000", "--no-open"])
     assert result.exit_code == 0, result.output
     assert seen["target"] == "shadecast.server.app:create_app" and seen["factory"] is True
     assert seen["port"] == 9000 and seen["host"] == "127.0.0.1" and seen["reload"] is False
-    assert serve_cli.os.environ.get("SDC_PORT") == "9000"
+    assert os.environ.get("SDC_PORT") == "9000"
     assert "http://127.0.0.1:9000/" in result.stdout
 
 
@@ -54,7 +56,7 @@ def test_a_port_already_in_use_is_named_before_anything_starts(monkeypatch):
     holder.listen(1)
     port = holder.getsockname()[1]
     try:
-        monkeypatch.setattr(serve_cli.uvicorn, "run", lambda *args, **kwargs: pytest.fail("uvicorn ran"))
+        monkeypatch.setattr(uvicorn, "run", lambda *args, **kwargs: pytest.fail("uvicorn ran"))
         result = runner.invoke(app, ["serve", "--port", str(port), "--no-open"])
     finally:
         holder.close()

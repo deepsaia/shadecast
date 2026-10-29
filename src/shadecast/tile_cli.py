@@ -4,6 +4,7 @@ Every urban centre is an exact set of 1 km GHS grid cells, so listing its tiles 
 computation, not a choice. The city catalog answers every question asked here; this module
 parses flags and renders answers. Choosing tiles is explicit: the densest, a spread across
 built-fraction terciles, named ids, or a seeded draw. Selection writes nothing; building does.
+What a command runs is imported inside it, so ``sdc --help`` answers before any heavy library loads.
 """
 
 from __future__ import annotations
@@ -12,11 +13,11 @@ import json
 import logging
 from collections.abc import Callable
 from functools import partial
+from typing import TYPE_CHECKING
 from typing import Annotated
 
 import typer
 
-from . import cities
 from .console import console
 from .console import error_console
 from .console import pairs_table
@@ -25,22 +26,16 @@ from .console import stage_line
 from .console import stages_reached
 from .console import tiles_table
 from .corpus import tile_paths
-from .corpus.tile_description import describe
-from .corpus.tiling import select_densest
-from .corpus.tiling import select_ids
-from .corpus.tiling import select_random
-from .corpus.tiling import select_stratified
-from .corpus.urban_centres import UrbanCentres
-from .service.city_catalog import CityCatalog
 from .service.missing_stage import MissingStage
-from .service.model_catalog import ModelCatalog
-from .service.selection import Selection
-from .service.tile_index import TileIndex
 from .service.tile_report import TileReport
-from .service.tile_reporter import TileReporter
 from .service.tile_summary import TileSummary
 from .service.unknown_city import UnknownCity
 from .service.unknown_tile import UnknownTile
+
+if TYPE_CHECKING:
+    from .corpus.urban_centres import UrbanCentres
+    from .service.city_catalog import CityCatalog
+    from .service.tile_index import TileIndex
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +47,8 @@ app = typer.Typer(
 
 
 def load_centres() -> UrbanCentres:
+    from .corpus.urban_centres import UrbanCentres
+
     return UrbanCentres.load()
 
 
@@ -60,6 +57,11 @@ def catalog() -> CityCatalog:
 
     The database is loaded once here and handed to both the selection and the catalog.
     """
+    from . import cities
+    from .service.city_catalog import CityCatalog
+    from .service.model_catalog import ModelCatalog
+    from .service.selection import Selection
+
     centres = load_centres()
     selection = cities.corpus(centres=centres)
     models = ModelCatalog(tile_paths.MODELS_ROOT)
@@ -71,6 +73,9 @@ def _loaded(centres: UrbanCentres) -> UrbanCentres:
 
 
 def _index() -> TileIndex:
+    from .corpus.tile_description import describe
+    from .service.tile_index import TileIndex
+
     return TileIndex(tile_paths.TILES_ROOT, describe)
 
 
@@ -123,6 +128,10 @@ def select(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of a table.")] = False,
 ) -> None:
     """Choose tiles by one explicit rule. Prints the choice; building is a separate step."""
+    from .corpus.tiling import select_densest
+    from .corpus.tiling import select_random
+    from .corpus.tiling import select_stratified
+
     strategies = [value for value in (densest, stratified, ids, random) if value]
     if len(strategies) != 1:
         raise typer.BadParameter("choose exactly one of --densest, --stratified, --ids or --random")
@@ -144,6 +153,8 @@ def select(
 
 
 def _named(rows: list[dict], ids: list[str]) -> list[dict]:
+    from .corpus.tiling import select_ids
+
     try:
         return select_ids(rows, ids)
     except KeyError as exc:
@@ -235,6 +246,8 @@ def report(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of tables.")] = False,
 ) -> None:
     """A tile's report: its facts, the baseline, the physics run and every scored plan."""
+    from .service.tile_reporter import TileReporter
+
     reporter = TileReporter(catalog())
     ask = partial(reporter.report, centre, tile) if tile else partial(reporter.report_furthest, centre)
     found = answer(ask)
