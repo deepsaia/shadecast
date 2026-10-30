@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>shadecast</title>
-<meta name="description" content="Given a city and a budget, which cooling measures should you build, and where?">
+<title>Heatwave Resilient Cities</title>
+<meta name="description" content="Heatwave Resilient Cities: a simulator of urban heat adaptation. Pick a city, set the policy, the design and the scale, and read the outcomes from a surrogate of the radiation physics.">
 <style>
   :root {
     --bg: #fbfaf7; --ink: #1d1d1b; --muted: #5d5b55; --rule: #e3e0d8; --link: #0b5fa5; --card: #ffffff;
@@ -17,7 +17,16 @@
     margin: 0; background: var(--bg); color: var(--ink);
     font: 17px/1.55 Georgia, "Iowan Old Style", "Times New Roman", serif;
   }
-  main { max-width: 44rem; margin: 0 auto; padding: 3rem 1rem 4rem; }
+  .top { max-width: 44rem; margin: 0 auto; padding: 1.25rem 1rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .wordmark { font-weight: 700; text-decoration: none; color: var(--ink); letter-spacing: -.01em; }
+  .repo {
+    display: inline-flex; align-items: center; gap: .55rem; padding: .5rem .9rem; border-radius: 999px;
+    background: var(--ink); color: var(--bg); text-decoration: none; font-weight: 700; font-size: .95rem;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .repo:hover { opacity: .9; }
+  .repo svg { width: 1.15rem; height: 1.15rem; fill: currentColor; }
+  main { max-width: 44rem; margin: 0 auto; padding: 2.25rem 1rem 4rem; }
   h1 { font-size: 2.4rem; margin: 0 0 .25rem; letter-spacing: -.01em; }
   .tagline { font-size: 1.25rem; color: var(--muted); margin: 0 0 2rem; }
   p { margin: 0 0 1rem; }
@@ -38,33 +47,43 @@
 </style>
 </head>
 <body>
+<header class="top">
+  <a class="wordmark" href="./">shadecast</a>
+  <a class="repo" href="https://github.com/deepsaia/shadecast" aria-label="Heatwave Resilient Cities on GitHub">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+    Heatwave Resilient Cities
+  </a>
+</header>
 <main>
-  <h1>shadecast</h1>
+  <h1>Heatwave Resilient Cities</h1>
   <p class="tagline">Given a city and a budget, which cooling measures should you build, and where?</p>
 
-  <p>shadecast is an open, credential-free pipeline that turns any city into an urban heat decision problem.
-  It assembles a city from open data, runs the SOLWEIG radiation physics over it, learns a surrogate of the
-  response so that search becomes affordable, and then asks the inverse question: not how much cooler a given
-  intervention makes a place, but which interventions a given budget should buy, and where.</p>
+  <p>A simulator of urban heat adaptation, built from open data with no account, key or quota. Pick a city
+  and one of its square-kilometre tiles, choose the policy, the design under it and how much to build, and
+  the outcomes answer at once: the drop in radiant heat exposure, the degree-hours removed, the people brought
+  below a stress threshold you set, the change in the equity gap, and the cost. Behind each answer is a
+  surrogate learned from SOLWEIG radiation physics run over that very tile, with the engine-verified designs
+  kept on every chart beside it, so the surrogate is always seen against the physics.</p>
 
   <ul class="pages">
     <li><a href="proposal.html">Proposal</a>
-      <span>The research proposal: hypotheses, pre-registered experiments and how each is judged.</span></li>
+      <span>Why the problem matters, what the physics found when the first tiles were run, and the limits the
+      project holds itself to.</span></li>
     <li><a href="model_pipeline.html">The tree shade surrogate pipeline</a>
-      <span>How the surrogate is built, trained and judged, with every number taken from a model manifest or
+      <span>How a tile is built, simulated and learned from, with every number taken from a model manifest or
       a recorded run.</span></li>
-    <li><a href="https://github.com/deepsaia/shadecast">Source and issues</a>
-      <span>The code, the design in its issues, and the command line that runs the whole pipeline.</span></li>
   </ul>
 
-  <h2>The interactive dashboard</h2>
-  <p>The dashboard draws maps and charts from physics output in the browser, so hovering a pixel reads its
-  temperature. That output is gigabytes of local data, so the dashboard runs on the machine that holds it,
-  from a checkout of the repository: build the client once, then serve it with the API.</p>
+  <h2>Running it</h2>
+  <p>The simulator draws its maps and charts from physics output in the browser, so hovering a pixel reads its
+  temperature. That output is gigabytes of local data, so it runs on the machine that holds it, from a
+  checkout of the repository: build the client once, then serve it with the API, and the simulator opens as the
+  first page. The same questions are answered from the command line by <code>sdc</code>.</p>
   <pre><code>make frontend
 uv run sdc serve</code></pre>
 
-  <footer>Apache-2.0. Physics by SOLWEIG, run as a separate process under its own license.</footer>
+  <footer>Apache-2.0. Physics by SOLWEIG, run as a separate process under its own license. Street basemap by
+  OpenFreeMap from OpenStreetMap data.</footer>
 </main>
 </body>
 </html>
