@@ -2,7 +2,8 @@ import { CartesianGrid, ComposedChart, Line, ReferenceDot, Scatter, XAxis, YAxis
 
 import type { Sweep } from "@/api/models";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { CURVES, type CurveKey, curveRows, designPoints, thresholdIndex } from "@/lib/curves";
+import { fitAxis } from "@/lib/axis";
+import { CURVES, type CurveKey, curveRows, curveValues, designPoints, thresholdIndex } from "@/lib/curves";
 import { decimal, integer } from "@/lib/format";
 import { ARRANGEMENTS, seriesColor } from "@/lib/series";
 
@@ -51,6 +52,9 @@ export function OutcomeCurves({
         const rows = curveRows(sweep, curve.key, index);
         const designs = designPoints(sweep, curve.key, index);
         const format = curve.key === "exposure_drop" || curve.key === "equity_gap_change" ? decimal : integer;
+        // Recharts would fit the axis to the designs alone, since they carry their own data; fit it to everything.
+        const drawn = live ? [...curveValues(sweep, curve.key, index), live.values[curve.key]] : curveValues(sweep, curve.key, index);
+        const axis = fitAxis(drawn, format);
         return (
           <figure key={curve.key} className="m-0 rounded-md border bg-card px-3 py-2">
             <figcaption className="flex items-baseline justify-between text-xs text-muted-foreground">
@@ -85,7 +89,15 @@ export function OutcomeCurves({
                   axisLine={false}
                   fontSize={10}
                 />
-                <YAxis width={44} tickLine={false} axisLine={false} fontSize={10} tickFormatter={(value) => format(value)} />
+                <YAxis
+                  width={axis.width}
+                  domain={axis.domain}
+                  ticks={axis.ticks}
+                  tickLine={false}
+                  axisLine={false}
+                  fontSize={10}
+                  tickFormatter={(value) => format(value)}
+                />
                 <ChartTooltip content={<ChartTooltipContent labelFormatter={(label) => `${label}% of the ground`} />} />
                 {ARRANGEMENTS.map((arrangement) => (
                   <Line
