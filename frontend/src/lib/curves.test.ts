@@ -1,6 +1,6 @@
 import type { Sweep } from "@/api/models";
 
-import { curveRows, designPoints, thresholdIndex, valueOf } from "./curves";
+import { curveRows, curveValues, designPoints, thresholdIndex, valueOf } from "./curves";
 
 const point = (drop: number, people: number[]) => ({
   exposure_drop: drop,
@@ -39,4 +39,9 @@ it("lays the curves out one row per coverage with a value per arrangement, and t
   expect(designPoints(SWEEP, "excess_removed", 1)).toEqual([
     { id: "clustered_0105", arrangement: "clustered", coverage: 5.2, value: 1200 },
   ]);
+});
+
+it("gathers every value a chart draws, the curves first and the designs after", () => {
+  expect(curveValues(SWEEP, "exposure_drop", 0)).toEqual([0.5, 2, 1.5, 4, 0.6]);
+  expect(curveValues(SWEEP, "people", 1)).toEqual([100, 400, 200, 800, 120]);
 });

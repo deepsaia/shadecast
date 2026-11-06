@@ -2,8 +2,8 @@ import { CartesianGrid, Legend, Scatter, ScatterChart, XAxis, YAxis, ZAxis } fro
 
 import type { Plan } from "@/api/models";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { integer } from "@/lib/format";
 import { ARRANGEMENTS, type Arrangement, seriesColor } from "@/lib/series";
-
 
 /** A point that is not a stored design: a live scenario, drawn as a diamond in the accent color. */
 export interface LivePoint {
@@ -13,6 +13,7 @@ export interface LivePoint {
 }
 
 const LIVE_COLOR = "var(--sun)";
+const AXIS_WIDTH = 68; // room for a grouped count beside the rotated axis title
 
 /**
  * Every plan on both objectives: the average exposure drop against the people moved below the
@@ -52,10 +53,11 @@ export function TradeoffChart({
           type="number"
           dataKey="people"
           name="people"
-          width={44}
+          width={AXIS_WIDTH}
           tickLine={false}
           axisLine={false}
           fontSize={11}
+          tickFormatter={(value) => integer(value)}
           label={{ value: "people below threshold", angle: -90, position: "insideLeft", fontSize: 11 }}
         />
         <ZAxis type="number" dataKey="size" range={[36, 160]} />

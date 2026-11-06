@@ -44,6 +44,13 @@ export function curveRows(sweep: Sweep, key: CurveKey, index: number): CurveRow[
   });
 }
 
+/** Every value a chart of this outcome draws, curves and designs alike, for an axis to be fitted to. */
+export function curveValues(sweep: Sweep, key: CurveKey, index: number): number[] {
+  const curves = sweep.curves.flatMap((curve) => curve.points.map((point) => valueOf(point, key, index)));
+  const designs = sweep.designs.map((design) => valueOf(design.point, key, index));
+  return [...curves, ...designs];
+}
+
 export interface DesignPoint {
   id: string;
   arrangement: string;
